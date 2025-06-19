@@ -1,0 +1,552 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.admin-panel {
+  flex: 1;
+  padding: var(--space-3) var(--space-4); /* Уменьшен с var(--space-4) var(--space-6) */
+  margin: 0 auto;
+  width: 100%;
+  /* max-width: 1440px; */
+  animation: fadeIn 0.3s ease-out;
+}
+
+.orders-section {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  transform: translateY(0);
+  margin-top: -10px; /* Уменьшен с -15px */
+}
+
+.orders-section:hover {
+  transform: translateY(-1px); /* Уменьшен эффект hover */
+  box-shadow: var(--shadow-xl);
+}
+
+.orders-section h2 {
+  padding: var(--space-3); /* Уменьшен с var(--space-4) */
+  background: linear-gradient(to right, var(--color-primary), white);
+  border-bottom: 1px solid var(--color-neutral-200);
+  margin-bottom: 0;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-neutral-200);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-panel {
+    padding: var(--space-2); /* Уменьшен с var(--space-3) */
+  }
+  
+  .orders-section h2 {
+    padding: var(--space-2); /* Уменьшен с var(--space-3) */
+  }
+}
+
+.action-button {
+  padding: var(--space-1) var(--space-2); /* Уменьшен с var(--space-1) var(--space-3) */
+  border-radius: var(--radius-sm); /* Уменьшен с var(--radius-md) */
+  font-size: calc(var(--font-size-xs) - 0.1rem); /* Дополнительное уменьшение */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px; /* Уменьшен с 70px */
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.action-button.edit {
+  background: linear-gradient(135deg, #3a80f1 0%, #6467f1 100%);
+  color: white;
+}
+
+.action-button.delete {
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error-dark) 100%);
+  color: white;
+}
+
+.action-button.view {
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
+  color: white;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button:hover::after {
+  opacity: 1;
+}
+
+.action-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .action-button {
+    padding: var(--space-1) var(--space-1); /* Уменьшен с var(--space-1) var(--space-2) */
+    min-width: 50px; /* Уменьшен с 60px */
+    font-size: calc(var(--font-size-xs) - 0.15rem); /* Дополнительное уменьшение */
+  }
+}
+
+:root {
+  --color-primary: #6366F1;
+  --color-primary-dark: #4F46E5;
+  --color-primary-light: #818CF8;
+  
+  --color-secondary: #F8FAFC;
+  --color-accent: #3B82F6;
+  
+  --color-success: #10B981;
+  --color-success-dark: #059669;
+  --color-success-light: #A7F3D0;
+  
+  --color-warning: #F59E0B;
+  --color-warning-dark: #D97706;
+  --color-warning-light: #FCD34D;
+  
+  --color-error: #EF4444;
+  --color-error-dark: #DC2626;
+  
+  --color-error-light: #FCA5A5;
+  
+  --color-neutral-50: #F8FAFC;
+  --color-neutral-100: #F1F5F9;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-400: #94A3B8;
+  --color-neutral-500: #64748B;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1E293B;
+  --color-neutral-900: #0F172A;
+  
+  --space-1: 2px; /* Уменьшен с 3px */
+  --space-2: 4px; /* Уменьшен с 6px */
+  --space-3: 6px; /* Уменьшен с 9px */
+  --space-4: 8px; /* Уменьшен с 12px */
+  --space-5: 10px; /* Уменьшен с 15px */
+  --space-6: 12px; /* Уменьшен с 18px */
+  --space-8: 16px; /* Уменьшен с 24px */
+  --space-10: 20px; /* Уменьшен с 30px */
+  --space-12: 24px; /* Уменьшен с 36px */
+  --space-16: 32px; /* Уменьшен с 48px */
+  
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-size-xs: 0.6rem; /* Уменьшен с 0.7rem */
+  --font-size-sm: 0.7rem; /* Уменьшен с 0.8rem */
+  --font-size-base: 0.8rem; /* Уменьшен с 0.9rem */
+  --font-size-lg: 0.9rem; /* Уменьшен с 1rem */
+  --font-size-xl: 1rem; /* Уменьшен с 1.1rem */
+  --font-size-2xl: 1.1rem; /* Уменьшен с 1.3rem */
+  --font-size-3xl: 1.3rem; /* Уменьшен с 1.6rem */
+  --font-size-4xl: 1.5rem; /* Уменьшен с 1.9rem */
+  
+  --line-height-tight: 1.1; /* Уменьшен с 1.2 */
+  --line-height-normal: 1.3; /* Уменьшен с 1.4 */
+  --line-height-relaxed: 1.5; /* Уменьшен с 1.6 */
+  
+  --radius-sm: 0.15rem; /* Уменьшен с 0.2rem */
+  --radius-md: 0.25rem; /* Уменьшен с 0.3rem */
+  --radius-lg: 0.3rem; /* Уменьшен с 0.4rem */
+  --radius-xl: 0.5rem; /* Уменьшен с 0.6rem */
+  --radius-2xl: 0.7rem; /* Уменьшен с 0.8rem */
+  --radius-full: 9999px;
+  
+  --shadow-sm: 0 0.5px 1px 0 rgb(0 0 0 / 0.05); /* Уменьшен эффект тени */
+  --shadow-md: 0 1px 2px -0.5px rgb(0 0 0 / 0.1), 0 0.5px 1px -0.5px rgb(0 0 0 / 0.1); /* Уменьшен эффект тени */
+  --shadow-lg: 0 3px 5px -1px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); /* Уменьшен эффект тени */
+  --shadow-xl: 0 5px 8px -2px rgb(0 0 0 / 0.1), 0 2px 3px -2px rgb(0 0 0 / 0.1); /* Уменьшен эффект тени */
+  
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-800);
+  background-color: var(--color-neutral-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--space-2); /* Уменьшен с var(--space-3) */
+  color: var(--color-neutral-900);
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: var(--font-size-3xl);
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+}
+
+p {
+  margin-bottom: var(--space-2); /* Уменьшен с var(--space-3) */
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --font-size-base: 0.7rem; /* Уменьшен с 0.8rem */
+  }
+  
+  h1 {
+    font-size: var(--font-size-2xl);
+  }
+  
+  h2 {
+    font-size: var(--font-size-xl);
+  }
+}
+
+.header1 {
+  background: var(--color-primary);
+  color: white;
+  padding-top: 40px;
+  padding-left: 15px;
+  padding-bottom: 15px;
+  width: calc(100% - -84px);
+  margin-top: -23px;
+  margin-right: -5px;
+  margin-left: -10px;
+}
+
+.header h1 {
+  color: white;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  opacity: 0.95;
+  transition: opacity var(--transition-fast);
+}
+
+.header:hover h1 {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: var(--space-2) var(--space-2);
+  }
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) var(--color-neutral-100);
+}
+
+.table-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-full);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+}
+
+.orders-table {
+  width: 100%;
+  min-width: 900px; /* Уменьшен с 1000px */
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: var(--font-size-sm);
+}
+
+.orders-table thead {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #3e3a7d 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.orders-table th {
+  padding: var(--space-2) var(--space-2); /* Уменьшен с var(--space-3) */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.orders-table th:first-child {
+  border-top-left-radius: var(--radius-md);
+}
+
+.orders-table th:last-child {
+  border-top-right-radius: var(--radius-md);
+}
+
+.orders-table tbody tr {
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.orders-table tbody tr:hover {
+  background-color: #e0e0e0cc;
+  transform: translateY(-0.5px); /* Уменьшен эффект hover */
+  box-shadow: var(--shadow-sm);
+}
+
+.orders-table td {
+  padding: var(--space-2) var(--space-2); /* Уменьшен с var(--space-3) */
+  vertical-align: middle;
+}
+
+.item-column {
+  max-width: 180px; /* Уменьшен с 200px */
+  white-space: normal;
+  line-height: 1.2; /* Уменьшен с 1.3 */
+  color: var(--color-neutral-700);
+  word-break: break-word;
+}
+
+.actions-column {
+  display: flex;
+  gap: var(--space-1); /* Уменьшен с var(--space-1) */
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  min-width: 200px; /* Уменьшен с 240px */
+  padding: var(--space-1) var(--space-2); /* Уменьшен с var(--space-2) var(--space-3) */
+}
+
+@media (max-width: 1440px) {
+  .orders-table {
+    min-width: 800px; /* Уменьшен с 900px */
+  }
+
+  .item-column {
+    max-width: 160px; /* Уменьшен с 180px */
+  }
+
+  .actions-column {
+    min-width: 180px; /* Уменьшен с 220px */
+  }
+}
+
+@media (max-width: 1200px) {
+  .orders-table {
+    min-width: 700px; /* Уменьшен с 800px */
+  }
+
+  .item-column {
+    max-width: 140px; /* Уменьшен с 160px */
+  }
+
+  .actions-column {
+    min-width: 160px; /* Уменьшен с 200px */
+  }
+}
+
+@media (max-width: 768px) {
+  .orders-table th,
+  .orders-table td {
+    padding: var(--space-1) var(--space-1); /* Уменьшен с var(--space-2) */
+  }
+  
+  .actions-column {
+    min-width: 140px; /* Уменьшен с 160px */
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .item-column {
+    max-width: 120px; /* Уменьшен с 140px */
+  }
+
+  .orders-table {
+    min-width: 100%;
+    font-size: calc(var(--font-size-xs) - 0.1rem); /* Дополнительное уменьшение */
+  }
+
+  .orders-table th {
+    font-size: calc(var(--font-size-xs) - 0.1rem); /* Дополнительное уменьшение */
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-1); /* Уменьшен с var(--space-2) */
+  border-radius: var(--radius-full);
+  font-size: calc(var(--font-size-xs) - 0.1rem); /* Уменьшен */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  min-width: 60px; /* Уменьшен с 70px */
+}
+
+.status-badge.status-ready {
+  background-color: #86efac;
+  color: #065f46;
+  border: 1px solid var(--color-success);
+}
+
+.status-badge.status-delivered {
+  background: linear-gradient(135deg, #7f7eff 0%, var(--color-primary) 100%);
+  color: white;
+  border: none;
+}
+
+.status-badge.status-cooking {
+  background-color: #93c5fd;
+  color: #1e3a8a;
+  border: 1px solid var(--color-neutral-300);
+}
+
+.status-badge.status-completed {
+  background-color: #a2c1ff;
+  color: #111827;
+  border: 1px solid var(--color-neutral-300);
+}
+
+.status-badge.status-archive {
+  background-color: #e5e7eb;
+  color: #374151;
+  border: 1px solid var(--color-neutral-300);
+}
+
+.status-badge.status-pending {
+  background-color: #fcd34d;
+  color: #92400e;
+  border: 1px solid var(--color-error);
+}
+
+.status-badge:hover {
+  transform: translateY(-0.5px); /* Уменьшен эффект hover */
+  box-shadow: var(--shadow-sm);
+  filter: brightness(1.05);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3); /* Уменьшен с var(--space-4) */
+  max-width: 400px; /* Уменьшен с 500px */
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2); /* Уменьшен с var(--space-3) */
+}
+
+.modal-input {
+  font-family: var(--font-family);
+  font-size: calc(var(--font-size-sm) - 0.1rem); /* Уменьшен с var(--font-size-sm) */
+  color: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-1); /* Уменьшен с var(--space-1) var(--space-2) */
+  transition: all var(--transition-fast);
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary-light); /* Уменьшен эффект */
+}
+
+@media (max-width: 768px) {
+  .modal {
+    width: 95%;
+    padding: var(--space-2); /* Уменьшен с var(--space-3) */
+  }
+
+  .modal-content {
+    gap: var(--space-1); /* Уменьшен с var(--space-2) */
+  }
+
+  .modal-input {
+    font-size: calc(var(--font-size-sm) - 0.15rem); /* Дополнительное уменьшение */
+    padding: var(--space-1) var(--space-1);
+  }
+}

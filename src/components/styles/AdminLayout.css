@@ -1,0 +1,10 @@
+.admin__layout{
+    margin-left: 220px;
+    width: calc(100% - 220px);
+}
+
+main{
+    height: 100vh;
+    height: auto;
+    padding: 20px;
+}

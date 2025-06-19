@@ -1,0 +1,12 @@
+.commission-info {
+  margin-top: 10px;
+  color: #4b5563;
+}
+
+.commission-info p {
+  margin: 5px 0;
+}
+
+.commission-info p.font-bold {
+  font-weight: 700;
+}
