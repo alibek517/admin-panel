@@ -11,6 +11,7 @@ import Zakazlar from "../pages/Zakazlar.jsx";
 import ZakazlarTarixi from "../pages/ZakazlarTarixi.jsx";
 import Chiqish from "../pages/Chiqish.jsx";
 import Login from "../pages/Login.jsx";
+import Dostavka from "../pages/Dostavka.jsx"; // Added Dostavka import
 
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -38,12 +39,13 @@ export const router = createBrowserRouter([
       { path: "Taomlar", element: <Taomlar /> },
       { path: "TaomlarSoz", element: <TaomlarSoz /> },
       { path: "Zakazlar", element: <Zakazlar /> },
+      { path: "/Dostavka", element: <Dostavka />},
       { path: "ZakazlarTarixi", element: <ZakazlarTarixi /> },
-      { path: "Chiqish", element: <Chiqish /> }
-    ]
+      { path: "Chiqish", element: <Chiqish /> },
+    ],
   },
   {
     path: "*",
-    element: <Navigate to="/login" />
+    element: <Navigate to="/login" />,
   },
 ]);

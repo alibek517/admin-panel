@@ -352,11 +352,11 @@ export default function Stollar() {
               </div>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Стол номи</label>
+                  <label className="form-label">Жойлашувини киритинг.</label>
                   <input
                     className="form-control"
                     type="text"
-                    placeholder="Стол номи"
+                    placeholder="Жойлашувини киритинг."
                     value={newStol.name}
                     onChange={(e) =>
                       setNewStol({ ...newStol, name: e.target.value })
@@ -364,12 +364,11 @@ export default function Stollar() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Стол рақами</label>
+                  <label className="form-label">Стол номи</label>
                   <input
                     className="form-control"
-                    type="number"
-                    placeholder="Стол рақами"
-                    value={newStol.number}
+                    type="text"
+                    placeholder="Стол номи"
                     onChange={(e) =>
                       setNewStol({ ...newStol, number: e.target.value })
                     }
