@@ -11,7 +11,9 @@ import {
   ShoppingBag,
   Settings,
   List,
-  Truck, // Added Truck icon for Dostavka
+  Truck,
+  Eye,
+  EyeOff, // Added Eye and EyeOff icons for password visibility
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -21,6 +23,7 @@ export default function Sidebar() {
   const [showModal, setShowModal] = useState(false);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // Added state for password visibility
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingRoute, setPendingRoute] = useState(null);
 
@@ -45,6 +48,7 @@ export default function Sidebar() {
         setShowModal(false);
         setLogin("");
         setPassword("");
+        setShowPassword(false); // Reset password visibility when modal closes
         if (pendingRoute) {
           navigate(pendingRoute);
           setPendingRoute(null);
@@ -64,7 +68,7 @@ export default function Sidebar() {
 
   // Переход по вкладке
   const handleNavigation = (to) => {
-    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka"]; // Added /Dostavka to openRoutes
+    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka"];
 
     if (!openRoutes.includes(to) && !isAuthenticated) {
       setPendingRoute(to);
@@ -75,6 +79,11 @@ export default function Sidebar() {
       }
       navigate(to);
     }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -208,14 +217,41 @@ export default function Sidebar() {
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
               />
-              <input
-                style={{ width: "300px", height: "50px", marginBottom: "5px" }}
-                className="modal-input"
-                type="password"
-                placeholder="Пароль"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <input
+                  style={{ 
+                    width: "300px", 
+                    height: "50px", 
+                    marginBottom: "5px",
+                    paddingRight: "40px" // Add padding for the eye icon
+                  }}
+                  className="modal-input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Пароль"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#666",
+                    padding: "0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
               <button className="success-message2" onClick={checkAuth}>
                 Войти
