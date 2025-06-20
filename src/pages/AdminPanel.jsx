@@ -151,6 +151,40 @@ export default function AdminPanel() {
     }
   };
 
+  // Tanlanган sana oralig'idagi buyurtmalarni filtrlash
+  const getFilteredOrders = () => {
+    if (!startDate || !endDate) {
+      return orders;
+    }
+    return orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
+    });
+  };
+
+  // Jami hisoblarni chiqarish
+  const calculateSummary = () => {
+    const filteredOrders = getFilteredOrders();
+    let totalPrice = 0;
+    let totalCommission = 0;
+    let totalWithCommission = 0;
+
+    filteredOrders.forEach(order => {
+      const orderTotal = calculateTotalPrice(order.orderItems);
+      const orderCommission = orderTotal * (commissionRate / 100);
+      totalPrice += orderTotal;
+      totalCommission += orderCommission;
+      totalWithCommission += orderTotal + orderCommission;
+    });
+
+    return {
+      totalPrice,
+      totalCommission,
+      totalWithCommission,
+      ordersCount: filteredOrders.length
+    };
+  };
+
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 30000);
@@ -201,6 +235,9 @@ export default function AdminPanel() {
     }
   };
 
+  const filteredOrders = getFilteredOrders();
+  const summary = calculateSummary();
+
   return (
     <div className="app">
       <header style={{
@@ -213,9 +250,52 @@ export default function AdminPanel() {
       </header>
       <div style={{ marginTop: "5px" }} className="admin-panel">
         <section className="orders-section">
-          <h2>Барча буюртмалар</h2>
+          {/* Jami hisobot */}
+          <div style={{
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-4)",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid #dee2e6"
+          }}>
+            <h3 style={{ marginBottom: "var(--space-3)", color: "#495057" }}>
+              Жами ҳисобот 
+              {startDate && endDate && (
+                <span style={{ fontSize: "14px", fontWeight: "normal", color: "#6c757d" }}>
+                  ({startDate} дан {endDate} гача)
+                </span>
+              )}
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-3)" }}>
+              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#28a745" }}>
+                  {summary.ordersCount}
+                </div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>Буюртмалар сони</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
+                  {formatPrice(summary.totalPrice)}
+                </div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>Умумий сотув</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#ffc107" }}>
+                  {formatPrice(summary.totalCommission)}
+                </div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами комиссия</div>
+              </div>
+              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#dc3545" }}>
+                  {formatPrice(summary.totalWithCommission)}
+                </div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами (комиссия билан)</div>
+              </div>
+            </div>
+          </div>
+
+
           <div className="clear-orders-form" style={{ marginBottom: "var(--space-4)" }}>
-            <h3>Архиви буюртмаларни ўчириш</h3> 
             <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
               <div>
                 <label>Бошланғич сана:</label>
@@ -256,7 +336,7 @@ export default function AdminPanel() {
                   height: "36px"
                 }}
               >
-                Ўчириш 
+                Архивни ўчириш 
               </button>
             </div>
           </div>
@@ -265,88 +345,94 @@ export default function AdminPanel() {
               Буюртмалар йўқ 
             </p>
           ) : (
-            <div className="table-container">
-              <table style={{overflow: "hidden"}} className="orders-table">
-                <thead>
-                  <tr>
-                    <th>Буюртма №</th>
-                    <th>Стол/Телефон</th>
-                    <th>Таом</th>
-                    <th>Комиссия ({commissionRate}%)</th>
-                    <th>Умумий нархи</th>
-                    <th>Комиссия</th>
-                    <th>Жами</th>
-                    <th>Ҳолати</th>
-                    <th>Сана</th>
-                    <th>Бажариладиган иши</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order, index) => {
-                    const totalPrice = calculateTotalPrice(order.orderItems);
-                    const commission = totalPrice * (commissionRate / 100);
-                    const totalWithCommission = totalPrice + commission;
-                    const isDelivery = !order.tableId;
-                    return (
-                      <tr key={`${order.id}-${index}`}>
-                        <td>№ {order.id}</td>
-                        <td>
-                          {isDelivery
-                            ? order.carrierNumber || "Йўқ"
-                            : tableMap[order.tableId] || "Йўқ"}
-                        </td>
-                        <td className="item-column">
-                          {order.orderItems.map((item) => `${item.product.name} (${item.count})`).join(", ")}
-                        </td>
-                        <td>{formatPrice(commission)}</td>
-                        <td>{formatPrice(totalPrice)}</td>
-                        <td>{formatPrice(commission)}</td>
-                        <td>{formatPrice(totalWithCommission)}</td>
-                        <td>
-                          <span
-                            className={`status-badge ${
-                              order.status === "PENDING" ? "status-pending" :
-                              order.status === "COOKING" ? "status-cooking" :
-                              order.status === "READY" ? "status-ready" :
-                              order.status === "COMPLETED" ? "status-completed" :
-                              order.status === "ARCHIVE" ? "status-archive" :
-                              "status-default"
-                            }`}
-                          >
-                            {getStatusText(order.status)}
-                          </span>
-                        </td>
-                        <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                        <td className="actions-column">
-                          {order.status !== "ARCHIVE" && (
-                            <>
-                              <button className="action-button edit" onClick={() => handleEdit(order)}>
-                                Таҳрирлаш
-                              </button>
+            <>
+              <div className="table-container">
+                <table style={{overflow: "hidden"}} className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Буюртма №</th>
+                      <th>Стол/Телефон</th>
+                      <th>Таом</th>
+                      <th>Умумий нархи</th>
+                      <th>Комиссия ({commissionRate}%)</th>
+                      <th>Жами</th>
+                      <th>Ҳолати</th>
+                      <th>Сана</th>
+                      <th>Бажариладиган иши</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order, index) => {
+                      const totalPrice = calculateTotalPrice(order.orderItems);
+                      const commission = totalPrice * (commissionRate / 100);
+                      const totalWithCommission = totalPrice + commission;
+                      const isDelivery = !order.tableId;
+                      return (
+                        <tr key={`${order.id}-${index}`}>
+                          <td>№ {order.id}</td>
+                          <td>
+                            {isDelivery
+                              ? order.carrierNumber || "Йўқ"
+                              : tableMap[order.tableId] || "Йўқ"}
+                          </td>
+                          <td className="item-column">
+                            {order.orderItems.map((item) => `${item.product.name} (${item.count})`).join(", ")}
+                          </td>
+                          <td>{formatPrice(totalPrice)}</td>
+                          <td>{formatPrice(commission)}</td>
+                          <td>{formatPrice(totalWithCommission)}</td>
+                          <td>
+                            <span
+                              className={`status-badge ${
+                                order.status === "PENDING" ? "status-pending" :
+                                order.status === "COOKING" ? "status-cooking" :
+                                order.status === "READY" ? "status-ready" :
+                                order.status === "COMPLETED" ? "status-completed" :
+                                order.status === "ARCHIVE" ? "status-archive" :
+                                "status-default"
+                              }`}
+                            >
+                              {getStatusText(order.status)}
+                            </span>
+                          </td>
+                          <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                          <td className="actions-column">
+                            {order.status !== "ARCHIVE" && (
+                              <>
+                                <button className="action-button edit" onClick={() => handleEdit(order)}>
+                                  Таҳрирлаш
+                                </button>
+                                <button className="action-button delete" onClick={() => handleDelete(order.id)}>
+                                  Ўчириш
+                                </button>
+                              </>
+                            )}
+                            {order.status === "ARCHIVE" && (
                               <button className="action-button delete" onClick={() => handleDelete(order.id)}>
                                 Ўчириш
                               </button>
-                            </>
-                          )}
-                          <button className="action-button view" onClick={() => handleView(order)}>
-                            Кўриш
-                          </button>
-                          {order.status === "ARCHIVE" && (
-                            <button
-                              className="order-card__print-btn"
-                              onClick={() => handlePrintOrder(order)}
-                              title="Чоп этиш"
-                            >
-                              <Printer size={16} />
+                            )}
+                            <button className="action-button view" onClick={() => handleView(order)}>
+                              Кўриш
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {order.status === "ARCHIVE" && (
+                              <button
+                                className="order-card__print-btn"
+                                onClick={() => handlePrintOrder(order)}
+                                title="Чоп этиш"
+                              >
+                                <Printer size={16} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+            </>
           )}
         </section>
 

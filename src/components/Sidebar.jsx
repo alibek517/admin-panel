@@ -6,7 +6,7 @@ import {
   LogOut,
   Home,
   FileText,
-  Users,
+  LineChart,
   Coffee,
   ShoppingBag,
   Settings,
@@ -113,8 +113,8 @@ export default function Sidebar() {
             location.pathname === "/Asboblar" ? "active" : ""
           }`}
         >
-          <Users size={20} />
-          <span>Асбоблар панели</span>
+          <LineChart size={20} />
+          <span>Статистикалар</span>
         </div>
         <div
           onClick={() => handleNavigation("/ZakazlarTarixi")}

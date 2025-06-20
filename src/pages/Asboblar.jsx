@@ -35,35 +35,128 @@ export default function Asboblar() {
   const [weeklyStats, setWeeklyStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commissionRate, setCommissionRate] = useState(0);
+  const [orders, setOrders] = useState([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [summary, setSummary] = useState({
+    ordersCount: 0,
+    totalPrice: 0,
+    totalCommission: 0,
+    totalWithCommission: 0,
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [ordersResponse, percentResponse] = await Promise.all([
-          axios.get("https://alikafecrm.uz/order"),
-          axios.get("https://alikafecrm.uz/percent/1"),
-        ]);
+  // Format price helper function
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('uz-UZ').format(price) + ' сўм';
+  };
 
-        const orders = ordersResponse.data.map((order) => ({
-          ...order,
-          orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
-        }));
-        const fetchedCommissionRate = percentResponse.data?.percent || 0;
-        setCommissionRate(fetchedCommissionRate);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(today);
-        todayEnd.setHours(23, 59, 59, 999);
+  // Calculate summary based on date range
+  const calculateSummary = (orders, start, end) => {
+    let filteredOrders = orders;
+    
+    if (start && end) {
+      const startDateTime = new Date(start);
+      const endDateTime = new Date(end);
+      endDateTime.setHours(23, 59, 59, 999);
+      
+      filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= startDateTime && orderDate <= endDateTime;
+      });
+    }
 
-        const dailyOrders = orders.filter(
+    const ordersCount = filteredOrders.length;
+    const totalPrice = filteredOrders.reduce((sum, order) => {
+      if (order.totalAmount) {
+        return sum + order.totalAmount;
+      }
+      return sum + order.orderItems.reduce(
+        (itemSum, item) => itemSum + (item.product?.price || 0) * item.count,
+        0
+      );
+    }, 0);
+    
+    const totalCommission = totalPrice * (commissionRate / 100);
+    const totalWithCommission = totalPrice + totalCommission;
+
+    return {
+      ordersCount,
+      totalPrice,
+      totalCommission,
+      totalWithCommission,
+    };
+  };
+
+  const fetchData = async () => {
+    try {
+      const [ordersResponse, percentResponse] = await Promise.all([
+        axios.get("https://alikafecrm.uz/order"),
+        axios.get("https://alikafecrm.uz/percent/1"),
+      ]);
+
+      const orders = ordersResponse.data.map((order) => ({
+        ...order,
+        orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+      }));
+      
+      const fetchedCommissionRate = percentResponse.data?.percent || 0;
+      setCommissionRate(fetchedCommissionRate);
+      setOrders(orders);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const dailyOrders = orders.filter(
+        (order) =>
+          new Date(order.createdAt) >= today &&
+          new Date(order.createdAt) <= todayEnd
+      );
+
+      const orderCount = dailyOrders.length;
+      const totalAmount = dailyOrders.reduce((sum, order) => {
+        if (order.totalAmount) {
+          return sum + order.totalAmount;
+        }
+        return (
+          sum +
+          order.orderItems.reduce(
+            (itemSum, item) =>
+              itemSum + (item.product?.price || 0) * item.count,
+            0
+          )
+        );
+      }, 0);
+      const totalCommission = totalAmount * (fetchedCommissionRate / 100);
+      const averageCheck = orderCount > 0 ? totalAmount / orderCount : 0;
+
+      setDailyStats({
+        orderCount,
+        totalAmount,
+        totalCommission,
+        averageCheck,
+      });
+
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(today.getDate() - 6);
+      oneWeekAgo.setHours(0, 0, 0, 0);
+
+      const weeklyData = [];
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(oneWeekAgo);
+        day.setDate(oneWeekAgo.getDate() + i);
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayOrders = orders.filter(
           (order) =>
-            new Date(order.createdAt) >= today &&
-            new Date(order.createdAt) <= todayEnd
+            new Date(order.createdAt) >= day &&
+            new Date(order.createdAt) <= dayEnd
         );
 
-        const orderCount = dailyOrders.length;
-        const totalAmount = dailyOrders.reduce((sum, order) => {
+        const dayTotalAmount = dayOrders.reduce((sum, order) => {
           if (order.totalAmount) {
             return sum + order.totalAmount;
           }
@@ -76,67 +169,41 @@ export default function Asboblar() {
             )
           );
         }, 0);
-        const totalCommission = totalAmount * (fetchedCommissionRate / 100);
-        const averageCheck = orderCount > 0 ? totalAmount / orderCount : 0;
 
-        setDailyStats({
-          orderCount,
-          totalAmount,
-          totalCommission,
-          averageCheck,
+        weeklyData.push({
+          date: day.toLocaleDateString("uz-UZ", {
+            day: "2-digit",
+            month: "2-digit",
+          }),
+          orderCount: dayOrders.length,
+          commission: dayTotalAmount * (fetchedCommissionRate / 100),
         });
-
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(today.getDate() - 6);
-        oneWeekAgo.setHours(0, 0, 0, 0);
-
-        const weeklyData = [];
-        for (let i = 0; i < 7; i++) {
-          const day = new Date(oneWeekAgo);
-          day.setDate(oneWeekAgo.getDate() + i);
-          const dayEnd = new Date(day);
-          dayEnd.setHours(23, 59, 59, 999);
-
-          const dayOrders = orders.filter(
-            (order) =>
-              new Date(order.createdAt) >= day &&
-              new Date(order.createdAt) <= dayEnd
-          );
-
-          const dayTotalAmount = dayOrders.reduce((sum, order) => {
-            if (order.totalAmount) {
-              return sum + order.totalAmount;
-            }
-            return (
-              sum +
-              order.orderItems.reduce(
-                (itemSum, item) =>
-                  itemSum + (item.product?.price || 0) * item.count,
-                0
-              )
-            );
-          }, 0);
-
-          weeklyData.push({
-            date: day.toLocaleDateString("uz-UZ", {
-              day: "2-digit",
-              month: "2-digit",
-            }),
-            orderCount: dayOrders.length,
-            commission: dayTotalAmount * (fetchedCommissionRate / 100),
-          });
-        }
-
-        setWeeklyStats(weeklyData);
-      } catch (error) {
-        console.error("Хатолик юз берди:", error);
-      } finally {
-        setLoading(false);
       }
-    };
 
+      setWeeklyStats(weeklyData);
+      
+      // Calculate initial summary
+      const initialSummary = calculateSummary(orders, startDate, endDate);
+      setSummary(initialSummary);
+      
+    } catch (error) {
+      console.error("Хатолик юз берди:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
+
+  // Update summary when dates change
+  useEffect(() => {
+    if (orders.length > 0) {
+      const newSummary = calculateSummary(orders, startDate, endDate);
+      setSummary(newSummary);
+    }
+  }, [startDate, endDate, orders, commissionRate]);
 
   const orderChartData = {
     labels: weeklyStats.map((stat) => stat.date),
@@ -248,7 +315,7 @@ export default function Asboblar() {
           }}
           className="header-title fade-in"
         >
-          Асбоблар
+          Статистика
         </h1>
         <h2
           style={{
@@ -263,6 +330,94 @@ export default function Asboblar() {
           Статистика
         </h2>
       </header>
+      
+      <section className="orders-section">
+        {/* Jami hisobot */}
+        <div style={{
+          marginBottom: "var(--space-4)",
+          padding: "var(--space-4)",
+          backgroundColor: "#f8f9fa",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid #dee2e6"
+        }}>
+          <h3 style={{ marginBottom: "var(--space-3)", color: "#495057" }}>
+            Жами ҳисобот 
+            {startDate && endDate && (
+              <span style={{ fontSize: "14px", fontWeight: "normal", color: "#6c757d" }}>
+                ({startDate} дан {endDate} гача)
+              </span>
+            )}
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-3)" }}>
+            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#28a745" }}>
+                {summary.ordersCount}
+              </div>
+              <div style={{ color: "#6c757d", fontSize: "14px" }}>Буюртмалар сони</div>
+            </div>
+            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
+                {formatPrice(summary.totalPrice)}
+              </div>
+              <div style={{ color: "#6c757d", fontSize: "14px" }}>Умумий сотув</div>
+            </div>
+            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#ffc107" }}>
+                {formatPrice(summary.totalCommission)}
+              </div>
+              <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами комиссия</div>
+            </div>
+            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#dc3545" }}>
+                {formatPrice(summary.totalWithCommission)}
+              </div>
+              <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами (комиссия билан)</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="clear-orders-form" style={{ marginBottom: "var(--space-4)" }}>
+          <div style={{ display: "flex", gap: "50px", alignItems: "center", justifyContent:"center" }}>
+            <div style={{textAlign:"center"}}>
+              <label>Бошланғич сана:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="modal-input"
+                style={{
+                  padding: "var(--space-2)",
+                  borderRadius: "var(--radius-md)",
+                  border: `1px solid var(--color-neutral-300)`,
+                  marginTop: "var(--space-1)",
+                }}
+              />
+            </div>
+            <div style={{textAlign:"center"}}>
+              <label>Якуний сана:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="modal-input"
+                style={{
+                  padding: "var(--space-2)",
+                  borderRadius: "var(--radius-md)",
+                  border: `1px solid var(--color-neutral-300)`,
+                  marginTop: "var(--space-1)",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        
+        {orders.length === 0 ? (
+          <p style={{ textAlign: "center", marginTop: "var(--space-4)" }}>
+            Буюртмалар йўқ 
+          </p>
+        ) : null}
+      </section>
+      
       <section className="section daily-stats">
         <h3 className="section-title">
           <svg>
@@ -335,6 +490,7 @@ export default function Asboblar() {
           </div>
         )}
       </section>
+      
       <section className="section chart-container">
         <h3 className="section-title">
           <svg>
