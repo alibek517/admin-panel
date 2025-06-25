@@ -144,7 +144,7 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, editingTable, places }) => 
             <option value="">Жойни танланг</option>
             {places.map((place, index) => (
               <option key={index} value={place}>
-                {place} ({index + 1} пробел)
+                {place} 
               </option>
             ))}
           </select>
@@ -421,26 +421,6 @@ export default function Taomlar() {
     setShowDeleteModal(true);
   };
 
-  const resetTableStatus = async (tableId) => {
-    try {
-      await axios.patch(
-        `https://alikafecrm.uz/tables/${tableId}`,
-        { status: "empty" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setTables((prev) =>
-        prev.map((table) =>
-          table.id === tableId ? { ...table, status: "empty" } : table
-        )
-      );
-      setSuccessMsg("Стол статуси автоматик равишда бўшга ўзгартирилди!");
-    } catch (err) {
-      console.error("Стол статусини ўзгартиришда хатолик:", err);
-    }
-  };
-
   useEffect(() => {
     if (!selectedTableId) {
       setSelectedTableOrder(null);
@@ -479,15 +459,14 @@ export default function Taomlar() {
       } else {
         setSelectedTableOrder(null);
         setCart([]);
-        setError("Актив буюртма топилмади. Стол бўшатилмоқда...");
-        resetTableStatus(selectedTableId);
+        setError("Актив буюртма топилмади.");
       }
     } else {
       setSelectedTableOrder(null);
       setCart([]);
       setError(null);
     }
-  }, [selectedTableId, tables, token]);
+  }, [selectedTableId, tables]);
 
   useEffect(() => {
     if (successMsg) {
@@ -816,7 +795,6 @@ export default function Taomlar() {
                     </td>
                     <td className="basket-table__total">{formatPrice(totalPrice)}</td>
                   </tr>
-                  
                 </tfoot>
               </table>
               {!isBusyTable && (

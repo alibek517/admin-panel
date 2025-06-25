@@ -92,6 +92,7 @@ export default function Sidebar() {
       <div className="sidebar-header">
         <h1
           style={{
+            cursor: 'default',
             fontSize: "24px",
             fontWeight: "bold",
             color: "#fff",
@@ -109,6 +110,7 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         <div
+        style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/Taomlar")}
           className={`nav-item ${location.pathname === "/Taomlar" ? "active" : ""}`}
         >
@@ -116,6 +118,7 @@ export default function Sidebar() {
           <span>Столлар</span>
         </div>
         <div
+        style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/Zakazlar")}
           className={`nav-item ${location.pathname === "/Zakazlar" ? "active" : ""}`}
         >
@@ -123,6 +126,8 @@ export default function Sidebar() {
           <span>Заказлар</span>
         </div>
         <div
+        style={{cursor:'pointer'}}
+
           onClick={() => handleNavigation("/AdminPanel")}
           className={`nav-item ${location.pathname === "/AdminPanel" ? "active" : ""}`}
         >
@@ -135,7 +140,7 @@ export default function Sidebar() {
           className={`nav-item ${
             location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
           }`}
-          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px' }}
+          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px',cursor:'pointer' }}
         >
           <HandPlatter size={20} />
           <span>Отчет по Официантам</span>
@@ -145,20 +150,22 @@ export default function Sidebar() {
           className={`nav-item ${
             location.pathname === "/AdminPanel/ovqat" ? "active" : ""
           }`}
-          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px' }}
+          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px',cursor:'pointer' }}
         >
           <Pizza size={20} />
           <span>Отчет по блюдам</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Asboblar")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/Asboblar")}
           className={`nav-item ${location.pathname === "/Asboblar" ? "active" : ""}`}
         >
           <LineChart size={20} />
           <span>Статистикалар</span>
         </div>
         <div
-          onClick={() => handleNavigation("/ZakazlarTarixi")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/ZakazlarTarixi")}
           className={`nav-item ${
             location.pathname === "/ZakazlarTarixi" ? "active" : ""
           }`}
@@ -167,14 +174,16 @@ export default function Sidebar() {
           <span>Заказ тарихи</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Dostavka")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/Dostavka")}
           className={`nav-item ${location.pathname === "/Dostavka" ? "active" : ""}`}
         >
           <Truck size={20} />
           <span>Доставка</span>
         </div>
         <div
-          onClick={() => handleNavigation("/TaomlarSoz")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/TaomlarSoz")}
           className={`nav-item ${location.pathname === "/TaomlarSoz" ? "active" : ""}`}
         >
           <Plus size={20} />
@@ -189,7 +198,8 @@ export default function Sidebar() {
           <span>Столлар</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Chiqish")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/Chiqish")}
           className={`nav-item logout ${
             location.pathname === "/Chiqish" ? "active" : ""
           }`}
@@ -198,7 +208,8 @@ export default function Sidebar() {
           <span>Чиқиш</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Sozlamalar")}
+        style={{cursor:'pointer'}}
+        onClick={() => handleNavigation("/Sozlamalar")}
           className={`nav-item ${location.pathname === "/Sozlamalar" ? "active" : ""}`}
         >
           <Settings size={20} />
