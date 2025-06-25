@@ -10,8 +10,10 @@ import {
   UserCircle2,
   Calendar,
   Search,
+  Eye,
 } from "lucide-react";
 
+// Filter options for order statuses
 const filters = [
   { label: "Барчаси", name: "ALL", icon: Package },
   { label: "Навбатда", name: "PENDING", icon: CircleDot },
@@ -21,6 +23,7 @@ const filters = [
   { label: "Тугалланган", name: "ARCHIVE", icon: CheckCheck },
 ];
 
+// Map order status to CSS class for styling
 const getStatusClass = (status) => {
   switch (status) {
     case "PENDING":
@@ -39,6 +42,7 @@ const getStatusClass = (status) => {
 };
 
 export default function ZakazTarixi() {
+  // State variables
   const [orders, setOrders] = useState([]);
   const [categoryList, setCategoryList] = useState([]);
   const [tables, setTables] = useState([]);
@@ -49,18 +53,24 @@ export default function ZakazTarixi() {
   const [sortAscending, setSortAscending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commissionRate, setCommissionRate] = useState(0);
+  const [openFoodItems, setOpenFoodItems] = useState(null);
 
+  // Calculate total price of order items
   const calculateTotalPrice = (orderItems) => {
+    if (!Array.isArray(orderItems)) return 0;
     return orderItems.reduce(
-      (sum, item) => sum + parseFloat(item.product?.price || 0) * item.count,
+      (sum, item) => sum + parseFloat(item.product?.price || 0) * (item.count || 0),
       0
     );
   };
 
+  // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
+        if (!token) throw new Error("Token not found");
+
         const config = {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -75,19 +85,18 @@ export default function ZakazTarixi() {
             axios.get("https://alikafecrm.uz/percent/1", config),
           ]);
 
+        // Sanitize orders to ensure orderItems is an array
         const sanitizedOrders = ordersResponse.data.map((order) => ({
           ...order,
           orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
         }));
 
-        console.log("Буюртмалар:", sanitizedOrders);
-
         setOrders(sanitizedOrders);
-        setCategoryList(categoriesResponse.data);
+        setCategoryList(categoriesResponse.data || []);
         setTables(tablesResponse.data.data || []);
         setCommissionRate(parseFloat(percentResponse.data?.percent) || 0);
       } catch (error) {
-        console.error("Хатолик юз берди:", error);
+        console.error("Error fetching data:", error);
         alert("Маълумотларни юклашда хатолик юз берди.");
       } finally {
         setLoading(false);
@@ -97,31 +106,30 @@ export default function ZakazTarixi() {
     fetchData();
   }, []);
 
-  const categoryMap = categoryList.reduce(
-    (map, category) => ({
-      ...map,
-      [category.id]: category.name,
-    }),
-    {}
-  );
-
+  // Map table IDs to their number and name
   const tableMap = tables.reduce(
     (map, table) => ({
       ...map,
-      [table.id]: table.number,
+      [table.id]: {
+        number: table.number || "Unknown",
+        name: table.name || "Номсиз", // Fallback if name is missing
+      },
     }),
     {}
   );
 
+  // Filter and sort orders
   const filteredHistory = orders
     .filter((order) => {
       const matchesFilterStatus =
         activeFilter === "ALL" || order.status === activeFilter;
       const matchesSearchInput =
         order.id.toString().includes(searchInput) ||
-        (order.tableId && tableMap[order.tableId]?.toString().includes(searchInput)) ||
-        (order.carrierNumber && order.carrierNumber.includes(searchInput)) ||
-        "";
+        (order.tableId &&
+          (tableMap[order.tableId]?.number?.toString().includes(searchInput) ||
+            tableMap[order.tableId]?.name?.toLowerCase().includes(searchInput.toLowerCase()))) ||
+        (order.carrierNumber && order.carrierNumber.toLowerCase().includes(searchInput.toLowerCase())) ||
+        false;
       const orderDate = new Date(order.createdAt);
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
@@ -135,6 +143,11 @@ export default function ZakazTarixi() {
       const dateB = new Date(b.createdAt);
       return sortAscending ? dateA - dateB : dateB - dateA;
     });
+
+  // Toggle food items visibility
+  const toggleFoodItems = (orderId) => {
+    setOpenFoodItems(openFoodItems === orderId ? null : orderId);
+  };
 
   return (
     <div className="app-container">
@@ -155,6 +168,15 @@ export default function ZakazTarixi() {
                     placeholder="ID, стол ёки телефон бўйича қидириш..."
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                </div>
+                <div className="date-input">
+                  <Calendar className="icon" />
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    placeholder="Бошланиш санаси"
                   />
                 </div>
                 <div className="date-input">
@@ -195,12 +217,11 @@ export default function ZakazTarixi() {
                 <tr>
                   <th>ID</th>
                   <th>Стол/Телефон</th>
-                  <th>Тури</th>
-                  <th>Таомлар</th>
                   <th>Нархи</th>
                   <th>Комиссия</th>
                   <th>Жами</th>
                   <th>Вақти</th>
+                  <th>Таомлар</th>
                   <th>Ҳолати</th>
                 </tr>
               </thead>
@@ -211,39 +232,61 @@ export default function ZakazTarixi() {
                   const totalWithCommission = totalPrice + commission;
                   const isDelivery = !order.tableId;
                   return (
-                    <tr key={order.id}>
-                      <td>{order.id}</td>
-                      <td>
-                        {isDelivery
-                          ? order.carrierNumber || "Йўқ"
-                          : tableMap[order.tableId] || "Йўқ"}
-                      </td>
-                      <td>{isDelivery ? "Доставка" : "Залда"}</td>
-                      <td className="food-items">
-                        {order.orderItems.map((item) => (
-                          <span
-                            key={item.id}
-                          >{`${item.product?.name} (${item.count})`}</span>
-                        ))}
-                      </td>
-                      <td>{totalPrice.toLocaleString("uz-UZ")} сўм</td>
-                      <td>{commission.toLocaleString("uz-UZ")} сўм</td>
-                      <td>{totalWithCommission.toLocaleString("uz-UZ")} сўм</td>
-                      <td>{new Date(order.createdAt).toLocaleString()}</td>
-                      <td className={getStatusClass(order.status)}>
-                        {order.status === "PENDING"
-                          ? "Навбатда"
-                          : order.status === "COOKING"
-                          ? "Тайёрланмоқда"
-                          : order.status === "READY"
-                          ? "Тайёр"
-                          : order.status === "COMPLETED"
-                          ? "Мижоз олдида"
-                          : order.status === "ARCHIVE"
-                          ? "Тугалланган"
-                          : "Номаълум"}
-                      </td>
-                    </tr>
+                    <React.Fragment key={order.id}>
+                      <tr>
+                        <td>{order.id}</td>
+                        <td>
+                          {isDelivery
+                            ? order.carrierNumber || "Йўқ"
+                            : tableMap[order.tableId]
+                              ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
+                              : "Йўқ"}
+                        </td>
+                        <td>{totalPrice.toLocaleString("uz-UZ")} сўм</td>
+                        <td>{commission.toLocaleString("uz-UZ")} сўм</td>
+                        <td>{totalWithCommission.toLocaleString("uz-UZ")} сўм</td>
+                        <td>
+                          {order.createdAt
+                            ? new Date(order.createdAt).toLocaleString("uz-UZ")
+                            : "Номаълум"}
+                        </td>
+                        <td>
+                          <Eye
+                            className="food-icon"
+                            onClick={() => toggleFoodItems(order.id)}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </td>
+                        <td className={getStatusClass(order.status)}>
+                          {order.status === "PENDING"
+                            ? "Навбатда"
+                            : order.status === "COOKING"
+                            ? "Тайёрланмоқда"
+                            : order.status === "READY"
+                            ? "Тайёр"
+                            : order.status === "COMPLETED"
+                            ? "Мижоз олдида"
+                            : order.status === "ARCHIVE"
+                            ? "Тугалланган"
+                            : "Номаълум"}
+                        </td>
+                      </tr>
+                      {openFoodItems === order.id && (
+                        <tr>
+                          <td colSpan="8" className="food-items">
+                            {order.orderItems.length > 0 ? (
+                              order.orderItems.map((item) => (
+                                <div key={item.id}>
+                                  {`${item.product?.name || "Номаълум"} (${item.count || 0})`}
+                                </div>
+                              ))
+                            ) : (
+                              <div>Таомлар йўқ</div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

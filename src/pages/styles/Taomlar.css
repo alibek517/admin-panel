@@ -97,7 +97,111 @@ body {
   padding: var(--space-4) 0;
   flex-grow: 1;
 }
+.tables-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
 
+.add-table-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-table-btn:hover {
+  background-color: #0056b3;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.add-table-form .form-group {
+  margin-bottom: 15px;
+}
+
+.add-table-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.add-table-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit-btn {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
 .nav-item {
   display: flex;
   align-items: center;
@@ -890,3 +994,843 @@ body {
 .menu-card:nth-child(6) { animation-delay: 0.25s; }
 .menu-card:nth-child(7) { animation-delay: 0.3s; }
 .menu-card:nth-child(8) { animation-delay: 0.35s; }
+/* Add these styles to your existing taomlar.css file */
+
+.table-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.table-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-item.selected {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.table-item.bosh {
+  border-left: 4px solid #4caf50;
+}
+
+.table-item.band {
+  border-left: 4px solid #f44336;
+}
+
+.table-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.table-info span:first-child {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.table-status {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.edit-btn {
+  color: #2196f3;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.edit-btn:hover {
+  background-color: rgba(33, 150, 243, 0.2);
+  color: #1976d2;
+}
+
+.delete-btn {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.delete-btn:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #d32f2f;
+}
+
+/* Modal styles for delete confirmation */
+.delete-confirm-content {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.delete-confirm-content p {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 16px;
+}
+
+.warning-text {
+  color: #f44336 !important;
+  font-weight: 500;
+  font-size: 14px !important;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.submit-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.submit-btn:hover {
+  background-color: #218838;
+}
+
+.submit-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Form styles */
+.add-table-form {
+  padding: 20px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 25px;
+}
+
+/* Modal overlay and content */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* Success message */
+.success-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #4caf50;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+/* taomlar.css */
+
+/* General Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Button Base Styles (Reusable) */
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s, transform 0.1s;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.category-buttons {
+  display: flex;
+  overflow-x: auto; /* Enables horizontal scrolling */
+  white-space: nowrap; /* Prevents buttons from wrapping */
+  padding: 10px 0;
+  margin-bottom: 10px;
+  gap: 10px; /* Space between buttons */
+  max-width: 300px; /* Adjust to fit approximately 3 buttons */
+  scrollbar-width: thin; /* For Firefox: thinner scrollbar */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+/* Customize scrollbar for WebKit browsers (Chrome, Safari) */
+.category-buttons::-webkit-scrollbar {
+  height: 6px; /* Scrollbar height */
+}
+
+.category-buttons::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Scrollbar track background */
+  border-radius: 3px;
+}
+
+.category-buttons::-webkit-scrollbar-thumb {
+  background: #888; /* Scrollbar thumb color */
+  border-radius: 3px;
+}
+
+.category-buttons::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Thumb color on hover */
+}
+
+.category-btn {
+  flex: 0 0 auto; /* Prevents buttons from shrinking or growing */
+  padding: 8px 16px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+  min-width: 80px; /* Ensures buttons have consistent width */
+  text-align: center;
+}
+
+.category-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.category-btn.active {
+  background-color: #007bff;
+  color: #fff;
+  border-color: #007bff;
+}
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.place-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.place-filter label {
+  font-weight: 500;
+}
+
+.place-filter select,
+.add-table-form select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.add-table-btn,
+.add-place-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-table-btn:hover,
+.add-place-btn:hover {
+  background-color: #218838;
+}
+
+.add-table-form .number-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.add-table-form .number-inputs .spacer {
+  font-size: 16px;
+  color: #666;
+}
+
+.add-table-form .number-inputs div {
+  flex: 1;
+}
+
+.add-table-form .number-inputs input {
+  width: 100%;
+}
+
+.add-place-form .form-group {
+  margin-bottom: 15px;
+}
+
+.add-place-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+/* Add Table Button */
+.add-table-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #28a745;
+  color: #fff;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
+.add-table-btn:hover {
+  background-color: #218838;
+}
+
+.add-table-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Table Action Buttons (Edit, Delete) */
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  background: none;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.edit-btn:hover {
+  background-color: #e7f0ff;
+}
+
+.delete-btn:hover {
+  background-color: #ffe7e7;
+}
+
+/* Confirm Order Button */
+.confirm-order-btn {
+  background-color: #007bff;
+  color: #fff;
+  padding: 12px 24px;
+  font-size: 16px;
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 6px;
+}
+
+.confirm-order-btn:hover {
+  background-color: #0056b3;
+}
+
+.confirm-order-btn:disabled {
+  background-color: #6c757d;
+}
+
+/* Modal Buttons */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.submit-btn {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.submit-btn:hover {
+  background-color: #0056b3;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.delete-btn:hover {
+  background-color: #c82333;
+}
+
+/* Modal Close Button */
+.modal-close {
+  background: none;
+  color: #333;
+  font-size: 18px;
+  padding: 5px 10px;
+}
+
+.modal-close:hover {
+  color: #dc3545;
+}
+
+/* Layout and Other Component Styles (Placeholders) */
+.content-section {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.order-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.tables-column,
+.cart-column,
+.products-column {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tables-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.tables-list {
+  list-style: none;
+}
+
+.table-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.table-item:hover {
+  background-color: #f9f9f9;
+}
+
+.table-item.selected {
+  background-color: #e7f0ff;
+}
+
+.table-item.bosh {
+  border-left: 4px solid #28a745;
+}
+
+.table-item.band {
+  border-left: 4px solid #dc3545;
+}
+
+.table-status {
+  font-size: 12px;
+  color: #666;
+}
+
+.basket-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.basket-table th,
+.basket-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.basket-table__total-label {
+  font-weight: 600;
+}
+
+.basket-table__total {
+  font-weight: 600;
+  color: #007bff;
+}
+
+.products-list {
+  list-style: none;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-name {
+  font-weight: 500;
+}
+
+.product-price {
+  color: #666;
+  font-size: 12px;
+}
+
+.menu-card__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.control-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.control-value {
+  min-width: 20px;
+  text-align: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.add-table-form .form-group {
+  margin-bottom: 15px;
+}
+
+.add-table-form label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.add-table-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.delete-confirm-content p {
+  margin-bottom: 10px;
+}
+
+.warning-text {
+  color: #dc3545;
+  font-size: 14px;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.spinner {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  margin: 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .order-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .products-column {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .products-column {
+    grid-column: span 1;
+  }
+
+  .category-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .category-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-item {
+    padding: 10px 12px;
+  }
+  
+  .table-actions {
+    gap: 6px;
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .modal-header {
+    padding: 15px 20px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-actions button {
+    width: 100%;
+  }
+}

@@ -93,7 +93,7 @@ const ModalBasket = ({
                     .filter((table) => table.status === "empty")
                     .map((table) => (
                       <option key={table.id} value={table.id}>
-                        {table.name} - {table.number}
+                        {table.number}
                       </option>
                     ))}
                 </select>

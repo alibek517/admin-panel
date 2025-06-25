@@ -2,6 +2,8 @@ import React from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AdminLayout from "../components/AdminLayout.jsx";
 import AdminPanel from "../pages/AdminPanel.jsx";
+import AtchotOfitsant from "../pages/AtchotOfitsantlar.jsx";
+import AtchotOvqatlar from "../pages/AtchotOvqatlar.jsx";
 import Asboblar from "../pages/Asboblar.jsx";
 import Sozlamalar from "../pages/Sozlamalar.jsx";
 import Stollar from "../pages/Stollar.jsx";
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
     children: [
       { path: "", element: <Zakazlar /> },
       { path: "AdminPanel", element: <AdminPanel /> },
+      { path: "/AdminPanel/ofitsant", element: <AtchotOfitsant /> },
+      { path: "AdminPanel/ovqat", element: <AtchotOvqatlar /> },
       { path: "Asboblar", element: <Asboblar /> },
       { path: "Sozlamalar", element: <Sozlamalar /> },
       { path: "Stollar", element: <Stollar /> },

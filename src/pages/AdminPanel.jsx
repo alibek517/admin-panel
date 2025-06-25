@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
-import { Printer } from "lucide-react";
+import { Printer, Edit, Trash2, Eye } from "lucide-react";
 import Receipt from "../components/Receipt.jsx";
 import "./styles/AdminPanel.css";
+import Header from "../components/header.jsx";
 
 export default function AdminPanel() {
   const [orders, setOrders] = useState([]);
@@ -47,12 +48,15 @@ export default function AdminPanel() {
 
   const handlePrintOrder = (order) => {
     const isDelivery = !order.tableId;
+    const table = tables.find((table) => table.id === order.tableId);
     setCurrentOrder({
       id: order.id || null,
       orderItems: order.orderItems || [],
       tableNumber: isDelivery
-        ? order.carrierNumber || "Йўқ" 
-        : tables.find((table) => table.id === order.tableId)?.number || "Йўқ",
+        ? order.carrierNumber || "Йўқ"
+        : table
+        ? `${table.name} - ${table.number}`
+        : "Йўқ",
       totalPrice: calculateTotalPrice(order.orderItems),
       commission: calculateTotalPrice(order.orderItems) * (commissionRate / 100),
       totalWithCommission:
@@ -88,7 +92,6 @@ export default function AdminPanel() {
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
 
-      // Логируем данные заказов для отладки
       console.log("Orders:", sanitizedOrders);
 
       setOrders((prevOrders) => {
@@ -117,7 +120,7 @@ export default function AdminPanel() {
     }
 
     const confirmClear = window.confirm(
-      `Ростдан ҳам ${startDate} дан ${endDate} гача бўлган архиви буюртмаларни ўчирмоқчимисиз? Бу амални ортга қайтариб бўлмайди!`
+      `Ростдан ҳам ${startDate} дан ${endDate} гача бўлган арxиви буюртмаларни ўчирмоқчимисиз? Бу амални ортга қайтариб бўлмайди!`
     );
     if (!confirmClear) return;
 
@@ -130,7 +133,7 @@ export default function AdminPanel() {
       );
 
       if (archiveOrders.length === 0) {
-        alert("Танланган даврда архиви буюртмалар йўқ.");
+        alert("Танланган даврда арxиви буюртмалар йўқ.");
         return;
       }
 
@@ -140,7 +143,7 @@ export default function AdminPanel() {
         )
       );
 
-      alert("Архиви буюртмалар муваффақиятли ўчирилди.");
+      alert("Арxиви буюртмалар муваффақиятли ўчирилди.");
       await fetchData();
       setStartDate("");
       setEndDate("");
@@ -151,25 +154,23 @@ export default function AdminPanel() {
     }
   };
 
-  // Tanlanган sana oralig'idagi buyurtmalarni filtrlash
   const getFilteredOrders = () => {
     if (!startDate || !endDate) {
       return orders;
     }
-    return orders.filter(order => {
+    return orders.filter((order) => {
       const orderDate = new Date(order.createdAt);
       return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
     });
   };
 
-  // Jami hisoblarni chiqarish
   const calculateSummary = () => {
     const filteredOrders = getFilteredOrders();
     let totalPrice = 0;
     let totalCommission = 0;
     let totalWithCommission = 0;
 
-    filteredOrders.forEach(order => {
+    filteredOrders.forEach((order) => {
       const orderTotal = calculateTotalPrice(order.orderItems);
       const orderCommission = orderTotal * (commissionRate / 100);
       totalPrice += orderTotal;
@@ -181,7 +182,7 @@ export default function AdminPanel() {
       totalPrice,
       totalCommission,
       totalWithCommission,
-      ordersCount: filteredOrders.length
+      ordersCount: filteredOrders.length,
     };
   };
 
@@ -192,7 +193,7 @@ export default function AdminPanel() {
   }, []);
 
   const tableMap = tables.reduce((map, table) => {
-    map[table.id] = table.number;
+    map[table.id] = { name: table.name, number: table.number };
     return map;
   }, {});
 
@@ -226,12 +227,18 @@ export default function AdminPanel() {
 
   const getStatusText = (status) => {
     switch (status) {
-      case "PENDING": return "Навбатда";
-      case "COOKING": return "Тайёрланмоқда";
-      case "READY": return "Тайёр";
-      case "COMPLETED": return "Мижоз олдида";
-      case "ARCHIVE": return "Тугалланган";
-      default: return status;
+      case "PENDING":
+        return "Навбатда";
+      case "COOKING":
+        return "Тайёрланмоқда";
+      case "READY":
+        return "Тайёр";
+      case "COMPLETED":
+        return "Мижоз олдида";
+      case "ARCHIVE":
+        return "Тугалланган";
+      default:
+        return status;
     }
   };
 
@@ -240,63 +247,155 @@ export default function AdminPanel() {
 
   return (
     <div className="app">
-      <header style={{
-        marginTop: "-45px",
-        marginLeft: "-40px",
-      }} className="header1">
-        <h1 style={{ color: '#ffffff', marginTop: "-30px", marginLeft: "40px", fontSize: "40px" }}>
-          Администратор панели 
+      <Header />
+      <header
+        style={{
+          marginTop: "28px",
+          marginLeft: "-40px",
+        }}
+        className="header1"
+      >
+        <h1
+          style={{
+            color: "#ffffff",
+            marginTop: "-30px",
+            marginLeft: "40px",
+            fontSize: "40px",
+          }}
+        >
+          Администратор панели
         </h1>
       </header>
       <div style={{ marginTop: "5px" }} className="admin-panel">
         <section className="orders-section">
-          {/* Jami hisobot */}
-          <div style={{
-            marginBottom: "var(--space-4)",
-            padding: "var(--space-4)",
-            backgroundColor: "#f8f9fa",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid #dee2e6"
-          }}>
+          <div
+            style={{
+              marginBottom: "var(--space-4)",
+              padding: "var(--space-4)",
+              backgroundColor: "#f8f9fa",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid #dee2e6",
+            }}
+          >
             <h3 style={{ marginBottom: "var(--space-3)", color: "#495057" }}>
-              Жами ҳисобот 
+              Жами ҳисобот
               {startDate && endDate && (
-                <span style={{ fontSize: "14px", fontWeight: "normal", color: "#6c757d" }}>
+                <span
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "normal",
+                    color: "#6c757d",
+                  }}
+                >
                   ({startDate} дан {endDate} гача)
                 </span>
               )}
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-3)" }}>
-              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
-                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#28a745" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "var(--space-3)",
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "var(--space-3)",
+                  backgroundColor: "white",
+                  borderRadius: "var(--radius-md)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    color: "#28a745",
+                  }}
+                >
                   {summary.ordersCount}
                 </div>
-                <div style={{ color: "#6c757d", fontSize: "14px" }}>Буюртмалар сони</div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                  Буюртмалар сони
+                </div>
               </div>
-              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
-                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "var(--space-3)",
+                  backgroundColor: "white",
+                  borderRadius: "var(--radius-md)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    color: "#007bff",
+                  }}
+                >
                   {formatPrice(summary.totalPrice)}
                 </div>
-                <div style={{ color: "#6c757d", fontSize: "14px" }}>Умумий сотув</div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                  Умумий сотув
+                </div>
               </div>
-              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
-                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#ffc107" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "var(--space-3)",
+                  backgroundColor: "white",
+                  borderRadius: "var(--radius-md)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    color: "#ffc107",
+                  }}
+                >
                   {formatPrice(summary.totalCommission)}
                 </div>
-                <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами комиссия</div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                  Жами комиссия
+                </div>
               </div>
-              <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
-                <div style={{ fontSize: "18px", fontWeight: "bold", color: "#dc3545" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "var(--space-3)",
+                  backgroundColor: "white",
+                  borderRadius: "var(--radius-md)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    color: "#dc3545",
+                  }}
+                >
                   {formatPrice(summary.totalWithCommission)}
                 </div>
-                <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами (комиссия билан)</div>
+                <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                  Жами (комиссия билан)
+                </div>
               </div>
             </div>
           </div>
 
-
-          <div className="clear-orders-form" style={{ marginBottom: "var(--space-4)" }}>
-            <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
+          <div
+            className="clear-orders-form"
+            style={{ marginBottom: "var(--space-4)" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--space-3)",
+                alignItems: "center",
+              }}
+            >
               <div>
                 <label>Бошланғич сана:</label>
                 <input
@@ -333,96 +432,120 @@ export default function AdminPanel() {
                 style={{
                   padding: "var(--space-1) var(--space-4)",
                   marginTop: "25px",
-                  height: "36px"
+                  height: "36px",
                 }}
               >
-                Архивни ўчириш 
+                Арxивни ўчириш
               </button>
             </div>
           </div>
           {orders.length === 0 ? (
             <p style={{ textAlign: "center", marginTop: "var(--space-4)" }}>
-              Буюртмалар йўқ 
+              Буюртмалар йўқ
             </p>
           ) : (
             <>
               <div className="table-container">
-                <table style={{overflow: "hidden"}} className="orders-table">
+                <table style={{ overflow: "hidden" }} className="orders-table">
                   <thead>
                     <tr>
                       <th>Буюртма №</th>
                       <th>Стол/Телефон</th>
-                      <th>Таом</th>
-                      <th>Умумий нархи</th>
-                      <th>Комиссия ({commissionRate}%)</th>
-                      <th>Жами</th>
+                      <th>Бошланғич сана</th>
+                      <th>Жами сумма</th>
                       <th>Ҳолати</th>
-                      <th>Сана</th>
-                      <th>Бажариладиган иши</th>
+                      <th>Амаллар</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOrders.map((order, index) => {
-                      const totalPrice = calculateTotalPrice(order.orderItems);
-                      const commission = totalPrice * (commissionRate / 100);
-                      const totalWithCommission = totalPrice + commission;
                       const isDelivery = !order.tableId;
+                      const totalPrice = calculateTotalPrice(order.orderItems);
+                      const totalWithCommission = totalPrice + totalPrice * (commissionRate / 100);
+                      const table = tableMap[order.tableId];
                       return (
                         <tr key={`${order.id}-${index}`}>
                           <td>№ {order.id}</td>
                           <td>
                             {isDelivery
                               ? order.carrierNumber || "Йўқ"
-                              : tableMap[order.tableId] || "Йўқ"}
+                              : table
+                              ? `${table.name} - ${table.number}`
+                              : "Йўқ"}
                           </td>
-                          <td className="item-column">
-                            {order.orderItems.map((item) => `${item.product.name} (${item.count})`).join(", ")}
+                          <td>
+                            {new Date(order.createdAt).toLocaleString("uz-UZ", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
                           </td>
-                          <td>{formatPrice(totalPrice)}</td>
-                          <td>{formatPrice(commission)}</td>
                           <td>{formatPrice(totalWithCommission)}</td>
                           <td>
                             <span
                               className={`status-badge ${
-                                order.status === "PENDING" ? "status-pending" :
-                                order.status === "COOKING" ? "status-cooking" :
-                                order.status === "READY" ? "status-ready" :
-                                order.status === "COMPLETED" ? "status-completed" :
-                                order.status === "ARCHIVE" ? "status-archive" :
-                                "status-default"
+                                order.status === "PENDING"
+                                  ? "status-pending"
+                                  : order.status === "COOKING"
+                                  ? "status-cooking"
+                                  : order.status === "READY"
+                                  ? "status-ready"
+                                  : order.status === "COMPLETED"
+                                  ? "status-completed"
+                                  : order.status === "ARCHIVE"
+                                  ? "status-archive"
+                                  : "status-default"
                               }`}
                             >
                               {getStatusText(order.status)}
                             </span>
                           </td>
-                          <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                           <td className="actions-column">
                             {order.status !== "ARCHIVE" && (
                               <>
-                                <button className="action-button edit" onClick={() => handleEdit(order)}>
-                                  Таҳрирлаш
+                                <button
+                                  className="action-button edit"
+                                  onClick={() => handleEdit(order)}
+                                  title="Таҳрирлаш"
+                                >
+                                  <Edit size={16} />
                                 </button>
-                                <button className="action-button delete" onClick={() => handleDelete(order.id)}>
-                                  Ўчириш
+                                <button
+                                  className="action-button delete"
+                                  onClick={() => handleDelete(order.id)}
+                                  title="Ўчириш"
+                                >
+                                  <Trash2 size={16} />
                                 </button>
                               </>
                             )}
-                            {order.status === "ARCHIVE" && (
-                              <button className="action-button delete" onClick={() => handleDelete(order.id)}>
-                                Ўчириш
-                              </button>
-                            )}
-                            <button className="action-button view" onClick={() => handleView(order)}>
-                              Кўриш
+                            <button
+                              className="action-button view"
+                              onClick={() => handleView(order)}
+                              title="Кўриш"
+                            >
+                              <Eye size={16} />
                             </button>
                             {order.status === "ARCHIVE" && (
-                              <button
-                                className="order-card__print-btn"
-                                onClick={() => handlePrintOrder(order)}
-                                title="Чоп этиш"
-                              >
-                                <Printer size={16} />
-                              </button>
+                              <>
+                                <button
+                                  className="action-button delete"
+                                  onClick={() => handleDelete(order.id)}
+                                  title="Ўчириш"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                                <button
+                                  className="action-button order-card__print-btn"
+                                  onClick={() => handlePrintOrder(order)}
+                                  title="Чоп этиш"
+                                >
+                                  <Printer size={16} />
+                                </button>
+                              </>
                             )}
                           </td>
                         </tr>
@@ -431,7 +554,6 @@ export default function AdminPanel() {
                   </tbody>
                 </table>
               </div>
-
             </>
           )}
         </section>
@@ -440,34 +562,69 @@ export default function AdminPanel() {
           <div className="modal-overlay">
             <div className="modal">
               <div className="modal-content">
-                <h3>{modalType === "view" ? "Буюртма ҳақида" : "Буюртмани таҳрирлаш"}</h3>
-                <p><b>Буюртма №</b> {selectedOrder.id}</p>
+                <h3>
+                  {modalType === "view" ? "Буюртма ҳақида" : "Буюртмани таҳрирлаш"}
+                </h3>
+                <p>
+                  <b>Буюртма №</b> {selectedOrder.id}
+                </p>
                 <p>
                   <b>Стол/Телефон:</b>{" "}
                   {!selectedOrder.tableId
                     ? selectedOrder.carrierNumber || "Йўқ"
-                    : tableMap[selectedOrder.tableId] || "Йўқ"}
+                    : tableMap[selectedOrder.tableId]
+                    ? `${tableMap[selectedOrder.tableId].name} - ${tableMap[selectedOrder.tableId].number}`
+                    : "Йўқ"}
                 </p>
                 <div>
                   <b>Таомлар:</b>
                   {selectedOrder.orderItems.map((item, index) => (
                     <div
                       key={index}
-                      style={{ display: "flex", alignItems: "center", marginBottom: "var(--space-2)" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: "var(--space-2)",
+                      }}
                     >
                       <img
                         src={`https://alikafecrm.uz${item.product?.image}`}
                         alt={item.product?.name}
-                        style={{ width: "50px", height: "50px", borderRadius: "var(--radius-md)", marginRight: "var(--space-3)" }}
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "var(--radius-md)",
+                          marginRight: "var(--space-3)",
+                        }}
                       />
-                      <span>{item.product.name} ({item.count})</span>
+                      <span>
+                        {item.product.name} ({item.count})
+                      </span>
                     </div>
                   ))}
                 </div>
-                <p><b>Ҳолати:</b> {getStatusText(selectedOrder.status)}</p>
-                <p><b>Умумий нархи:</b> {formatPrice(calculateTotalPrice(selectedOrder.orderItems))}</p>
-                <p><b>Комиссия ({commissionRate}%):</b> {formatPrice(calculateTotalPrice(selectedOrder.orderItems) * (commissionRate / 100))}</p>
-                <p><b>Жами (комиссия билан):</b> {formatPrice(calculateTotalPrice(selectedOrder.orderItems) + calculateTotalPrice(selectedOrder.orderItems) * (commissionRate / 100))}</p>
+                <p>
+                  <b>Ҳолати:</b> {getStatusText(selectedOrder.status)}
+                </p>
+                <p>
+                  <b>Умумий нарxи:</b>{" "}
+                  {formatPrice(calculateTotalPrice(selectedOrder.orderItems))}
+                </p>
+                <p>
+                  <b>Комиссия ({commissionRate}%):</b>{" "}
+                  {formatPrice(
+                    calculateTotalPrice(selectedOrder.orderItems) *
+                      (commissionRate / 100)
+                  )}
+                </p>
+                <p>
+                  <b>Жами (комиссия билан):</b>{" "}
+                  {formatPrice(
+                    calculateTotalPrice(selectedOrder.orderItems) +
+                      calculateTotalPrice(selectedOrder.orderItems) *
+                        (commissionRate / 100)
+                  )}
+                </p>
 
                 {modalType === "edit" && (
                   <div style={{ marginBottom: "var(--space-4)" }}>
@@ -475,7 +632,12 @@ export default function AdminPanel() {
                     <select
                       className="modal-input"
                       value={selectedOrder.status}
-                      onChange={(e) => setSelectedOrder({ ...selectedOrder, status: e.target.value })}
+                      onChange={(e) =>
+                        setSelectedOrder({
+                          ...selectedOrder,
+                          status: e.target.value,
+                        })
+                      }
                       style={{
                         width: "100%",
                         padding: "var(--space-2)",
@@ -494,8 +656,12 @@ export default function AdminPanel() {
                       className="action-button edit"
                       onClick={async () => {
                         try {
-                          await axios.put(`https://alikafecrm.uz/order/${selectedOrder.id}`, { status: selectedOrder.status }, createApiRequest(token));
-                          alert("Буюртма янгилани");
+                          await axios.put(
+                            `https://alikafecrm.uz/order/${selectedOrder.id}`,
+                            { status: selectedOrder.status },
+                            createApiRequest(token)
+                          );
+                          alert("Буюртма янгиланди");
                           setSelectedOrder(null);
                           setModalType("");
                           await fetchData();
@@ -511,7 +677,11 @@ export default function AdminPanel() {
                   </div>
                 )}
 
-                <button className="action-button delete" onClick={() => setSelectedOrder(null)}>
+                <button
+                  style={{ padding: "10px" }}
+                  className="action-button delete"
+                  onClick={() => setSelectedOrder(null)}
+                >
                   Ёпиш
                 </button>
               </div>

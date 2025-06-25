@@ -10,7 +10,6 @@ export default function Stollar() {
   const [selectedTable, setSelectedTable] = useState(null);
   const [filter, setFilter] = useState("Барча");
   const [newStol, setNewStol] = useState({
-    name: "",
     number: "",
     status: "Бўш",
   });
@@ -53,7 +52,7 @@ export default function Stollar() {
                     }))
                 : [],
             }))
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Сортировка по времени создания (новые сверху)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setStollar(mappedData);
           await checkAndUpdateStatuses(mappedData);
         } else {
@@ -101,8 +100,8 @@ export default function Stollar() {
   };
 
   const handleAddStol = async () => {
-    if (!newStol.name || !newStol.number) {
-      setError("Илтимос, стол номи ва рақамини киритинг");
+    if (!newStol.number) {
+      setError("Илтимос, стол рақамини киритинг");
       return;
     }
     if (!["Бўш", "Банд"].includes(newStol.status)) {
@@ -114,7 +113,7 @@ export default function Stollar() {
       const res = await axios.post(
         API_URL,
         {
-          name: newStol.name,
+          name: ".", // Automatically send "." as the name
           number: newStol.number,
           status: statusMapToBackend[newStol.status],
         },
@@ -133,11 +132,12 @@ export default function Stollar() {
         orders: [],
       };
 
-      setStollar((prev) => [
-        newTable,
-        ...prev,
-      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))); // Сортировка после добавления
-      setNewStol({ name: "", number: "", status: "Бўш" });
+      setStollar((prev) =>
+        [newTable, ...prev].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )
+      );
+      setNewStol({ number: "", status: "Бўш" });
       setModal(false);
       setError(null);
     } catch (err) {
@@ -175,8 +175,8 @@ export default function Stollar() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`"${name}" столни ўчиришни хоҳлайсизми?`)) return;
+  const handleDelete = async (id, number) => {
+    if (!window.confirm(`"${number}" столни ўчиришни хоҳлайсизми?`)) return;
 
     try {
       await axios.delete(`${API_URL}/${id}`, {
@@ -270,9 +270,7 @@ export default function Stollar() {
                       >
                         <div className="table-item__header">
                           <div className="table-item__info">
-                            <h3 className="table-title">
-                              {stol.name} - {stol.number}
-                            </h3>
+                            <h3 className="table-title">{stol.number}</h3>
                             <div className="table-item__details">
                               <div className="table-item__stats">
                                 <span className="info-label">Статус:</span>
@@ -308,7 +306,7 @@ export default function Stollar() {
                           )}
                           <button
                             className="action-button danger"
-                            onClick={() => handleDelete(stol.id, stol.name)}
+                            onClick={() => handleDelete(stol.id, stol.number)}
                             title="Ўчириш"
                           >
                             <Trash size={16} />
@@ -352,23 +350,12 @@ export default function Stollar() {
               </div>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Жойлашувини киритинг.</label>
+                  <label className="form-label">Стол рақами</label>
                   <input
                     className="form-control"
                     type="text"
-                    placeholder="Жойлашувини киритинг."
-                    value={newStol.name}
-                    onChange={(e) =>
-                      setNewStol({ ...newStol, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Стол номи</label>
-                  <input
-                    className="form-control"
-                    type="text"
-                    placeholder="Стол номи"
+                    placeholder="Стол рақами"
+                    value={newStol.number}
                     onChange={(e) =>
                       setNewStol({ ...newStol, number: e.target.value })
                     }
@@ -419,7 +406,7 @@ export default function Stollar() {
             >
               <div className="modal-header">
                 <h2 className="modal-title">
-                  {selectedTable.name} учун буюртмалар
+                  {selectedTable.number} учун буюртмалар
                 </h2>
               </div>
               <div className="modal-body">

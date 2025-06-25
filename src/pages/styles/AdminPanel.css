@@ -8,7 +8,40 @@
   /* max-width: 1440px; */
   animation: fadeIn 0.3s ease-out;
 }
+.actions-column {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+}
 
+.action-button {
+  background: none;
+  border: none;
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover {
+  background-color: var(--color-neutral-100);
+  border-radius: var(--radius-sm);
+}
+
+.action-button.edit:hover {
+  color: var(--blue-500);
+}
+
+.action-button.delete:hover {
+  color: var(--red-500);
+}
+
+.action-button.view:hover {
+  color: var(--blue-500);
+}
+
+.action-button.order-card__print-btn:hover {
+  color: var(--green-500);
+}
 .orders-section {
   background-color: white;
   border-radius: var(--radius-xl);

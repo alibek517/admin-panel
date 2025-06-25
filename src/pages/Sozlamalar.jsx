@@ -139,6 +139,12 @@ export default function Sozlamalar() {
   };
 
   const handleStaffSave = async () => {
+    // Validate password length only if a new password is provided
+    if (editingStaff.password && editingStaff.password.length < 8) {
+      alert("Парол камида 8 та белгидан иборат бўлиши керак.");
+      return;
+    }
+
     try {
       const staffData = {
         username: editingStaff.username,
@@ -179,6 +185,13 @@ export default function Sozlamalar() {
       alert("Барча мажбурий майдонларни тўлдиринг.");
       return;
     }
+
+    // Validate password length
+    if (newStaff.password.length < 8) {
+      alert("Парол камида 8 та белгидан иборат бўлиши керак.");
+      return;
+    }
+
     try {
       const staffData = {
         name: newStaff.name,
@@ -333,7 +346,7 @@ export default function Sozlamalar() {
             </button>
             <div className="employees-grid">
               {staff.map((person) => (
-<div
+                <div
                   key={person.id}
                   className="employee-card"
                   data-position={
@@ -427,13 +440,13 @@ export default function Sozlamalar() {
             style={{ width: "200px", height: "50px", fontSize: "20px" }}
             type="number"
             className="form-control"
-            value={commissionPercent}
             onChange={(e) => handleCommissionChange(Number(e.target.value))}
             min="0"
             max="100"
             step="0.1"
             placeholder="Комиссия фоизини киритинг"
           />
+          
           <div className="commission-info">
             <p>Намуна буюртма суммаси: {formatPrice((100000).toFixed(2))}</p>
             <p>
@@ -453,100 +466,231 @@ export default function Sozlamalar() {
           </button>
         </div>
       </section>
+      
+      {/* Updated Add Staff Modal - Full Height with Scroll */}
       {showAddModal && (
         <div
           className={`modal-backdrop ${showAddModal ? "active" : ""}`}
           onClick={() => setShowAddModal(false)}
         >
-          <div  className="modalY fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">Ходим қўшиш</h3>
+          <div 
+            className="modal-fullscreen fade-in" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              height: '100vh',
+              width: '100%',
+              maxWidth: '500px',
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: 'white',
+              borderRadius: '0',
+              overflow: 'hidden'
+            }}
+          >
+            <div 
+              className="modal-header"
+              style={{
+                padding: '20px',
+                borderBottom: '1px solid #e5e5e5',
+                flexShrink: 0,
+                backgroundColor: '#f8f9fa'
+              }}
+            >
+              <h3 className="modal-title" style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                Ходим қўшиш
+              </h3>
             </div>
-            <div className="modal-body1">
-              <div style={{display: "flex", flexDirection: "column"}} className="form-group">
-                <label className="form-label">Лавозим</label>
-                <select
-                  className="form-control"
-                  value={newStaff.role}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, role: e.target.value })
-                  }
-                >
-                  {roleOptions.map((option) => (
-                    <option key={option.id} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Исм</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Исм"
-                  value={newStaff.name}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, name: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Фамилия</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Фамилия"
-                  value={newStaff.surname}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, surname: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Логин</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Логин"
-                  value={newStaff.username}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, username: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Телефон</label>
-                <input
-                  type="tel"
-                  className="form-control"
-                  placeholder="+998 XX XXX XX XX"
-                  value={newStaff.phone}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, phone: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Парол</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="Парол"
-                  value={newStaff.password}
-                  onChange={(e) =>
-                    setNewStaff({ ...newStaff, password: e.target.value })
-                  }
-                />
+            
+            <div 
+              className="modal-body-scrollable"
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px',
+                backgroundColor: 'white'
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Лавозим
+                  </label>
+                  <select
+                    className="form-control"
+                    value={newStaff.role}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, role: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  >
+                    {roleOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Исм
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Исм"
+                    value={newStaff.name}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, name: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Фамилия
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Фамилия"
+                    value={newStaff.surname}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, surname: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Логин
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Логин"
+                    value={newStaff.username}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, username: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Телефон
+                  </label>
+                  <input
+                    type="tel"
+                    className="form-control"
+                    placeholder="+998 XX XXX XX XX"
+                    value={newStaff.phone}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, phone: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Парол
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Парол"
+                    value={newStaff.password}
+                    onChange={(e) =>
+                      setNewStaff({ ...newStaff, password: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-success" onClick={handleAddStaff}>
+            
+            <div 
+              className="modal-footer"
+              style={{
+                padding: '20px',
+                borderTop: '1px solid #e5e5e5',
+                flexShrink: 0,
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+                backgroundColor: '#f8f9fa'
+              }}
+            >
+              <button 
+                className="btn btn-success" 
+                onClick={handleAddStaff}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
                 Қўшиш
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => setShowAddModal(false)}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
               >
                 Бекор қилиш
               </button>
@@ -554,6 +698,8 @@ export default function Sozlamalar() {
           </div>
         </div>
       )}
+      
+      {/* Edit Staff Modal */}
       {editingStaff && (
         <div
           className={`modal-backdrop ${editingStaff ? "active" : ""}`}

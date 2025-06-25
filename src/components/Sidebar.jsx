@@ -13,7 +13,10 @@ import {
   List,
   Truck,
   Eye,
-  EyeOff, // Added Eye and EyeOff icons for password visibility
+  EyeOff,
+  HandPlatter,
+  Pizza,
+  Plus,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -23,20 +26,21 @@ export default function Sidebar() {
   const [showModal, setShowModal] = useState(false);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // Added state for password visibility
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingRoute, setPendingRoute] = useState(null);
 
-  // Авторизация
+  // Check if /AdminPanel is active
+  const isAdminPanelActive = location.pathname.startsWith("/AdminPanel");
+
+  // Authorization logic
   const checkAuth = async () => {
     setErrorMessage("");
-
     try {
       const response = await fetch("https://alikafecrm.uz/user");
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
       const data = await response.json();
       const bigAdmin = data.find((user) => user.role === "BIGADMIN");
       if (
@@ -48,7 +52,7 @@ export default function Sidebar() {
         setShowModal(false);
         setLogin("");
         setPassword("");
-        setShowPassword(false); // Reset password visibility when modal closes
+        setShowPassword(false);
         if (pendingRoute) {
           navigate(pendingRoute);
           setPendingRoute(null);
@@ -66,22 +70,19 @@ export default function Sidebar() {
     }
   };
 
-  // Переход по вкладке
   const handleNavigation = (to) => {
-    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka"];
-
+    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka", "/Stollar","/AdminPanel/ofitsant", "/AdminPanel/ovqat"];
     if (!openRoutes.includes(to) && !isAuthenticated) {
       setPendingRoute(to);
       setShowModal(true);
     } else {
       if (to === "/Chiqish") {
-        setIsAuthenticated(false); // logout
+        setIsAuthenticated(false);
       }
       navigate(to);
     }
   };
 
-  // Toggle password visibility
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -108,19 +109,50 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         <div
+          onClick={() => handleNavigation("/Taomlar")}
+          className={`nav-item ${location.pathname === "/Taomlar" ? "active" : ""}`}
+        >
+          <Coffee size={20} />
+          <span>Столлар</span>
+        </div>
+        <div
+          onClick={() => handleNavigation("/Zakazlar")}
+          className={`nav-item ${location.pathname === "/Zakazlar" ? "active" : ""}`}
+        >
+          <ShoppingBag size={20} />
+          <span>Заказлар</span>
+        </div>
+        <div
           onClick={() => handleNavigation("/AdminPanel")}
-          className={`nav-item ${
-            location.pathname === "/AdminPanel" ? "active" : ""
-          }`}
+          className={`nav-item ${location.pathname === "/AdminPanel" ? "active" : ""}`}
         >
           <Home size={20} />
           <span>Администратор панели</span>
         </div>
+        {/* Conditionally render these items */}
+        <div
+          onClick={() => handleNavigation("/AdminPanel/ofitsant")}
+          className={`nav-item ${
+            location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
+          }`}
+          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px' }}
+        >
+          <HandPlatter size={20} />
+          <span>Отчет по Официантам</span>
+        </div>
+        <div
+          onClick={() => handleNavigation("/AdminPanel/ovqat")}
+          className={`nav-item ${
+            location.pathname === "/AdminPanel/ovqat" ? "active" : ""
+          }`}
+          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px' }}
+        >
+          <Pizza size={20} />
+          <span>Отчет по блюдам</span>
+        </div>
         <div
           onClick={() => handleNavigation("/Asboblar")}
-          className={`nav-item ${
-            location.pathname === "/Asboblar" ? "active" : ""
-          }`}
+          className={`nav-item ${location.pathname === "/Asboblar" ? "active" : ""}`}
         >
           <LineChart size={20} />
           <span>Статистикалар</span>
@@ -135,58 +167,26 @@ export default function Sidebar() {
           <span>Заказ тарихи</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Zakazlar")}
-          className={`nav-item ${
-            location.pathname === "/Zakazlar" ? "active" : ""
-          }`}
-        >
-          <ShoppingBag size={20} />
-          <span>Заказлар</span>
-        </div>
-        <div
           onClick={() => handleNavigation("/Dostavka")}
-          className={`nav-item ${
-            location.pathname === "/Dostavka" ? "active" : ""
-          }`}
+          className={`nav-item ${location.pathname === "/Dostavka" ? "active" : ""}`}
         >
           <Truck size={20} />
           <span>Доставка</span>
         </div>
         <div
-          onClick={() => handleNavigation("/Taomlar")}
-          className={`nav-item ${
-            location.pathname === "/Taomlar" ? "active" : ""
-          }`}
-        >
-          <Coffee size={20} />
-          <span>Таомлар</span>
-        </div>
-        <div
           onClick={() => handleNavigation("/TaomlarSoz")}
-          className={`nav-item ${
-            location.pathname === "/TaomlarSoz" ? "active" : ""
-          }`}
+          className={`nav-item ${location.pathname === "/TaomlarSoz" ? "active" : ""}`}
         >
-          <Settings size={20} />
-          <span>Таомлар созламаси</span>
+          <Plus size={20} />
+          <span>Таом қўшиш</span>
         </div>
         <div
+        style={{display:'none'}}
           onClick={() => handleNavigation("/Stollar")}
-          className={`nav-item ${
-            location.pathname === "/Stollar" ? "active" : ""
-          }`}
+          className={`nav-item ${location.pathname === "/Stollar" ? "active" : ""}`}
         >
           <List size={20} />
           <span>Столлар</span>
-        </div>
-        <div
-          onClick={() => handleNavigation("/Sozlamalar")}
-          className={`nav-item ${
-            location.pathname === "/Sozlamalar" ? "active" : ""
-          }`}
-        >
-          <Settings size={20} />
-          <span>Созламалар</span>
         </div>
         <div
           onClick={() => handleNavigation("/Chiqish")}
@@ -196,6 +196,13 @@ export default function Sidebar() {
         >
           <LogOut size={20} />
           <span>Чиқиш</span>
+        </div>
+        <div
+          onClick={() => handleNavigation("/Sozlamalar")}
+          className={`nav-item ${location.pathname === "/Sozlamalar" ? "active" : ""}`}
+        >
+          <Settings size={20} />
+          <span>Созламалар</span>
         </div>
       </nav>
 
@@ -219,11 +226,11 @@ export default function Sidebar() {
               />
               <div style={{ position: "relative", display: "inline-block" }}>
                 <input
-                  style={{ 
-                    width: "300px", 
-                    height: "50px", 
+                  style={{
+                    width: "300px",
+                    height: "50px",
                     marginBottom: "5px",
-                    paddingRight: "40px" // Add padding for the eye icon
+                    paddingRight: "40px",
                   }}
                   className="modal-input"
                   type={showPassword ? "text" : "password"}
@@ -246,7 +253,7 @@ export default function Sidebar() {
                     padding: "0",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}

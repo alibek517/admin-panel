@@ -386,3 +386,42 @@ img {
   background-color: var(--color-secondary);
   cursor: pointer;
 }
+.tables-section {
+  margin-bottom: var(--spacing-6);
+}
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-4);
+}
+.table-card {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.table-card.band {
+  background-color: var(--color-red-50);
+}
+.table-card.bosh {
+  background-color: var(--color-white);
+}
+.table-actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+.add-table-button {
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: var(--color-success);
+  color: var(--color-white);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+.text-danger {
+  color: var(--color-red);
+  margin-bottom: var(--spacing-3);
+}
