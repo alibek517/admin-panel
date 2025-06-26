@@ -18,7 +18,7 @@
     UserCircle2,
     Menu,
     PrinterIcon,
-    Table2,
+    ArrowLeftRight,
     Trash,
   } from "lucide-react";
   import Receipt from "../components/Receipt.jsx";
@@ -940,7 +940,7 @@
                               }}
                               title="Столни ўзгартириш"
                             >
-                              <Table2 size={20} />
+                              <ArrowLeftRight  size={20} />
                             </button>
                             <button
                               className="order-card__edit-btn"
