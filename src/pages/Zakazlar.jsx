@@ -448,40 +448,54 @@
         alert("Илтимос, стол танланг.");
         return;
       }
-
+    
       try {
         setState((prev) => ({ ...prev, isSaving: true, error: "" }));
         console.log(`Changing table for order ${state.selectedOrderId} to table ${state.selectedTableId}`);
-
+    
         const order = state.orders.find((o) => o.id === state.selectedOrderId);
         const oldTableId = order?.tableId;
-
+    
+        console.log(`Old table ID: ${oldTableId}, New table ID: ${state.selectedTableId}`);
+    
         const payload = {
           tableId: state.selectedTableId,
           status: order.status,
         };
-
+    
         const response = await axios.put(
           `${API_ENDPOINTS.orders}/${state.selectedOrderId}`,
           payload,
           createApiRequest(token)
         );
-
+    
         const updatedOrder = response.data;
-
+    
         if (socket.connected) {
           socket.emit("orderUpdated", updatedOrder);
         }
-
-        await Promise.all([
-          updateTableStatus(state.selectedTableId, "Банд"),
-          oldTableId &&
-            !state.orders.some(
-              (o) => o.tableId === oldTableId && o.id !== state.selectedOrderId
-            ) &&
-            updateTableStatus(oldTableId, "Бўш"),
-        ]);
-
+    
+        // Yangi stolni BUSY qilish
+        await updateTableStatus(state.selectedTableId, "Банд");
+    
+        // Eski stolni tekshirish va bo'sh qilish
+        if (oldTableId && oldTableId !== state.selectedTableId) {
+          // Eski stolda boshqa buyurtmalar borligini tekshirish
+          const hasOtherOrdersOnOldTable = state.orders.some(
+            (o) => o.tableId === oldTableId && 
+                   o.id !== state.selectedOrderId && 
+                   o.status !== "ARCHIVE"
+          );
+          
+          console.log(`Other orders on old table ${oldTableId}: ${hasOtherOrdersOnOldTable}`);
+          
+          // Agar eski stolda boshqa buyurtmalar bo'lmasa, uni bo'sh qilish
+          if (!hasOtherOrdersOnOldTable) {
+            console.log(`Setting old table ${oldTableId} to empty`);
+            await updateTableStatus(oldTableId, "Бўш");
+          }
+        }
+    
         setState((prev) => ({
           ...prev,
           orders: prev.orders.map((o) =>
@@ -498,7 +512,7 @@
           selectedTableId: null,
           isSaving: false,
         }));
-
+    
         console.log(`Table changed successfully for order ${state.selectedOrderId}`);
         alert("Стол муваффақиятли ўзгартирилди!");
       } catch (error) {
@@ -1247,7 +1261,7 @@
                   Буюртма №{state.editingOrder.id} ни таҳрирлаш
                 </h2>
                 <button className="modal__close-btn" onClick={closeEditModal}>
-                  <X size={24} />
+                  <X color="#000" size={24} />
                 </button>
               </div>
 

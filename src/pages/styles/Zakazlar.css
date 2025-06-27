@@ -612,26 +612,6 @@
   margin: 0;
 }
 
-.modal__close-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 18px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.modal__close-btn:hover {
-  background: #dc2626;
-  color: white;
-  transform: scale(1.1);
-}
 
 .modal__content {
   flex: 1;
@@ -1507,27 +1487,6 @@
   font-weight: 700;
   color: #1e293b;
   margin: 0;
-}
-
-.modal__close-btn {
-  width: 28px; /* Smaller button */
-  height: 28px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.modal__close-btn:hover {
-  background: #dc2626;
-  color: white;
-  transform: scale(1.05);
 }
 
 .modal__content {
