@@ -813,12 +813,7 @@ export default function Taomlar() {
         {!isBusyTable && (
           <div className="products-column">
             <div className="category-buttons">
-              <button
-                className={`category-btn ${selectedCategory === "Barchasi" ? "active" : ""}`}
-                onClick={() => setSelectedCategory("Barchasi")}
-              >
-                Barchasi
-              </button>
+              
               {categories.map((category) => (
                 <button
                   key={category.id}

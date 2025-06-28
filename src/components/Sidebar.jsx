@@ -30,8 +30,10 @@ export default function Sidebar() {
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingRoute, setPendingRoute] = useState(null);
 
-  // Check if /AdminPanel is active
-  const isAdminPanelActive = location.pathname.startsWith("/AdminPanel");
+  // Check if /AdminPanel or related routes are active
+  const isAdminPanelActive = location.pathname.startsWith("/AdminPanel") || 
+                             location.pathname === "/ZakazlarTarixi" || 
+                             location.pathname === "/AtchotDastafka";
 
   // Authorization logic
   const checkAuth = async () => {
@@ -71,7 +73,10 @@ export default function Sidebar() {
   };
 
   const handleNavigation = (to) => {
-    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka", "/Stollar","/AdminPanel/ofitsant", "/AdminPanel/ovqat"];
+    // Ochiq route'lar ro'yxati
+    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka"];
+    
+    // Agar route yopiq bo'lsa va foydalanuvchi autentifikatsiya qilmagan bo'lsa
     if (!openRoutes.includes(to) && !isAuthenticated) {
       setPendingRoute(to);
       setShowModal(true);
@@ -109,97 +114,141 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
+        {/* Asosiy menu elementlari */}
         <div
-        style={{cursor:'pointer'}}
+          style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/Taomlar")}
           className={`nav-item ${location.pathname === "/Taomlar" ? "active" : ""}`}
         >
           <Coffee size={20} />
           <span>Столлар</span>
         </div>
+
         <div
-        style={{cursor:'pointer'}}
+          style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/Zakazlar")}
           className={`nav-item ${location.pathname === "/Zakazlar" ? "active" : ""}`}
         >
           <ShoppingBag size={20} />
           <span>Заказлар</span>
         </div>
-        <div
-        style={{cursor:'pointer'}}
 
+        <div
+          style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/AdminPanel")}
           className={`nav-item ${location.pathname === "/AdminPanel" ? "active" : ""}`}
         >
           <Home size={20} />
           <span>Администратор панели</span>
         </div>
-        {/* Conditionally render these items */}
+
+        {/* AdminPanel sub-menu elementlari */}
         <div
           onClick={() => handleNavigation("/AdminPanel/ofitsant")}
           className={`nav-item ${
             location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
           }`}
-          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px',cursor:'pointer' }}
+          style={{ 
+            display: isAdminPanelActive ? "flex" : "none",
+            marginLeft:'15px',
+            fontSize:'15px',
+            cursor:'pointer' 
+          }}
         >
           <HandPlatter size={20} />
           <span>Отчет по Официантам</span>
         </div>
+
         <div
           onClick={() => handleNavigation("/AdminPanel/ovqat")}
           className={`nav-item ${
             location.pathname === "/AdminPanel/ovqat" ? "active" : ""
           }`}
-          style={{ display: isAdminPanelActive ? "flex" : "none",marginLeft:'15px',fontSize:'15px',cursor:'pointer' }}
+          style={{ 
+            display: isAdminPanelActive ? "flex" : "none",
+            marginLeft:'15px',
+            fontSize:'15px',
+            cursor:'pointer' 
+          }}
         >
           <Pizza size={20} />
           <span>Отчет по блюдам</span>
         </div>
+
+        {/* Отчет по кассе - AdminPanel sub-menu */}
         <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/Asboblar")}
+          onClick={() => handleNavigation("/ZakazlarTarixi")}
+          className={`nav-item ${
+            location.pathname === "/ZakazlarTarixi" ? "active" : ""
+          }`}
+          style={{ 
+            display: isAdminPanelActive ? "flex" : "none",
+            marginLeft:'15px',
+            fontSize:'15px',
+            cursor:'pointer' 
+          }}
+        >
+          <FileText size={20} />
+          <span>Отчет по кассе</span>
+        </div>
+
+        {/* Отчет по доставка - AdminPanel sub-menu */}
+        <div
+          onClick={() => handleNavigation("/AtchotDastafka")}
+          className={`nav-item ${
+            location.pathname === "/AtchotDastafka" ? "active" : ""
+          }`}
+          style={{ 
+            display: isAdminPanelActive ? "flex" : "none", 
+            marginLeft:'15px',
+            fontSize:'15px',
+            cursor:'pointer' 
+          }}
+        >
+          <Truck size={20} />
+          <span>Отчет по доставка</span>
+        </div>
+
+        {/* Qolgan menu elementlari */}
+        <div
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/Asboblar")}
           className={`nav-item ${location.pathname === "/Asboblar" ? "active" : ""}`}
         >
           <LineChart size={20} />
           <span>Статистикалар</span>
         </div>
+        
         <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/ZakazlarTarixi")}
-          className={`nav-item ${
-            location.pathname === "/ZakazlarTarixi" ? "active" : ""
-          }`}
-        >
-          <FileText size={20} />
-          <span>Заказ тарихи</span>
-        </div>
-        <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/Dostavka")}
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/Dostavka")}
           className={`nav-item ${location.pathname === "/Dostavka" ? "active" : ""}`}
         >
           <Truck size={20} />
           <span>Доставка</span>
         </div>
+
         <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/TaomlarSoz")}
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/TaomlarSoz")}
           className={`nav-item ${location.pathname === "/TaomlarSoz" ? "active" : ""}`}
         >
           <Plus size={20} />
-          <span>Таом қўшиш</span>
+          <span>Меню</span>
         </div>
+
         <div
-        style={{display:'none'}}
+          style={{display:'none'}}
           onClick={() => handleNavigation("/Stollar")}
           className={`nav-item ${location.pathname === "/Stollar" ? "active" : ""}`}
         >
           <List size={20} />
           <span>Столлар</span>
         </div>
+
         <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/Chiqish")}
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/Chiqish")}
           className={`nav-item logout ${
             location.pathname === "/Chiqish" ? "active" : ""
           }`}
@@ -207,16 +256,18 @@ export default function Sidebar() {
           <LogOut size={20} />
           <span>Чиқиш</span>
         </div>
+
         <div
-        style={{cursor:'pointer'}}
-        onClick={() => handleNavigation("/Sozlamalar")}
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/Sozlamalar")}
           className={`nav-item ${location.pathname === "/Sozlamalar" ? "active" : ""}`}
         >
           <Settings size={20} />
-          <span>Созламалар</span>
+          <span>Настройки</span>
         </div>
       </nav>
 
+      {/* Modal oyna */}
       {showModal && (
         <>
           <div className="overlay" onClick={() => setShowModal(false)}></div>

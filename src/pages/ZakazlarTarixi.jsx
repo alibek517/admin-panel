@@ -64,6 +64,36 @@ export default function ZakazTarixi() {
     );
   };
 
+  // Calculate summary for orders
+  const calculateSummary = () => {
+    const filteredOrders = getFilteredOrders();
+    let totalPrice = 0;
+    let totalCommission = 0;
+    let totalWithCommission = 0;
+
+    filteredOrders.forEach((order) => {
+      const orderTotal = calculateTotalPrice(order.orderItems);
+      const orderCommission = orderTotal * (commissionRate / 100);
+      totalPrice += orderTotal;
+      totalCommission += orderCommission;
+      totalWithCommission += orderTotal + orderCommission;
+    });
+
+    return {
+      totalPrice,
+      totalCommission,
+      totalWithCommission,
+      ordersCount: filteredOrders.length,
+    };
+  };
+
+  // Format price with spaces for thousands
+  const formatPrice = (price) => {
+    const priceStr = price.toString();
+    const formatted = priceStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return `${formatted} сўм`;
+  };
+
   // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
@@ -112,42 +142,47 @@ export default function ZakazTarixi() {
       ...map,
       [table.id]: {
         number: table.number || "Unknown",
-        name: table.name || "Номсиз", // Fallback if name is missing
+        name: table.name || "Номсиз",
       },
     }),
     {}
   );
 
   // Filter and sort orders
-  const filteredHistory = orders
-    .filter((order) => {
-      const matchesFilterStatus =
-        activeFilter === "ALL" || order.status === activeFilter;
-      const matchesSearchInput =
-        order.id.toString().includes(searchInput) ||
-        (order.tableId &&
-          (tableMap[order.tableId]?.number?.toString().includes(searchInput) ||
-            tableMap[order.tableId]?.name?.toLowerCase().includes(searchInput.toLowerCase()))) ||
-        (order.carrierNumber && order.carrierNumber.toLowerCase().includes(searchInput.toLowerCase())) ||
-        false;
-      const orderDate = new Date(order.createdAt);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
-      const matchesDateRange =
-        (!start || orderDate >= start) &&
-        (!end || orderDate <= new Date(end).setHours(23, 59, 59, 999));
-      return matchesFilterStatus && matchesSearchInput && matchesDateRange;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return sortAscending ? dateA - dateB : dateB - dateA;
-    });
+  const getFilteredOrders = () => {
+    return orders
+      .filter((order) => {
+        const matchesFilterStatus =
+          activeFilter === "ALL" || order.status === activeFilter;
+        const matchesSearchInput =
+          order.id.toString().includes(searchInput) ||
+          (order.tableId &&
+            (tableMap[order.tableId]?.number?.toString().includes(searchInput) ||
+              tableMap[order.tableId]?.name?.toLowerCase().includes(searchInput.toLowerCase()))) ||
+          (order.carrierNumber && order.carrierNumber.toLowerCase().includes(searchInput.toLowerCase())) ||
+          false;
+        const orderDate = new Date(order.createdAt);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        const matchesDateRange =
+          (!start || orderDate >= start) &&
+          (!end || orderDate <= new Date(end).setHours(23, 59, 59, 999));
+        return matchesFilterStatus && matchesSearchInput && matchesDateRange;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        return sortAscending ? dateA - dateB : dateB - dateA;
+      });
+  };
 
   // Toggle food items visibility
   const toggleFoodItems = (orderId) => {
     setOpenFoodItems(openFoodItems === orderId ? null : orderId);
   };
+
+  const filteredHistory = getFilteredOrders();
+  const summary = calculateSummary();
 
   return (
     <div className="app-container">
@@ -159,6 +194,123 @@ export default function ZakazTarixi() {
           <div className="spinner" />
         ) : (
           <div>
+            <div
+              style={{
+                marginBottom: "var(--space-4)",
+                padding: "var(--space-4)",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid #dee2e6",
+              }}
+            >
+              <h3 style={{ marginBottom: "var(--space-3)", color: "#495057" }}>
+                Жами ҳисобот
+                {startDate && endDate && (
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "normal",
+                      color: "#6c757d",
+                    }}
+                  >
+                    ({startDate} дан {endDate} гача)
+                  </span>
+                )}
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "var(--space-3)",
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "var(--space-3)",
+                    backgroundColor: "white",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "bold",
+                      color: "#28a745",
+                    }}
+                  >
+                    {summary.ordersCount}
+                  </div>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    Буюртмалар сони
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "var(--space-3)",
+                    backgroundColor: "white",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      color: "#007bff",
+                    }}
+                  >
+                    {formatPrice(summary.totalPrice)}
+                  </div>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    Умумий сотув
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "var(--space-3)",
+                    backgroundColor: "white",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      color: "#ffc107",
+                    }}
+                  >
+                    {formatPrice(summary.totalCommission)}
+                  </div>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    Жами комиссия
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "var(--space-3)",
+                    backgroundColor: "white",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      color: "#dc3545",
+                    }}
+                  >
+                    {formatPrice(summary.totalWithCommission)}
+                  </div>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    Жами (комиссия билан)
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="controls">
               <div className="search-container">
                 <div className="search-input">
@@ -242,9 +394,9 @@ export default function ZakazTarixi() {
                               ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
                               : "Йўқ"}
                         </td>
-                        <td>{totalPrice.toLocaleString("uz-UZ")} сўм</td>
-                        <td>{commission.toLocaleString("uz-UZ")} сўм</td>
-                        <td>{totalWithCommission.toLocaleString("uz-UZ")} сўм</td>
+                        <td>{formatPrice(totalPrice)}</td>
+                        <td>{formatPrice(commission)}</td>
+                        <td>{formatPrice(totalWithCommission)}</td>
                         <td>
                           {order.createdAt
                             ? new Date(order.createdAt).toLocaleString("uz-UZ")
