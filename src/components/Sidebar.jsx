@@ -17,6 +17,7 @@ import {
   HandPlatter,
   Pizza,
   Plus,
+  Rocket,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -74,7 +75,7 @@ export default function Sidebar() {
 
   const handleNavigation = (to) => {
     // Ochiq route'lar ro'yxati
-    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka"];
+    const openRoutes = ["/Zakazlar", "/Taomlar", "/Chiqish", "/Dostavka","/ishniBoshlash"];
     
     // Agar route yopiq bo'lsa va foydalanuvchi autentifikatsiya qilmagan bo'lsa
     if (!openRoutes.includes(to) && !isAuthenticated) {
@@ -227,7 +228,14 @@ export default function Sidebar() {
           <Truck size={20} />
           <span>Доставка</span>
         </div>
-
+        <div
+          style={{cursor:'pointer'}}
+          onClick={() => handleNavigation("/ishniBoshlash")}
+          className={`nav-item ${location.pathname === "/ishniBoshlash" ? "active" : ""}`}
+        >
+          <Rocket size={20} />
+          <span>Иш фаолияти</span>
+        </div>
         <div
           style={{cursor:'pointer'}}
           onClick={() => handleNavigation("/TaomlarSoz")}

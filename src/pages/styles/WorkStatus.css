@@ -1,0 +1,433 @@
+/* Container for the entire component */
+.work-status-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: background 0.5s ease;
+}
+
+/* Day and night themes */
+.day-theme {
+  background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+}
+
+.night-theme {
+  background: linear-gradient(180deg, #1C2526 0%, #3B4371 100%);
+}
+
+/* Content container for buttons and text */
+.content-container {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Error message styling */
+.error-message {
+  color: #F44336;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-size: 16px;
+  text-align: center;
+}
+
+/* Title styling */
+.status-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 32px;
+  color: #FFFFFF;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Button group styling */
+.button-group {
+  display: flex;
+  gap: 24px;
+}
+
+/* Base button styles */
+.action-button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: auto; /* Ensure buttons are clickable */
+}
+
+/* Start button styles */
+.start-button {
+  background: linear-gradient(to right, #4CAF50, #66BB6A);
+}
+
+.start-button:hover:not(.disabled) {
+  background: linear-gradient(to right, #43A047, #5CB85C);
+  transform: scale(1.1);
+}
+
+/* End button styles */
+.end-button {
+  background: linear-gradient(to right, #F44336, #EF5350);
+}
+
+.end-button:hover:not(.disabled) {
+  background: linear-gradient(to right, #D32F2F, #E53935);
+  transform: scale(1.1);
+}
+
+/* Disabled button styles */
+.action-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Background elements for animations */
+.background-elements {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Sun styling */
+.sun {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, #FFD700 40%, #FFA500 70%);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  animation: sunMove 20s linear infinite;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+}
+
+@keyframes sunMove {
+  0% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 20px); }
+  100% { transform: translate(-50%, 0); }
+}
+
+/* Cloud styling */
+.cloud {
+  position: absolute;
+  background: #FFFFFF;
+  border-radius: 50px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  opacity: 0.8;
+}
+
+.cloud-1 {
+  width: 150px;
+  height: 50px;
+  top: 30%;
+  left: 10%;
+  animation: cloudMove 30s linear infinite;
+}
+
+.cloud-2 {
+  width: 100px;
+  height: 40px;
+  top: 40%;
+  left: 50%;
+  animation: cloudMove 25s linear infinite;
+}
+
+.cloud-3 {
+  width: 120px;
+  height: 45px;
+  top: 35%;
+  left: 80%;
+  animation: cloudMove 35s linear infinite;
+}
+
+@keyframes cloudMove {
+  0% { transform: translateX(-200px); }
+  100% { transform: translateX(2000px); }
+}
+
+/* Moon styling */
+.moon {
+  position:  absolute;
+  top: 20%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, #F4F4F8 40%, #A0A0A8 70%);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  animation: moonGlow 10s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(244, 244, 248, 0.8);
+}
+
+@keyframes moonGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(244, 244, 248, 0.8); }
+  50% { box-shadow: 0 0 40px rgba(244, 244, 248, 1); }
+}
+
+/* Star styling */
+.star {
+  position: absolute;
+  background: #FFFFFF;
+  border-radius: 50%;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.star-1 {
+    width: 4px;
+    height: 4px;
+    top: 25%;
+    left: 30%;
+    animation-delay: 0s;
+  }
+  
+  .star-2 {
+    width: 3px;
+    height: 3px;
+    top: 15%;
+    left: 60%;
+    animation-delay: 1s;
+  }
+  
+  .star-3 {
+    width: 5px;
+    height: 5px;
+    top: 30%;
+    left: 80%;
+    animation-delay: 2s;
+  }
+  
+  .star-4 {
+    width: 5px;
+    height: 5px;
+    top: 40%;
+    left: 20%;
+    animation-delay: 0.5s;
+  }
+  
+  .star-5 {
+    width: 4px;
+    height: 4px;
+    top: 10%;
+    left: 45%;
+    animation-delay: 1.5s;
+  }
+  
+  .star-6 {
+    width: 3px;
+    height: 3px;
+    top: 50%;
+    left: 70%;
+    animation-delay: 0.8s;
+  }
+  
+  .star-7 {
+    width: 6px;
+    height: 6px;
+    top: 20%;
+    left: 15%;
+    animation-delay: 2.2s;
+  }
+  
+  .star-8 {
+    width: 4px;
+    height: 4px;
+    top: 35%;
+    left: 55%;
+    animation-delay: 1.2s;
+  }
+  
+  .star-9 {
+    width: 5px;
+    height: 5px;
+    top: 60%;
+    left: 25%;
+    animation-delay: 0.3s;
+  }
+  
+  .star-10 {
+    width: 3px;
+    height: 3px;
+    top: 5%;
+    left: 75%;
+    animation-delay: 1.8s;
+  }
+  
+  .star-11 {
+    width: 4px;
+    height: 4px;
+    top: 45%;
+    left: 35%;
+    animation-delay: 0.6s;
+  }
+  
+  .star-12 {
+    width: 5px;
+    height: 5px;
+    top: 70%;
+    left: 65%;
+    animation-delay: 2.5s;
+  }
+  
+  .star-13 {
+    width: 3px;
+    height: 3px;
+    top: 25%;
+    left: 10%;
+    animation-delay: 1.1s;
+  }
+  
+  .star-14 {
+    width: 6px;
+    height: 6px;
+    top: 55%;
+    left: 85%;
+    animation-delay: 0.9s;
+  }
+  
+  .star-15 {
+    width: 4px;
+    height: 4px;
+    top: 15%;
+    left: 50%;
+    animation-delay: 1.7s;
+  }
+  
+  .star-16 {
+    width: 5px;
+    height: 5px;
+    top: 65%;
+    left: 30%;
+    animation-delay: 0.4s;
+  }
+  
+  .star-17 {
+    width: 3px;
+    height: 3px;
+    top: 35%;
+    left: 90%;
+    animation-delay: 2.1s;
+  }
+  
+  .star-18 {
+    width: 4px;
+    height: 4px;
+    top: 80%;
+    left: 40%;
+    animation-delay: 0.7s;
+  }
+  
+  .star-19 {
+    width: 5px;
+    height: 5px;
+    top: 20%;
+    left: 70%;
+    animation-delay: 1.4s;
+  }
+  
+  .star-20 {
+    width: 6px;
+    height: 6px;
+    top: 50%;
+    left: 15%;
+    animation-delay: 2.3s;
+  }
+  
+  .star-21 {
+    width: 3px;
+    height: 3px;
+    top: 10%;
+    left: 80%;
+    animation-delay: 0.2s;
+  }
+  
+  .star-22 {
+    width: 4px;
+    height: 4px;
+    top: 70%;
+    left: 20%;
+    animation-delay: 1.9s;
+  }
+  
+  .star-23 {
+    width: 5px;
+    height: 5px;
+    top: 40%;
+    left: 60%;
+    animation-delay: 0.5s;
+  }
+  
+  .star-24 {
+    width: 3px;
+    height: 3px;
+    top: 25%;
+    left: 45%;
+    animation-delay: 1.6s;
+  }
+  
+  .star-25 {
+    width: 6px;
+    height: 6px;
+    top: 60%;
+    left: 75%;
+    animation-delay: 2.4s;
+  }
+  
+  .star-26 {
+    width: 4px;
+    height: 4px;
+    top: 30%;
+    left: 25%;
+    animation-delay: 0.8s;
+  }
+  
+  .star-27 {
+    width: 5px;
+    height: 5px;
+    top: 15%;
+    left: 85%;
+    animation-delay: 1.3s;
+  }
+  
+  .star-28 {
+    width: 3px;
+    height: 3px;
+    top: 50%;
+    left: 50%;
+    animation-delay: 0.6s;
+  }
+  
+  .star-29 {
+    width: 4px;
+    height: 4px;
+    top: 75%;
+    left: 35%;
+    animation-delay: 2s;
+  }
+  
+  .star-30 {
+    width: 5px;
+    height: 5px;
+    top: 5%;
+    left: 65%;
+    animation-delay: 1.5s;
+  }
+  
+  
+  
+@keyframes twinkle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
