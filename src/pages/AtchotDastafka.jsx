@@ -3,10 +3,16 @@ import axios from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
 
 const DeliveryReport = () => {
+  // Function to get today's date in yyyy-mm-dd format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Returns yyyy-mm-dd
+  };
+
   const [report, setReport] = useState([]);
   const [error, setError] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayDate()); // Set default to today
+  const [endDate, setEndDate] = useState(getTodayDate()); // Set default to today
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [expandedOrders, setExpandedOrders] = useState({});
 
@@ -24,7 +30,17 @@ const DeliveryReport = () => {
           order => order.carrierNumber && order.carrierNumber !== 'null'
         );
         setReport(orders);
-        setFilteredOrders(orders);
+        // Apply initial filter for today's date
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const filtered = orders.filter(order => {
+          const createdAt = new Date(order.createdAt);
+          return createdAt >= start && createdAt <= end;
+        });
+        setFilteredOrders(filtered);
       } catch (error) {
         if (error.response) {
           setError(`APIдан маълумот олишда хато: ${error.response.status}`);
@@ -59,8 +75,8 @@ const DeliveryReport = () => {
   };
 
   const handleClear = () => {
-    setStartDate('');
-    setEndDate('');
+    setStartDate(getTodayDate()); // Reset to today
+    setEndDate(getTodayDate()); // Reset to today
     setFilteredOrders(report);
   };
 
@@ -274,6 +290,7 @@ const DeliveryReport = () => {
           placeholder="Тугаш сана"
         />
         <button onClick={handleFilter}>Қидириш</button>
+        <button onClick={handleClear}>Тозалаш</button>
         <button onClick={handleDeleteRange}>Ўчириш</button>
       </div>
 
@@ -365,19 +382,19 @@ const DeliveryReport = () => {
         }
 
         .filter-section button:nth-child(4) {
-          background: #dc3545;
+          background: #6c757d;
         }
 
         .filter-section button:nth-child(4):hover {
+          background: #5a6268;
+        }
+
+        .filter-section button:nth-child(5) {
+          background: #dc3545;
+        }
+
+        .filter-section button:nth-child(5):hover {
           background: #b02a37;
-        }
-
-        .filter-section button:last-child {
-          background: #ff6b6b;
-        }
-
-        .filter-section button:last-child:hover {
-          background: #d44a4a;
         }
 
         .orders-list {
