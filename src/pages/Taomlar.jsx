@@ -17,7 +17,7 @@ import {
 import ModalBasket from "../components/modal/modal-basket";
 import Receipt from "../components/Receipt.jsx";
 
-  const handleApiError = (error, defaultMessage) => {
+const handleApiError = (error, defaultMessage) => {
   console.error(defaultMessage, {
     message: error.message,
     status: error.response?.status,
@@ -68,14 +68,12 @@ const STATUS_LABELS = {
   ARCHIVE: "Архиви буюртма",
 };
 
-// Normalize table status
 const normalizeStatus = (status) => {
   if (!status) return "empty";
   const normalized = status.toLowerCase().trim();
   return normalized === "busy" || normalized === "band" ? "busy" : "empty";
 };
 
-// Reusable Modal Component
 const Modal = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
   return (
@@ -93,7 +91,6 @@ const Modal = ({ isOpen, onClose, children, title }) => {
   );
 };
 
-// Add Place Modal
 const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   const [placeName, setPlaceName] = useState("");
   const handleSubmit = (e) => {
@@ -134,7 +131,6 @@ const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-// Add Table Modal
 const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   const [selectedPlace, setSelectedPlace] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -228,7 +224,6 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   );
 };
 
-// Edit Order Modal
 const EditOrderModal = ({
   isOpen,
   onClose,
@@ -514,7 +509,6 @@ const EditOrderModal = ({
   );
 };
 
-// Change Table Modal
 const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId, isSaving }) => {
   const [selectedTableId, setSelectedTableId] = useState("");
   const [selectedPlace, setSelectedPlace] = useState("");
@@ -599,7 +593,6 @@ const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId,
   );
 };
 
-// Delete Order Confirmation Modal
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Буюртмани ўчириш">
@@ -621,7 +614,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   );
 };
 
-// Delete Table Modal
 const DeleteTableModal = ({ isOpen, onClose, onConfirm, table }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Столни ўчириш">
@@ -693,6 +685,7 @@ export default function Taomlar() {
       0
     );
   }, []);
+
   const calculateTotalPricee = useCallback((orderItems) => {
     return orderItems.reduce(
       (sum, item) =>
@@ -718,7 +711,7 @@ export default function Taomlar() {
       } catch (error) {
         console.error("Uslug update error:", error);
         setError(
-          console.log(`Хизмат нархини ўзгартиришда хатолик: ${error.response?.data?.message || error.message}`),
+          console.log(`Хизмат нархини ўзгартиришда хатолик: ${error.response?.data?.message || error.message}`)
           
         );
       }
@@ -810,6 +803,7 @@ export default function Taomlar() {
         setCart([]);
         setSelectedTableId(null);
         setSelectedTableOrder(null);
+        setUslug(commissionPercent.toString()); // Reset uslug to default commissionPercent
         setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
       } catch (error) {
         console.error("Print and pay error:", error);
@@ -874,102 +868,102 @@ export default function Taomlar() {
     }
   }, [selectedTableOrder, token, tables]);
 
-const handleChangeTable = useCallback(
-  async (newTableId) => {
-    if (!selectedTableOrder?.id || !newTableId) {
-      setError("Стол ёки буюртма танланмаган.");
-      console.error("No order or table selected for table change", {
-        orderId: selectedTableOrder?.id,
-        newTableId,
-      });
-      return;
-    }
-    try {
-      setIsSaving(true);
-      const oldTableId = selectedTableOrder.tableId;
-      const payload = {
-        tableId: newTableId,
-        status: selectedTableOrder.status,
-        userId: selectedTableOrder.userId,
-        uslug: parseFloat(uslug) || null,
-      };
-      const response = await axios.put(
-        `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const updatedOrder = response.data;
-      if (socket.connected) {
-        socket.emit("orderUpdated", updatedOrder);
-      } else {
-        console.warn("Socket not connected, orderUpdated event not emitted");
+  const handleChangeTable = useCallback(
+    async (newTableId) => {
+      if (!selectedTableOrder?.id || !newTableId) {
+        setError("Стол ёки буюртма танланмаган.");
+        console.error("No order or table selected for table change", {
+          orderId: selectedTableOrder?.id,
+          newTableId,
+        });
+        return;
       }
-      await axios.patch(
-        `${API_ENDPOINTS.tables}/${newTableId}`,
-        { status: "busy" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (oldTableId && oldTableId !== newTableId) {
-        const hasOtherOrders = tables.some(
-          (t) =>
-            t.id === oldTableId &&
-            t.orders?.some(
-              (o) => o.id !== selectedTableOrder.id && o.status !== "ARCHIVE"
-            )
+      try {
+        setIsSaving(true);
+        const oldTableId = selectedTableOrder.tableId;
+        const payload = {
+          tableId: newTableId,
+          status: selectedTableOrder.status,
+          userId: selectedTableOrder.userId,
+          uslug: parseFloat(uslug) || null,
+        };
+        const response = await axios.put(
+          `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (!hasOtherOrders) {
-          await axios.patch(
-            `${API_ENDPOINTS.tables}/${oldTableId}`,
-            { status: "empty" },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+        const updatedOrder = response.data;
+        if (socket.connected) {
+          socket.emit("orderUpdated", updatedOrder);
+        } else {
+          console.warn("Socket not connected, orderUpdated event not emitted");
         }
+        await axios.patch(
+          `${API_ENDPOINTS.tables}/${newTableId}`,
+          { status: "busy" },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (oldTableId && oldTableId !== newTableId) {
+          const hasOtherOrders = tables.some(
+            (t) =>
+              t.id === oldTableId &&
+              t.orders?.some(
+                (o) => o.id !== selectedTableOrder.id && o.status !== "ARCHIVE"
+              )
+          );
+          if (!hasOtherOrders) {
+            await axios.patch(
+              `${API_ENDPOINTS.tables}/${oldTableId}`,
+              { status: "empty" },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
+        }
+        setTables((prev) =>
+          prev.map((table) => {
+            if (table.id === newTableId) {
+              return { ...table, status: "busy", orders: [...(table.orders || []), updatedOrder] };
+            }
+            if (table.id === oldTableId && oldTableId !== newTableId) {
+              const updatedOrders = table.orders?.filter((o) => o.id !== selectedTableOrder.id) || [];
+              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+              return { ...table, orders: updatedOrders, status: hasActiveOrders ? "busy" : "empty" };
+            }
+            return table;
+          })
+        );
+        setSelectedTableId(newTableId);
+        setSelectedTableOrder({
+          ...updatedOrder,
+          table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "Йўқ" },
+          totalPrice: calculateTotalPrice(updatedOrder.orderItems),
+          uslug: parseFloat(uslug) || null,
+        });
+        setCart(
+          updatedOrder.orderItems?.map((item) => ({
+            id: item.productId || item.product?.id || 0,
+            name: item.product?.name || "Номаълум таом",
+            price: parseFloat(item.product?.price) || 0,
+            count: item.count || 0,
+            status: item.status || "PENDING",
+          })) || []
+        );
+        setSuccessMsg("Стол муваффақиятли ўзгартирилди!");
+        console.log(
+          `Table changed for order ${selectedTableOrder.id} to table ${newTableId}`
+        );
+      } catch (error) {
+        console.error("Change table error:", error);
+        setError(
+          handleApiError(error, "Стол ўзгартиришда хатолик.")
+        );
+      } finally {
+        setIsSaving(false);
+        setShowChangeTableModal(false);
       }
-      setTables((prev) =>
-        prev.map((table) => {
-          if (table.id === newTableId) {
-            return { ...table, status: "busy", orders: [...(table.orders || []), updatedOrder] };
-          }
-          if (table.id === oldTableId && oldTableId !== newTableId) {
-            const updatedOrders = table.orders?.filter((o) => o.id !== selectedTableOrder.id) || [];
-            const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-            return { ...table, orders: updatedOrders, status: hasActiveOrders ? "busy" : "empty" };
-          }
-          return table;
-        })
-      );
-      setSelectedTableId(newTableId);
-      setSelectedTableOrder({
-        ...updatedOrder,
-        table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "Йўқ" },
-        totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-        uslug: parseFloat(uslug) || null,
-      });
-      setCart(
-        updatedOrder.orderItems?.map((item) => ({
-          id: item.productId || item.product?.id || 0,
-          name: item.product?.name || "Номаълум таом",
-          price: parseFloat(item.product?.price) || 0,
-          count: item.count || 0,
-          status: item.status || "PENDING",
-        })) || []
-      );
-      setSuccessMsg("Стол муваффақиятли ўзгартирилди!");
-      console.log(
-        `Table changed for order ${selectedTableOrder.id} to table ${newTableId}`
-      );
-    } catch (error) {
-      console.error("Change table error:", error);
-      setError(
-        handleApiError(error, "Стол ўзгартиришда хатолик.")
-      );
-    } finally {
-      setIsSaving(false);
-      setShowChangeTableModal(false);
-    }
-  },
-  [selectedTableOrder, token, tables, uslug, calculateTotalPrice]
-);
+    },
+    [selectedTableOrder, token, tables, uslug, calculateTotalPrice]
+  );
 
   const handleAdminCodeChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
@@ -1116,62 +1110,62 @@ const handleChangeTable = useCallback(
     return () => controller.abort();
   }, [token]);
 
-useEffect(() => {
-  if (!selectedTableId) {
-    setSelectedTableOrder(null);
-    setCart([]);
-    setError(null);
-    console.log("No table selected, resetting order and cart");
-    return;
-  }
+  useEffect(() => {
+    if (!selectedTableId) {
+      setSelectedTableOrder(null);
+      setCart([]);
+      setError(null);
+      console.log("No table selected, resetting order and cart");
+      return;
+    }
 
-  const selectedTable = tables.find((t) => t?.id === selectedTableId);
-  if (!selectedTable) {
-    setSelectedTableOrder(null);
-    setCart([]);
-    setError("Стол топилмади.");
-    console.error("Selected table not found", { selectedTableId });
-    return;
-  }
+    const selectedTable = tables.find((t) => t?.id === selectedTableId);
+    if (!selectedTable) {
+      setSelectedTableOrder(null);
+      setCart([]);
+      setError("Стол топилмади.");
+      console.error("Selected table not found", { selectedTableId });
+      return;
+    }
 
-  if (selectedTable.status === "busy" && selectedTable.orders?.length > 0) {
-    const activeOrders = selectedTable.orders.filter(
-      (order) => order.status !== "ARCHIVE"
-    );
-    if (activeOrders.length > 0) {
-      const latestOrder = activeOrders.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      )[0];
-      const totalPrice = calculateTotalPrice(latestOrder.orderItems);
-      setSelectedTableOrder({ ...latestOrder, totalPrice });
-      setCart(
-        latestOrder.orderItems?.map((item) => ({
-          id: item.productId || item.product?.id || 0,
-          name: item.product?.name || "Номаълум таом",
-          price: parseFloat(item.product?.price) || 0,
-          count: item.count || 0,
-          status: item.status || "PENDING",
-        })) || []
+    if (selectedTable.status === "busy" && selectedTable.orders?.length > 0) {
+      const activeOrders = selectedTable.orders.filter(
+        (order) => order.status !== "ARCHIVE"
       );
-      console.log("Selected table order updated", {
-        orderId: latestOrder.id,
-        items: latestOrder.orderItems.length,
-      });
+      if (activeOrders.length > 0) {
+        const latestOrder = activeOrders.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )[0];
+        const totalPrice = calculateTotalPrice(latestOrder.orderItems);
+        setSelectedTableOrder({ ...latestOrder, totalPrice });
+        setCart(
+          latestOrder.orderItems?.map((item) => ({
+            id: item.productId || item.product?.id || 0,
+            name: item.product?.name || "Номаълум таом",
+            price: parseFloat(item.product?.price) || 0,
+            count: item.count || 0,
+            status: item.status || "PENDING",
+          })) || []
+        );
+        console.log("Selected table order updated", {
+          orderId: latestOrder.id,
+          items: latestOrder.orderItems.length,
+        });
+      } else {
+        setSelectedTableOrder(null);
+        setCart([]);
+        setError("Актив буюртма топилмади.");
+        console.log("No active orders for selected table", { tableId: selectedTableId });
+      }
     } else {
       setSelectedTableOrder(null);
       setCart([]);
-      setError("Актив буюртма топилмади.");
-      console.log("No active orders for selected table", { tableId: selectedTableId });
+      setError(null);
+      console.log("Selected table is empty or has no orders", {
+        tableId: selectedTableId,
+      });
     }
-  } else {
-    setSelectedTableOrder(null);
-    setCart([]);
-    setError(null);
-    console.log("Selected table is empty or has no orders", {
-      tableId: selectedTableId,
-    });
-  }
-}, [selectedTableId, tables, calculateTotalPrice]);
+  }, [selectedTableId, tables, calculateTotalPrice]);
 
   useEffect(() => {
     if (successMsg) {
@@ -1180,266 +1174,266 @@ useEffect(() => {
     }
   }, [successMsg]);
 
-useEffect(() => {
-  const handleConnect = () => {
-    console.log("Socket connected:", socket.id);
-    setIsConnected(true);
-  };
+  useEffect(() => {
+    const handleConnect = () => {
+      console.log("Socket connected:", socket.id);
+      setIsConnected(true);
+    };
 
-  const handleDisconnect = () => {
-    console.log("Socket disconnected");
-    setIsConnected(false);
-  };
+    const handleDisconnect = () => {
+      console.log("Socket disconnected");
+      setIsConnected(false);
+    };
 
-  const handleOrderCreated = (newOrder) => {
-    try {
-      console.log("Received orderCreated event:", newOrder);
-      if (!newOrder || !newOrder.id) {
-        console.error("Invalid order data received:", newOrder);
-        return;
-      }
-      const eventKey = `orderCreated:${newOrder.id}:${newOrder.createdAt || Date.now()}`;
-      if (processedEvents.current.has(eventKey)) {
-        console.log(`Duplicate orderCreated event ignored: ${eventKey}`);
-        return;
-      }
-      processedEvents.current.add(eventKey);
-      setTables((prev) => {
-        if (prev.some((table) => table.orders?.some((order) => order.id === newOrder.id))) {
-          console.log(`Order ${newOrder.id} already exists, ignoring creation`);
-          return prev;
+    const handleOrderCreated = (newOrder) => {
+      try {
+        console.log("Received orderCreated event:", newOrder);
+        if (!newOrder || !newOrder.id) {
+          console.error("Invalid order data received:", newOrder);
+          return;
         }
-        const sanitizedOrder = deepClone({
-          ...newOrder,
-          orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
-          table: newOrder.table || { name: "Йўқ", number: "Йўқ" },
-          createdAt: newOrder.createdAt || new Date().toISOString(),
+        const eventKey = `orderCreated:${newOrder.id}:${newOrder.createdAt || Date.now()}`;
+        if (processedEvents.current.has(eventKey)) {
+          console.log(`Duplicate orderCreated event ignored: ${eventKey}`);
+          return;
+        }
+        processedEvents.current.add(eventKey);
+        setTables((prev) => {
+          if (prev.some((table) => table.orders?.some((order) => order.id === newOrder.id))) {
+            console.log(`Order ${newOrder.id} already exists, ignoring creation`);
+            return prev;
+          }
+          const sanitizedOrder = deepClone({
+            ...newOrder,
+            orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
+            table: newOrder.table || { name: "Йўқ", number: "Йўқ" },
+            createdAt: newOrder.createdAt || new Date().toISOString(),
+          });
+          return prev.map((table) =>
+            table.id === newOrder.tableId
+              ? {
+                  ...table,
+                  status: "busy",
+                  orders: [...(table.orders || []), sanitizedOrder],
+                }
+              : table
+          );
         });
-        return prev.map((table) =>
-          table.id === newOrder.tableId
-            ? {
-                ...table,
-                status: "busy",
-                orders: [...(table.orders || []), sanitizedOrder],
-              }
-            : table
-        );
-      });
-    } catch (error) {
-      console.error("Error in handleOrderCreated:", error);
-      setError(handleApiError(error, "Буюртма қабул қилишда хатолик."));
-    }
-  };
-
-const handleOrderUpdated = (updatedOrder) => {
-  try {
-    console.log("Received orderUpdated event:", updatedOrder);
-    if (!updatedOrder || !updatedOrder.id) {
-      console.error("Invalid order data received:", updatedOrder);
-      return;
-    }
-    const eventKey = `orderUpdated:${updatedOrder.id}:${updatedOrder.updatedAt || Date.now()}`;
-    if (processedEvents.current.has(eventKey)) {
-      console.log(`Duplicate orderUpdated event ignored: ${eventKey}`);
-      return;
-    }
-    processedEvents.current.add(eventKey);
-
-    setTables((prev) => {
-      const orderExists = prev.some((table) =>
-        table.orders?.some((order) => order.id === updatedOrder.id)
-      );
-      if (!orderExists) {
-        console.warn(`Order ${updatedOrder.id} not found in local state, ignoring update`);
-        return prev;
+      } catch (error) {
+        console.error("Error in handleOrderCreated:", error);
+        setError(handleApiError(error, "Буюртма қабул қилишда хатолик."));
       }
+    };
 
-      let oldTableId = null;
-      prev.forEach((table) => {
-        if (table.orders?.some((order) => order.id === updatedOrder.id)) {
-          oldTableId = table.id;
+    const handleOrderUpdated = (updatedOrder) => {
+      try {
+        console.log("Received orderUpdated event:", updatedOrder);
+        if (!updatedOrder || !updatedOrder.id) {
+          console.error("Invalid order data received:", updatedOrder);
+          return;
         }
-      });
+        const eventKey = `orderUpdated:${updatedOrder.id}:${updatedOrder.updatedAt || Date.now()}`;
+        if (processedEvents.current.has(eventKey)) {
+          console.log(`Duplicate orderUpdated event ignored: ${eventKey}`);
+          return;
+        }
+        processedEvents.current.add(eventKey);
 
-      const updatedTables = prev.map((table) => {
-        if (table.id === updatedOrder.tableId) {
-          const updatedOrders = table.orders?.some((order) => order.id === updatedOrder.id)
-            ? table.orders.map((order) =>
-                order.id === updatedOrder.id
-                  ? {
-                      ...order,
-                      ...updatedOrder,
-                      orderItems: Array.isArray(updatedOrder.orderItems)
-                        ? [...updatedOrder.orderItems]
-                        : order.orderItems,
-                      table: updatedOrder.table || order.table,
-                    }
-                  : order
-              )
-            : [...(table.orders || []), { ...updatedOrder, table: table }];
-          const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-          return {
-            ...table,
-            orders: updatedOrders,
-            status: hasActiveOrders ? "busy" : "empty",
-          };
-        }
-        if (table.id === oldTableId && oldTableId !== updatedOrder.tableId) {
-          const updatedOrders = table.orders.filter((order) => order.id !== updatedOrder.id);
-          const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-          return {
-            ...table,
-            orders: updatedOrders,
-            status: hasActiveOrders ? "busy" : "empty",
-          };
-        }
-        return table;
-      });
+        setTables((prev) => {
+          const orderExists = prev.some((table) =>
+            table.orders?.some((order) => order.id === updatedOrder.id)
+          );
+          if (!orderExists) {
+            console.warn(`Order ${updatedOrder.id} not found in local state, ignoring update`);
+            return prev;
+          }
 
-      return updatedTables;
+          let oldTableId = null;
+          prev.forEach((table) => {
+            if (table.orders?.some((order) => order.id === updatedOrder.id)) {
+              oldTableId = table.id;
+            }
+          });
+
+          const updatedTables = prev.map((table) => {
+            if (table.id === updatedOrder.tableId) {
+              const updatedOrders = table.orders?.some((order) => order.id === updatedOrder.id)
+                ? table.orders.map((order) =>
+                    order.id === updatedOrder.id
+                      ? {
+                          ...order,
+                          ...updatedOrder,
+                          orderItems: Array.isArray(updatedOrder.orderItems)
+                            ? [...updatedOrder.orderItems]
+                            : order.orderItems,
+                          table: updatedOrder.table || order.table,
+                        }
+                      : order
+                  )
+                : [...(table.orders || []), { ...updatedOrder, table: table }];
+              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+              return {
+                ...table,
+                orders: updatedOrders,
+                status: hasActiveOrders ? "busy" : "empty",
+              };
+            }
+            if (table.id === oldTableId && oldTableId !== updatedOrder.tableId) {
+              const updatedOrders = table.orders.filter((order) => order.id !== updatedOrder.id);
+              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+              return {
+                ...table,
+                orders: updatedOrders,
+                status: hasActiveOrders ? "busy" : "empty",
+              };
+            }
+            return table;
+          });
+
+          return updatedTables;
+        });
+
+        if (selectedTableOrder?.id === updatedOrder.id) {
+          const clonedOrder = deepClone({
+            ...updatedOrder,
+            totalPrice: calculateTotalPrice(updatedOrder.orderItems),
+          });
+          setSelectedTableOrder(clonedOrder);
+          setSelectedTableId(updatedOrder.tableId);
+          setCart(
+            updatedOrder.orderItems?.map((item) => ({
+              id: item.productId || item.product?.id || 0,
+              name: item.product?.name || "Номаълум таом",
+              price: parseFloat(item.product?.price) || 0,
+              count: item.count || 0,
+              status: item.status || "PENDING",
+            })) || []
+          );
+        }
+      } catch (error) {
+        console.error("Error in handleOrderUpdated:", error);
+        setError(handleApiError(error, "Буюртма янгилашда хатолик."));
+      }
+    };
+
+    const handleOrderDeleted = (data) => {
+      try {
+        console.log("Received orderDeleted event:", data);
+        const id = data?.id;
+        if (!id) {
+          console.error("Invalid order ID received:", data);
+          return;
+        }
+        const eventKey = `orderDeleted:${id}:${Date.now()}`;
+        if (processedEvents.current.has(eventKey)) {
+          console.log(`Duplicate orderDeleted event ignored: ${eventKey}`);
+          return;
+        }
+        processedEvents.current.add(eventKey);
+        setTables((prev) =>
+          prev.map((table) => {
+            if (table.orders?.some((order) => order.id === id)) {
+              const updatedOrders = table.orders.filter((order) => order.id !== id);
+              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+              return {
+                ...table,
+                orders: updatedOrders,
+                status: hasActiveOrders ? "busy" : "empty",
+              };
+            }
+            return table;
+          })
+        );
+        if (selectedTableOrder?.id === id) {
+          setSelectedTableOrder(null);
+          setCart([]);
+          setSelectedTableId(null);
+        }
+      } catch (error) {
+        console.error("Error in handleOrderDeleted:", error);
+        setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
+      }
+    };
+
+    const handleOrderItemStatusUpdated = (updatedItem) => {
+      try {
+        console.log("Received orderItemStatusUpdated event:", updatedItem);
+        if (!updatedItem || !updatedItem.id) {
+          console.error("Invalid item data received:", updatedItem);
+          return;
+        }
+        const eventKey = `orderItemStatusUpdated:${updatedItem.id}:${updatedItem.status}:${Date.now()}`;
+        if (processedEvents.current.has(eventKey)) {
+          console.log(`Duplicate orderItemStatusUpdated event ignored: ${eventKey}`);
+          return;
+        }
+        processedEvents.current.add(eventKey);
+        setTables((prev) =>
+          prev.map((table) => {
+            if (table.orders?.some((order) => order.orderItems.some((item) => item.id === updatedItem.id))) {
+              const updatedOrders = table.orders.map((order) => {
+                if (order.orderItems.some((item) => item.id === updatedItem.id)) {
+                  return {
+                    ...order,
+                    orderItems: order.orderItems.map((item) =>
+                      item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+                    ),
+                  };
+                }
+                return order;
+              });
+              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+              return {
+                ...table,
+                orders: updatedOrders,
+                status: hasActiveOrders ? "busy" : "empty",
+              };
+            }
+            return table;
+          })
+        );
+        if (selectedTableOrder?.orderItems?.some((item) => item.id === updatedItem.id)) {
+          setSelectedTableOrder((prev) => ({
+            ...prev,
+            orderItems: prev.orderItems.map((item) =>
+              item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+            ),
+          }));
+          setCart((prev) =>
+            prev.map((item) =>
+              item.id === updatedItem.productId
+                ? { ...item, status: updatedItem.status }
+                : item
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error in handleOrderItemStatusUpdated:", error);
+        setError(handleApiError(error, "Таом ҳолатини янгилашда хатолик."));
+      }
+    };
+
+    socket.onAny((event, ...args) => {
+      console.log(`Received socket event: ${event}`, args);
     });
 
-    if (selectedTableOrder?.id === updatedOrder.id) {
-      const clonedOrder = deepClone({
-        ...updatedOrder,
-        totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-      });
-      setSelectedTableOrder(clonedOrder);
-      setSelectedTableId(updatedOrder.tableId);
-      setCart(
-        updatedOrder.orderItems?.map((item) => ({
-          id: item.productId || item.product?.id || 0,
-          name: item.product?.name || "Номаълум таом",
-          price: parseFloat(item.product?.price) || 0,
-          count: item.count || 0,
-          status: item.status || "PENDING",
-        })) || []
-      );
-    }
-  } catch (error) {
-    console.error("Error in handleOrderUpdated:", error);
-    setError(handleApiError(error, "Буюртма янгилашда хатолик."));
-  }
-};
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("orderCreated", handleOrderCreated);
+    socket.on("orderUpdated", handleOrderUpdated);
+    socket.on("orderDeleted", handleOrderDeleted);
+    socket.on("orderItemStatusUpdated", handleOrderItemStatusUpdated);
 
-  const handleOrderDeleted = (data) => {
-    try {
-      console.log("Received orderDeleted event:", data);
-      const id = data?.id;
-      if (!id) {
-        console.error("Invalid order ID received:", data);
-        return;
-      }
-      const eventKey = `orderDeleted:${id}:${Date.now()}`;
-      if (processedEvents.current.has(eventKey)) {
-        console.log(`Duplicate orderDeleted event ignored: ${eventKey}`);
-        return;
-      }
-      processedEvents.current.add(eventKey);
-      setTables((prev) =>
-        prev.map((table) => {
-          if (table.orders?.some((order) => order.id === id)) {
-            const updatedOrders = table.orders.filter((order) => order.id !== id);
-            const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-            return {
-              ...table,
-              orders: updatedOrders,
-              status: hasActiveOrders ? "busy" : "empty",
-            };
-          }
-          return table;
-        })
-      );
-      if (selectedTableOrder?.id === id) {
-        setSelectedTableOrder(null);
-        setCart([]);
-        setSelectedTableId(null);
-      }
-    } catch (error) {
-      console.error("Error in handleOrderDeleted:", error);
-      setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
-    }
-  };
-
-  const handleOrderItemStatusUpdated = (updatedItem) => {
-    try {
-      console.log("Received orderItemStatusUpdated event:", updatedItem);
-      if (!updatedItem || !updatedItem.id) {
-        console.error("Invalid item data received:", updatedItem);
-        return;
-      }
-      const eventKey = `orderItemStatusUpdated:${updatedItem.id}:${updatedItem.status}:${Date.now()}`;
-      if (processedEvents.current.has(eventKey)) {
-        console.log(`Duplicate orderItemStatusUpdated event ignored: ${eventKey}`);
-        return;
-      }
-      processedEvents.current.add(eventKey);
-      setTables((prev) =>
-        prev.map((table) => {
-          if (table.orders?.some((order) => order.orderItems.some((item) => item.id === updatedItem.id))) {
-            const updatedOrders = table.orders.map((order) => {
-              if (order.orderItems.some((item) => item.id === updatedItem.id)) {
-                return {
-                  ...order,
-                  orderItems: order.orderItems.map((item) =>
-                    item.id === updatedItem.id ? { ...item, ...updatedItem } : item
-                  ),
-                };
-              }
-              return order;
-            });
-            const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-            return {
-              ...table,
-              orders: updatedOrders,
-              status: hasActiveOrders ? "busy" : "empty",
-            };
-          }
-          return table;
-        })
-      );
-      if (selectedTableOrder?.orderItems?.some((item) => item.id === updatedItem.id)) {
-        setSelectedTableOrder((prev) => ({
-          ...prev,
-          orderItems: prev.orderItems.map((item) =>
-            item.id === updatedItem.id ? { ...item, ...updatedItem } : item
-          ),
-        }));
-        setCart((prev) =>
-          prev.map((item) =>
-            item.id === updatedItem.productId
-              ? { ...item, status: updatedItem.status }
-              : item
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error in handleOrderItemStatusUpdated:", error);
-      setError(handleApiError(error, "Таом ҳолатини янгилашда хатолик."));
-    }
-  };
-
-  socket.onAny((event, ...args) => {
-    console.log(`Received socket event: ${event}`, args);
-  });
-
-  socket.on("connect", handleConnect);
-  socket.on("disconnect", handleDisconnect);
-  socket.on("orderCreated", handleOrderCreated);
-  socket.on("orderUpdated", handleOrderUpdated);
-  socket.on("orderDeleted", handleOrderDeleted);
-  socket.on("orderItemStatusUpdated", handleOrderItemStatusUpdated);
-
-  return () => {
-    socket.off("connect", handleConnect);
-    socket.off("disconnect", handleDisconnect);
-    socket.off("orderCreated", handleOrderCreated);
-    socket.off("orderUpdated", handleOrderUpdated);
-    socket.off("orderDeleted", handleOrderDeleted);
-    socket.off("orderItemStatusUpdated", handleOrderItemStatusUpdated);
-    socket.offAny();
-  };
-}, [selectedTableOrder, calculateTotalPrice, setError]);
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("orderCreated", handleOrderCreated);
+      socket.off("orderUpdated", handleOrderUpdated);
+      socket.off("orderDeleted", handleOrderDeleted);
+      socket.off("orderItemStatusUpdated", handleOrderItemStatusUpdated);
+      socket.offAny();
+    };
+  }, [selectedTableOrder, calculateTotalPrice, setError]);
 
   const addToCart = (taom) => {
     setCart((prev) => {
@@ -1938,40 +1932,40 @@ const handleOrderUpdated = (updatedOrder) => {
         <AddTableModal
           isOpen={showAddTableModal}
           onClose={() => setShowAddTableModal(false)}
-          onConfirm={async (tableData) => {
-            try {
-              await axios.post(API_ENDPOINTS.tables, tableData, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const res = await axios.get(API_ENDPOINTS.tables, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const tablesData = Array.isArray(res.data?.data)
-                ? res.data.data
-                : Array.isArray(res.data)
-                ? res.data
-                : [];
-              setTables(
-                tablesData.map((table) => ({
-                  ...table,
-                  status: normalizeStatus(table.status),
-                  orders: Array.isArray(table.orders) ? table.orders : [],
-                }))
-              );
-              const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
-                Boolean
-              );
-              setPlaces(uniquePlaces);
-              setFilterPlace(uniquePlaces[0] || "");
-              setSuccessMsg("Стол муваффақиятли қўшилди!");
-              console.log("Table added successfully", tableData);
-            } catch (err) {
-              console.error("Add table error:", err);
-              setError(
-                `Хатолик: ${err.response?.data?.message || "Стол қўшишда хатолик."}`
-              );
-            }
-          }}
+  onConfirm={async (tableData) => {
+    try {
+      await axios.post(API_ENDPOINTS.tables, tableData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const res = await axios.get(API_ENDPOINTS.tables, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const tablesData = Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setTables(
+        tablesData.map((table) => ({
+          ...table,
+          status: normalizeStatus(table.status),
+          orders: Array.isArray(table.orders) ? table.orders : [],
+        }))
+      );
+      const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
+        Boolean
+      );
+      setPlaces(uniquePlaces);
+      setFilterPlace(uniquePlaces[0] || "");
+      setSuccessMsg("Стол муваффақиятли қўшилди!");
+      console.log("Table added successfully", tableData);
+    } catch (err) {
+      console.error("Add table error:", err);
+      setError(
+        `Хатолик: ${err.response?.data?.message || "Стол қўшишда хатолик."}`
+      );
+    }
+  }}
           places={places}
         />
       )}
