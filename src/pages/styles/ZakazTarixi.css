@@ -266,14 +266,12 @@ th:first-child {
   padding-left: 1rem;
 }
 
-
 td {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--gray-100);
   font-size: 0.95rem;
   color: var(--gray-700);
   vertical-align: middle;
-  
 }
 
 td:first-child {
@@ -298,6 +296,16 @@ tr:last-child td {
   border-bottom: none;
 }
 
+.food-icon {
+  cursor: pointer;
+  color: var(--gray-400);
+  transition: var(--transition-base);
+}
+
+.food-icon:hover {
+  color: var(--primary);
+}
+
 .food-items {
   display: flex;
   flex-direction: column;
@@ -305,8 +313,7 @@ tr:last-child td {
   max-width: 300px;
 }
 
-.food-items span {
-  display: block;
+.food-items div {
   line-height: 1.4;
   color: var(--gray-600);
   font-size: 0.9375rem;
@@ -315,7 +322,6 @@ tr:last-child td {
 .status {
   display: inline-flex;
   align-items: center;
-  /* padding: 0.5rem 1rem; */
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 1rem;
@@ -413,7 +419,7 @@ tr:last-child td {
     max-width: 250px;
   }
   
-  .food-items span {
+  .food-items div {
     font-size: 0.875rem;
   }
 }

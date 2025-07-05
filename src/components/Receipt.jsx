@@ -17,6 +17,14 @@ const Receipt = React.forwardRef(({ order }, ref) => {
         .trim() + " so'm"
     );
   };
+  const formatPricee = (price) => {
+    return (
+      price
+        .toString()
+        .replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+        .trim()
+    );
+  };
 
   // Determine if the order is for delivery based on tableNumber format
   const isDelivery = order.tableNumber?.startsWith("+") || order.tableNumber === "N/A";
@@ -84,22 +92,24 @@ const Receipt = React.forwardRef(({ order }, ref) => {
           <table>
             <thead>
               <tr>
-                <th style={{ width: "10%", fontSize: "10px" }}>№</th>
-                <th style={{ width: "40%", fontSize: "10px" }}>Taom</th>
-                <th style={{ width: "20%", fontSize: "10px" }}>Soni</th>
-                <th style={{ width: "30%", fontSize: "10px" }}>Jami</th>
+                <th style={{ width: "10%", fontSize: "9px" }}>№</th>
+                <th style={{ width: "40%", fontSize: "9px" }}>Taom</th>
+                <th style={{ width: "30%", fontSize: "9px" }}>Jami</th>
+                <th style={{ width: "20%", fontSize: "9px" }}>Summasi</th>
+                <th style={{ width: "30%", fontSize: "9px" }}>Jami</th>
               </tr>
             </thead>
             <tbody>
               {order.orderItems?.map((item, index) => (
                 <tr key={index}>
-                  <td style={{ fontSize: "10px" }}>{index + 1}</td>
-                  <td style={{ fontSize: "10px" }}>{item.product?.name || "Noma'lum taom"}</td>
-                  <td style={{ fontSize: "10px" }}>
+                  <td style={{ fontSize: "8px" }}>{index + 1}</td>
+                  <td style={{ fontSize: "8px" }}>{item.product?.name || "Noma'lum taom"}</td>
+                  <td style={{ fontSize: "8px" }}>
                     <X size={6} />
                     {item.count}
                   </td>
-                  <td style={{ fontSize: "10px" }}>{formatPrice((item.product?.price || 0) * item.count)}</td>
+                  <td style={{ fontSize: "8px" }}>{formatPricee((item.product?.price || 0))}</td>
+                  <td style={{ fontSize: "8px" }}>{formatPricee((item.product?.price || 0) * item.count)}</td>
                 </tr>
               ))}
             </tbody>

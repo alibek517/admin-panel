@@ -7,7 +7,7 @@ export default function TaomlarSoz() {
   const [menu, setMenu] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [newCategory, setNewCategory] = useState("Ҳаммаси");
+  const [newCategory, setNewCategory] = useState("");
   const [dishes, setDishes] = useState({
     id: null,
     name: "",
@@ -22,88 +22,131 @@ export default function TaomlarSoz() {
   const [categoryList, setCategoryList] = useState([]);
   const [kitchenStaff, setKitchenStaff] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [swapMode, setSwapMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
   const scrollRef = useRef(null);
 
-  // Rasm faylini JPG formatiga aylantirish funksiyasi
   const convertToJPG = (file) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
       const img = new Image();
-      
+
       img.onload = () => {
-        // Rasmning o'lchamini sozlash (maksimal 800px)
         const maxWidth = 800;
         const maxHeight = 600;
         let { width, height } = img;
-        
+
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
-        
+
         if (height > maxHeight) {
           width = (width * maxHeight) / height;
           height = maxHeight;
         }
-        
+
         canvas.width = width;
         canvas.height = height;
-        
-        // Oq fon qo'shish (JPG uchun zarur)
-        ctx.fillStyle = '#FFFFFF';
+
+        ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, width, height);
-        
-        // Rasmni chizish
         ctx.drawImage(img, 0, 0, width, height);
-        
-        // JPG formatida blob yaratish
-        canvas.toBlob((blob) => {
-          // Fayl nomini JPG ga o'zgartirish
-          const fileName = file.name.replace(/\.[^/.]+$/, ".jpg");
-          const jpgFile = new File([blob], fileName, {
-            type: 'image/jpeg',
-            lastModified: Date.now()
-          });
-          resolve(jpgFile);
-        }, 'image/jpeg', 0.85); // 85% sifat
+
+        canvas.toBlob(
+          (blob) => {
+            const fileName = file.name.replace(/\.[^/.]+$/, ".jpg");
+            const jpgFile = new File([blob], fileName, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(jpgFile);
+          },
+          "image/jpeg",
+          0.85
+        );
       };
-      
+
+      img.onerror = () => reject(new Error("Rasm yuklashda xatolik"));
       img.src = URL.createObjectURL(file);
     });
   };
 
-  const fetchMenu = () => {
+  const fetchMenu = async () => {
     setLoading(true);
-    axios
-      .get("https://alikafecrm.uz/product", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-      .then((res) => setMenu(res.data))
-      .catch((err) => console.error("Менюни юклашда хатолик:", err))
-      .finally(() => setLoading(false));
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("JWT token not found in localStorage");
+      }
+
+      const res = await axios.get("https://alikafecrm.uz/product", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!Array.isArray(res.data)) {
+        throw new Error("Expected an array from API, received: " + JSON.stringify(res.data));
+      }
+
+      const sortedMenu = res.data
+        .map((item) => ({
+          ...item,
+          id: Number(item.id) || 0,
+          categoryId: item.categoryId ? Number(item.categoryId) : null,
+          index: item.index || "0",
+        }))
+        .sort((a, b) => Number(a.id) - Number(b.id));
+
+      setMenu(sortedMenu);
+    } catch (err) {
+      console.error("Менюни юклашда хатолик:", err);
+      alert(`Менюни юклашда хатолик: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchCategories = () => {
+  const fetchCategories = async () => {
     setLoading(true);
-    axios
-      .get("https://alikafecrm.uz/category", {
+    try {
+      const res = await axios.get("https://alikafecrm.uz/category", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-      .then((res) => setCategoryList(res.data))
-      .catch((err) => console.error("Категория олишда хатолик:", err))
-      .finally(() => setLoading(false));
+      });
+      const categories = res.data.map((cat) => ({
+        ...cat,
+        id: Number(cat.id),
+      }));
+      setCategoryList(categories);
+      if (categories.length > 0 && !newCategory) {
+        setNewCategory(categories[0].name);
+      }
+    } catch (err) {
+      console.error("Категория олишда хатолик:", err);
+      alert("Категорияларни юклашда хатолик юз берди!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchKitchenStaff = () => {
+  const fetchKitchenStaff = async () => {
     setLoading(true);
-    axios
-      .get("https://alikafecrm.uz/user?role=KITCHEN", {
+    try {
+      const res = await axios.get("https://alikafecrm.uz/user?role=KITCHEN", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-      .then((res) => setKitchenStaff(res.data))
-      .catch((err) => console.error("Ошпазларни олишда хатолик:", err))
-      .finally(() => setLoading(false));
+      });
+      setKitchenStaff(
+        res.data.map((user) => ({
+          ...user,
+          id: Number(user.id),
+        }))
+      );
+    } catch (err) {
+      console.error("Ошпазларни олишда хатолик:", err);
+      alert("Ошпазларни юклашда хатолик юз берди!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -126,16 +169,12 @@ export default function TaomlarSoz() {
     });
   };
 
-  const handleAddDish = () => {
-    console.log("handleAddDish boshlandi");
-    console.log("dishes:", dishes);
-    
-    // Validatsiya
+  const handleAddDish = async () => {
     if (!dishes.name || !dishes.name.trim()) {
       alert("Илтимос, таом номини киритинг.");
       return;
     }
-    
+
     if (!dishes.price || isNaN(parseInt(dishes.price)) || parseInt(dishes.price) <= 0) {
       alert("Илтимос, тўғри нархни киритинг.");
       return;
@@ -144,115 +183,178 @@ export default function TaomlarSoz() {
     const formData = new FormData();
     formData.append("name", dishes.name.trim());
     formData.append("price", parseInt(dishes.price));
-    
+
     if (dishes.cookingTime && dishes.cookingTime.trim()) {
       formData.append("cookingTime", dishes.cookingTime.trim());
     }
-    
+
     if (dishes.categoryId) {
-      formData.append("categoryId", dishes.categoryId);
+      formData.append("categoryId", Number(dishes.categoryId));
     }
-    
+
     if (dishes.assignedToId) {
-      formData.append("assignedToId", dishes.assignedToId);
+      formData.append("assignedToId", Number(dishes.assignedToId));
     }
-    
+
     if (dishes.image && typeof dishes.image !== "string") {
       formData.append("image", dishes.image);
     }
 
-    console.log("FormData tayyor:");
-    for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ' + pair[1]);
+    try {
+      const request = editing
+        ? axios.put(`https://alikafecrm.uz/product/${Number(dishes.id)}`, formData, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "multipart/form-data",
+            },
+          })
+        : axios.post("https://alikafecrm.uz/product", formData, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              "Content-Type": "multipart/form-data",
+            },
+          });
+
+      await request;
+      await fetchMenu();
+      setShowModal(false);
+      setEditing(false);
+      resetDish();
+      alert("Таом муваффақиятли қўшилди!");
+    } catch (err) {
+      console.error(`${editing ? "Таҳрирлашда" : "Қўшишда"} хатолик:`, err);
+      alert(`Хатолик: ${err.response?.data?.message || err.message}`);
     }
-
-    const request = editing
-      ? axios.put(`https://alikafecrm.uz/product/${dishes.id}`, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "multipart/form-data",
-          },
-        })
-      : axios.post("https://alikafecrm.uz/product", formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-    console.log("So'rov yuborilmoqda...");
-    request
-      .then((response) => {
-        console.log("Muvaffaqiyatli javob:", response.data);
-        fetchMenu();
-        setShowModal(false);
-        setEditing(false);
-        resetDish();
-        alert("Таом муваффақиятли қўшилди!");
-      })
-      .catch((err) => {
-        console.error(`${editing ? "Таҳрирлашда" : "Қўшишда"} хатолик:`, err);
-        console.error("Xatolik ma'lumotlari:", err.response?.data);
-        console.error("Status:", err.response?.status);
-        
-        let errorMessage = "Номаълум хатолик";
-        if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response?.data?.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        
-        alert(`Хатолик: ${errorMessage}`);
-      });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Таомни ўчиришни хоҳлайсизми?")) {
-      axios
-        .delete(`https://alikafecrm.uz/product/${id}`, {
+      try {
+        await axios.delete(`https://alikafecrm.uz/product/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        })
-        .then(() => fetchMenu())
-        .catch((err) => {
-          alert("Бу таом ўчириб бўлмайди. Балки у заказга боғланган.");
-          console.error("Ўчиришда хатолик:", err);
         });
+        await fetchMenu();
+      } catch (err) {
+        console.error("Ўчиришда хатолик:", err);
+        alert("Бу таом ўчириб бўлмайди. Балки у заказга боғланган.");
+      }
     }
   };
 
-  const handleDeleteCategory = (id) => {
-    if (window.confirm("Категорияни ўчиришни хоўлайсизми?")) {
-      axios
-        .delete(`https://alikafecrm.uz/category/${id}`, {
+  const handleDeleteCategory = async (id) => {
+    if (window.confirm("Категорияни ўчиришни хоҳлайсизми?")) {
+      try {
+        await axios.delete(`https://alikafecrm.uz/category/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        })
-        .then(() => {
-          fetchCategories();
-          setNewCategory("Ҳаммаси");
-        })
-        .catch((err) => {
-          alert("Категорияни ўчириб бўлмади. Балки у таомга боғланган.");
-          console.error("Категория ўчиришда хатолик:", err);
         });
+        await fetchCategories();
+        setNewCategory(categoryList[0]?.name || "");
+      } catch (err) {
+        console.error("Категория ўчиришда хатолик:", err);
+        alert("Категорияни ўчириб бўлмади. Балки у таомга боғланган.");
+      }
     }
   };
 
   const handleEdit = (dish) => {
     setDishes({
-      id: dish.id,
+      id: Number(dish.id),
       name: dish.name,
       cookingTime: dish.cookingTime || "",
       price: dish.price,
       image: dish.image,
-      categoryId: dish.categoryId ?? null,
-      assignedToId: dish.assignedToId ?? null,
+      categoryId: Number(dish.categoryId) ?? null,
+      assignedToId: Number(dish.assignedToId) ?? null,
       createdAt: dish.createdAt ?? null,
       category: dish.category ?? null,
     });
     setEditing(true);
     setShowModal(true);
+  };
+
+  const handleSelectItem = (id) => {
+    if (!swapMode) return;
+    if (selectedItems.includes(id)) {
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
+    } else if (selectedItems.length < 2) {
+      setSelectedItems([...selectedItems, id]);
+    } else {
+      alert("Faqat ikkita taomni tanlash mumkin!");
+    }
+  };
+
+  const handleSwapIds = async () => {
+    if (selectedItems.length !== 2) {
+      alert("Iltimos, almashish uchun roppa-rosa ikkita taomni tanlang!");
+      return;
+    }
+
+    const [id1, id2] = selectedItems;
+
+    try {
+      await axios.post(
+        "https://alikafecrm.uz/product/swap-ids",
+        { id1: Number(id1), id2: Number(id2) },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      await fetchMenu();
+      setSelectedItems([]);
+      setSwapMode(false);
+      console.log("IDs swapped successfully");
+    } catch (err) {
+      console.error("ID'larni almashtirishda xatolik:", err);
+      alert(`ID'larni almashtirishda xatolik: ${err.response?.data?.message || err.message}`);
+      await fetchMenu();
+    }
+  };
+
+  const FoodCard = ({ item }) => {
+    return (
+      <article
+  className={`  ${selectedItems.includes(item.id) ? "selected" : ""}`}
+  onClick={() => handleSelectItem(item.id) }
+  style={{display: "flex", cursor: "pointer", justifyContent:"space-between", alignItems: "center"}}
+  
+>
+  <img
+    className="food-card-image"
+    src={`https://alikafecrm.uz${item.image}`}
+    alt={item.name}
+  />
+  <div className="food-card-content">
+    <h3 className="food-card-title">{item.name}</h3>
+    <div className="food-card-meta">
+      <div className="food-card-time">
+        <Clock size={16} className="food-card-time-icon" />
+        <span>{item.cookingTime ? `${item.cookingTime} мин` : "Вақти йўқ"}</span>
+      </div>
+    </div>
+  </div>
+  <div style={{marginRight:'350px'}} className="food-card-price">{formatPrice(item.price)}</div>
+  <div className="food-card-actions">
+    <button
+      className="food-card-button edit"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleEdit(item);
+      }}
+    >
+      <Edit color="#fff" size={16} />
+    </button>
+    <button
+      className="food-card-button delete"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDelete(item.id);
+      }}
+    >
+      <Trash color="#fff" size={16} />
+    </button>
+  </div>
+</article>
+    );
   };
 
   const scrollLeft = () => {
@@ -267,23 +369,15 @@ export default function TaomlarSoz() {
     }
   };
 
-  const filteredMenu =
-    newCategory === "Ҳаммаси"
-      ? menu
-      : menu.filter((item) => item.category?.name === newCategory);
+  const filteredMenu = newCategory
+    ? menu.filter((item) => item.category?.name === newCategory)
+    : [...menu];
+  const sortedMenu = filteredMenu.sort((a, b) => Number(a.id) - Number(b.id));
 
   const formatPrice = (price) => {
     const priceStr = price.toString();
-    const formatted = priceStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    return formatted + " сўм";
+    return priceStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " сўм";
   };
-
-  const uniqueCategories = [
-    "Ҳаммаси",
-    ...categoryList
-      .map((cat) => cat.name)
-      .filter((name) => name !== "Ҳаммаси"),
-  ];
 
   return (
     <div className="container">
@@ -301,50 +395,56 @@ export default function TaomlarSoz() {
       >
         <div className="header-container">
           <h1 className="header-title">Таомлар созламаси</h1>
+          {swapMode && selectedItems.length === 2 && (
+            <button
+              className="btn btn-swap"
+              onClick={handleSwapIds}
+            >
+              Tanlanganlarni almashtirish
+            </button>
+          )}
+          <button
+            className="btn btn-toggle-swap"
+            onClick={() => {
+              setSwapMode(!swapMode);
+              setSelectedItems([]);
+            }}
+          >
+            {swapMode ? "X" : "Joy o'zgartirish rejimini yoqish"}
+          </button>
         </div>
       </header>
       <section>
         <div className="category-tabs-container">
           <button
-            style={{
-              marginBottom: "20px",
-              marginRight: "10px",
-            }}
+            style={{ marginBottom: "20px", marginRight: "10px" }}
             className="scroll-arrow left"
             onClick={scrollLeft}
           >
             <ChevronLeft size={30} />
           </button>
           <nav className="category-tabs" ref={scrollRef}>
-            {uniqueCategories.map((cat) => {
-              const realCat = categoryList.find((c) => c.name === cat);
-              return (
-                <div key={cat} style={{ display: "flex", alignItems: "center" }}>
-                  <button
-                    className={`category-tab ${
-                      newCategory === cat ? "active" : ""
-                    }`}
-                    onClick={() => setNewCategory(cat)}
-                  >
-                    {cat}
-                  </button>
-                  {cat !== "Ҳаммаси" && (
-                    <button
-                      className="food-card-button delete"
-                      onClick={() => handleDeleteCategory(realCat?.id)}
-                    >
-                      <Trash size={16} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            {categoryList.map((cat) => (
+              <div key={cat.id} style={{ display: "flex", alignItems: "center" }}>
+                <button
+                  className={`category-tab ${
+                    newCategory === cat.name ? "active" : ""
+                  }`}
+                  onClick={() => setNewCategory(cat.name)}
+                >
+                  {cat.name}
+                </button>
+                <button
+                  className="food-card-button delete"
+                  onClick={() => handleDeleteCategory(cat.id)}
+                >
+                  <Trash color="#fff" size={16} />
+                </button>
+              </div>
+            ))}
           </nav>
           <button
-            style={{
-              marginBottom: "20px",
-              marginLeft: "10px",
-            }}
+            style={{ marginBottom: "20px", marginLeft: "10px" }}
             className="scroll-arrow right"
             onClick={scrollRight}
           >
@@ -355,8 +455,7 @@ export default function TaomlarSoz() {
         {loading ? (
           <div className="spinner"></div>
         ) : (
-          <div className="food-grid">
-            {/* "+ Таом қўшиш" tugmasi doimo ko'rinadi */}
+          <div>
             <article
               className="add-food-card"
               onClick={() => {
@@ -370,10 +469,12 @@ export default function TaomlarSoz() {
               </div>
               <h3 className="add-food-text">Таом қўшиш</h3>
             </article>
-            
-            {/* Agar filtrlangan menu bo'sh bo'lsa, xabar ko'rsatiladi */}
-            {filteredMenu.length === 0 ? (
-              <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
+
+            {sortedMenu.length === 0 ? (
+              <div
+                className="empty-state"
+                style={{ gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}
+              >
                 <div className="empty-state-icon">
                   <Plus size={48} />
                 </div>
@@ -383,41 +484,8 @@ export default function TaomlarSoz() {
                 </p>
               </div>
             ) : (
-              // Mavjud taomlarni ko'rsatish
-              filteredMenu.map((i) => (
-                <article key={i.id} className="food-card">
-                  <div className="food-card-image-container">
-                    <img
-                      className="food-card-image"
-                      src={`https://alikafecrm.uz${i.image}`}
-                      alt={i.name}
-                    />
-                  </div>
-                  <div className="food-card-content">
-                    <h3 className="food-card-title">{i.name}</h3>
-                    <div className="food-card-meta">
-                      <div className="food-card-time">
-                        <Clock size={16} className="food-card-time-icon" />
-                        <span>{i.cookingTime ? `${i.cookingTime} мин` : "Вақти йўқ"}</span>
-                      </div>
-                    </div>
-                    <div className="food-card-price">{formatPrice(i.price)}</div>
-                    <div className="food-card-actions">
-                      <button
-                        className="food-card-button edit"
-                        onClick={() => handleEdit(i)}
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        className="food-card-button delete"
-                        onClick={() => handleDelete(i.id)}
-                      >
-                        <Trash size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </article>
+              sortedMenu.map((item) => (
+                <FoodCard key={item.id} item={item} />
               ))
             )}
           </div>
@@ -432,7 +500,10 @@ export default function TaomlarSoz() {
               resetDish();
             }}
           >
-            <div style={{ overflow: "scroll", height: '100vh', backgroundColor: '#fff' }} onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{ overflow: "scroll", height: "100vh", backgroundColor: "#fff" }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="modal-header">
                 <h2 className="modal-title">
                   {editing ? "Таомни таҳрирлаш" : "Янги таом қўшиш"}
@@ -487,7 +558,7 @@ export default function TaomlarSoz() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Расм (автоматик JPG га айлантирилади)</label>
+                  <label className="form-label">Расм:</label>
                   <input
                     type="file"
                     accept="image/*"
@@ -496,9 +567,7 @@ export default function TaomlarSoz() {
                       const file = e.target.files[0];
                       if (file) {
                         try {
-                          console.log("Asl fayl:", file.name, file.type);
                           const jpgFile = await convertToJPG(file);
-                          console.log("JPG ga aylantirildi:", jpgFile.name, jpgFile.type);
                           setDishes({ ...dishes, image: jpgFile });
                         } catch (error) {
                           console.error("Rasm konvertatsiya qilishda xatolik:", error);
@@ -507,7 +576,7 @@ export default function TaomlarSoz() {
                       }
                     }}
                   />
-                  <small style={{ color: '#666', fontSize: '12px' }}>
+                  <small style={{ color: "#666", fontSize: "12px" }}>
                     Har qanday rasm formati JPG ga aylantiriladi va o'lchami optimallashtiriladi
                   </small>
                 </div>
@@ -516,13 +585,12 @@ export default function TaomlarSoz() {
                   <select
                     className="form-control"
                     value={dishes.categoryId || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onChange={(e) =>
                       setDishes({
                         ...dishes,
-                        categoryId: val === "" ? null : parseInt(val),
-                      });
-                    }}
+                        categoryId: e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
                   >
                     <option value="">Категория танланг</option>
                     {categoryList.map((cat) => (
@@ -537,17 +605,21 @@ export default function TaomlarSoz() {
                   <select
                     className="form-control"
                     value={dishes.assignedToId || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onChange={(e) =>
                       setDishes({
                         ...dishes,
-                        assignedToId: val === "" ? null : parseInt(val),
-                      });
-                    }}
+                        assignedToId: e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
                   >
                     <option value="">Ошпаз танланг (авто-танлов)</option>
                     {kitchenStaff
-                      .filter((user) => user.role === "KITCHEN" && user.name !== "." && user.username !== ".")
+                      .filter(
+                        (user) =>
+                          user.role === "KITCHEN" &&
+                          user.name !== "." &&
+                          user.username !== "."
+                      )
                       .map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.name} ({user.username})
@@ -575,32 +647,30 @@ export default function TaomlarSoz() {
                   </div>
                   <button
                     className="btn btn-success"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!newCategory.trim()) {
                         alert("Категория номини киритинг.");
                         return;
                       }
-                      axios
-                        .post(
+                      try {
+                        const res = await axios.post(
                           "https://alikafecrm.uz/category",
                           { name: newCategory.trim() },
                           {
                             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                           }
-                        )
-                        .then((res) => {
-                          const added = res.data;
-                          setCategoryList((prev) => [...prev, added]);
-                          setDishes((prev) => ({
-                            ...prev,
-                            categoryId: added.id,
-                          }));
-                          setNewCategory("Ҳаммаси");
-                        })
-                        .catch((err) => {
-                          console.error("Категория қўшишда хатолик:", err);
-                          alert("Категория қўшилмади.");
-                        });
+                        );
+                        const newCat = { ...res.data, id: Number(res.data.id) };
+                        setCategoryList((prev) => [...prev, newCat]);
+                        setDishes((prev) => ({
+                          ...prev,
+                          categoryId: newCat.id,
+                        }));
+                        setNewCategory(newCat.name);
+                      } catch (err) {
+                        console.error("Категория қўшишда хатолик:", err);
+                        alert("Категория қўшилмади.");
+                      }
                     }}
                   >
                     Қўшиш

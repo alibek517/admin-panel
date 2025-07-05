@@ -26,6 +26,9 @@ ChartJS.register(
 );
 
 export default function Asboblar() {
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split("T")[0];
+
   const [dailyStats, setDailyStats] = useState({
     orderCount: 0,
     totalAmount: 0,
@@ -34,10 +37,9 @@ export default function Asboblar() {
   });
   const [weeklyStats, setWeeklyStats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [commissionRate, setCommissionRate] = useState(0);
   const [orders, setOrders] = useState([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(today); // Default to today
+  const [endDate, setEndDate] = useState(today); // Default to today
   const [summary, setSummary] = useState({
     ordersCount: 0,
     totalPrice: 0,
@@ -47,20 +49,28 @@ export default function Asboblar() {
 
   // Format price helper function
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('uz-UZ').format(price) + ' сўм';
+    return new Intl.NumberFormat("uz-UZ").format(price) + " сўм";
   };
 
+  // Calculate total price of order items
+  const calculateTotalPrice = (orderItems) => {
+    if (!Array.isArray(orderItems)) return 0;
+    return orderItems.reduce(
+      (sum, item) => sum + parseFloat(item.product?.price || 0) * (item.count || 0),
+      0
+    );
+  };
 
   // Calculate summary based on date range
   const calculateSummary = (orders, start, end) => {
     let filteredOrders = orders;
-    
+
     if (start && end) {
       const startDateTime = new Date(start);
       const endDateTime = new Date(end);
       endDateTime.setHours(23, 59, 59, 999);
-      
-      filteredOrders = orders.filter(order => {
+
+      filteredOrders = orders.filter((order) => {
         const orderDate = new Date(order.createdAt);
         return orderDate >= startDateTime && orderDate <= endDateTime;
       });
@@ -71,13 +81,15 @@ export default function Asboblar() {
       if (order.totalAmount) {
         return sum + order.totalAmount;
       }
-      return sum + order.orderItems.reduce(
-        (itemSum, item) => itemSum + (item.product?.price || 0) * item.count,
-        0
-      );
+      return sum + calculateTotalPrice(order.orderItems);
     }, 0);
-    
-    const totalCommission = totalPrice * (commissionRate / 100);
+
+    const totalCommission = filteredOrders.reduce((sum, order) => {
+      const orderTotal = order.totalAmount || calculateTotalPrice(order.orderItems);
+      const commissionRate = parseFloat(order.uslug) || 0;
+      return sum + orderTotal * (commissionRate / 100);
+    }, 0);
+
     const totalWithCommission = totalPrice + totalCommission;
 
     return {
@@ -90,18 +102,14 @@ export default function Asboblar() {
 
   const fetchData = async () => {
     try {
-      const [ordersResponse, percentResponse] = await Promise.all([
-        axios.get("https://alikafecrm.uz/order"),
-        axios.get("https://alikafecrm.uz/percent/1"),
-      ]);
+      const ordersResponse = await axios.get("https://alikafecrm.uz/order");
 
       const orders = ordersResponse.data.map((order) => ({
         ...order,
         orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+        uslug: parseFloat(order.uslug) || 0,
       }));
-      
-      const fetchedCommissionRate = percentResponse.data?.percent || 0;
-      setCommissionRate(fetchedCommissionRate);
+
       setOrders(orders);
 
       const today = new Date();
@@ -120,16 +128,15 @@ export default function Asboblar() {
         if (order.totalAmount) {
           return sum + order.totalAmount;
         }
-        return (
-          sum +
-          order.orderItems.reduce(
-            (itemSum, item) =>
-              itemSum + (item.product?.price || 0) * item.count,
-            0
-          )
-        );
+        return sum + calculateTotalPrice(order.orderItems);
       }, 0);
-      const totalCommission = totalAmount * (fetchedCommissionRate / 100);
+
+      const totalCommission = dailyOrders.reduce((sum, order) => {
+        const orderTotal = order.totalAmount || calculateTotalPrice(order.orderItems);
+        const commissionRate = parseFloat(order.uslug) || 0;
+        return sum + orderTotal * (commissionRate / 100);
+      }, 0);
+
       const averageCheck = orderCount > 0 ? totalAmount / orderCount : 0;
 
       setDailyStats({
@@ -160,14 +167,13 @@ export default function Asboblar() {
           if (order.totalAmount) {
             return sum + order.totalAmount;
           }
-          return (
-            sum +
-            order.orderItems.reduce(
-              (itemSum, item) =>
-                itemSum + (item.product?.price || 0) * item.count,
-              0
-            )
-          );
+          return sum + calculateTotalPrice(order.orderItems);
+        }, 0);
+
+        const dayCommission = dayOrders.reduce((sum, order) => {
+          const orderTotal = order.totalAmount || calculateTotalPrice(order.orderItems);
+          const commissionRate = parseFloat(order.uslug) || 0;
+          return sum + orderTotal * (commissionRate / 100);
         }, 0);
 
         weeklyData.push({
@@ -176,16 +182,15 @@ export default function Asboblar() {
             month: "2-digit",
           }),
           orderCount: dayOrders.length,
-          commission: dayTotalAmount * (fetchedCommissionRate / 100),
+          commission: dayCommission,
         });
       }
 
       setWeeklyStats(weeklyData);
-      
-      // Calculate initial summary
-      const initialSummary = calculateSummary(orders, startDate, endDate);
+
+      // Calculate initial summary with today's date
+      const initialSummary = calculateSummary(orders, today, today);
       setSummary(initialSummary);
-      
     } catch (error) {
       console.error("Хатолик юз берди:", error);
     } finally {
@@ -203,7 +208,7 @@ export default function Asboblar() {
       const newSummary = calculateSummary(orders, startDate, endDate);
       setSummary(newSummary);
     }
-  }, [startDate, endDate, orders, commissionRate]);
+  }, [startDate, endDate, orders]);
 
   const orderChartData = {
     labels: weeklyStats.map((stat) => stat.date),
@@ -242,10 +247,8 @@ export default function Asboblar() {
         suggestedMax: (context) => {
           const maxValue =
             context.chart.canvas.id === "orderChart"
-              ? Math.max(...weeklyStats.map((stat) => stat.orderCount || 0)) *
-                1.1
-              : Math.max(...weeklyStats.map((stat) => stat.commission || 0)) *
-                1.1;
+              ? Math.max(...weeklyStats.map((stat) => stat.orderCount || 0)) * 1.1
+              : Math.max(...weeklyStats.map((stat) => stat.commission || 0)) * 1.1;
           return maxValue > 0 ? maxValue : 10;
         },
         title: {
@@ -262,8 +265,7 @@ export default function Asboblar() {
         },
         ticks: {
           color: "var(--color-text-secondary)",
-          precision: (context) =>
-            context.chart.canvas.id === "orderChart" ? 0 : 2,
+          precision: (context) => (context.chart.canvas.id === "orderChart" ? 0 : 2),
         },
       },
       x: {
@@ -330,55 +332,100 @@ export default function Asboblar() {
           Статистика
         </h2>
       </header>
-      
+
       <section className="orders-section">
         {/* Jami hisobot */}
-        <div style={{
-          marginBottom: "var(--space-4)",
-          padding: "var(--space-4)",
-          backgroundColor: "#f8f9fa",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid #dee2e6"
-        }}>
+        <div
+          style={{
+            marginBottom: "var(--space-4)",
+            padding: "var(--space-4)",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid #dee2e6",
+          }}
+        >
           <h3 style={{ marginBottom: "var(--space-3)", color: "#495057" }}>
-            Жами ҳисобот 
+            Жами ҳисобот
             {startDate && endDate && (
               <span style={{ fontSize: "14px", fontWeight: "normal", color: "#6c757d" }}>
-                ({startDate} дан {endDate} гача)
+                ( {startDate} д а н {endDate} г а ч а )
               </span>
             )}
           </h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "var(--space-3)" }}>
-            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "var(--space-3)",
+            }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                padding: "var(--space-3)",
+                backgroundColor: "white",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
               <div style={{ fontSize: "24px", fontWeight: "bold", color: "#28a745" }}>
                 {summary.ordersCount}
               </div>
               <div style={{ color: "#6c757d", fontSize: "14px" }}>Буюртмалар сони</div>
             </div>
-            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "var(--space-3)",
+                backgroundColor: "white",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
               <div style={{ fontSize: "18px", fontWeight: "bold", color: "#007bff" }}>
                 {formatPrice(summary.totalPrice)}
               </div>
               <div style={{ color: "#6c757d", fontSize: "14px" }}>Умумий сотув</div>
             </div>
-            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "var(--space-3)",
+                backgroundColor: "white",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
               <div style={{ fontSize: "18px", fontWeight: "bold", color: "#ffc107" }}>
                 {formatPrice(summary.totalCommission)}
               </div>
               <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами комиссия</div>
             </div>
-            <div style={{ textAlign: "center", padding: "var(--space-3)", backgroundColor: "white", borderRadius: "var(--radius-md)" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "var(--space-3)",
+                backgroundColor: "white",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
               <div style={{ fontSize: "18px", fontWeight: "bold", color: "#dc3545" }}>
                 {formatPrice(summary.totalWithCommission)}
               </div>
-              <div style={{ color: "#6c757d", fontSize: "14px" }}>Жами (комиссия билан)</div>
+              <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                Жами (комиссия билан)
+              </div>
             </div>
           </div>
         </div>
 
         <div className="clear-orders-form" style={{ marginBottom: "var(--space-4)" }}>
-          <div style={{ display: "flex", gap: "50px", alignItems: "center", justifyContent:"center" }}>
-            <div style={{textAlign:"center"}}>
+          <div
+            style={{
+              display: "flex",
+              gap: "50px",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
               <label>Бошланғич сана:</label>
               <input
                 type="date"
@@ -393,7 +440,7 @@ export default function Asboblar() {
                 }}
               />
             </div>
-            <div style={{textAlign:"center"}}>
+            <div style={{ textAlign: "center" }}>
               <label>Якуний сана:</label>
               <input
                 type="date"
@@ -410,14 +457,14 @@ export default function Asboblar() {
             </div>
           </div>
         </div>
-        
+
         {orders.length === 0 ? (
           <p style={{ textAlign: "center", marginTop: "var(--space-4)" }}>
-            Буюртмалар йўқ 
+            Буюртмалар йўқ
           </p>
         ) : null}
       </section>
-      
+
       <section className="section daily-stats">
         <h3 className="section-title">
           <svg>
@@ -435,62 +482,36 @@ export default function Asboblar() {
               <span className="stats-card-unit">та</span>
             </div>
             <div className="stats-card card-hover fade-in">
-              <div
-                style={{
-                  display: "flex",
-                }}
-              >
+              <div style={{ display: "flex" }}>
                 <p style={{ marginLeft: "-10px" }} className="stats-card-title">
                   Умумий сумма
                 </p>
-                <p
-                  style={{
-                    fontSize: "9px",
-                  }}
-                  className="stats-card-title"
-                >
+                <p style={{ fontSize: "9px" }} className="stats-card-title">
                   ( Комиссиясиз )
                 </p>
               </div>
-              <h4 className="stats-card-value">
-                {dailyStats.totalAmount.toLocaleString("uz-UZ")}
-              </h4>
+              <h4 className="stats-card-value">{formatPrice(dailyStats.totalAmount)}</h4>
               <span className="stats-card-unit">сўм</span>
             </div>
             <div className="stats-card card-hover fade-in">
               <p className="stats-card-title">Комиссия</p>
-              <h4 className="stats-card-value">
-                {dailyStats.totalCommission.toLocaleString("uz-UZ")}
-              </h4>
+              <h4 className="stats-card-value">{formatPrice(dailyStats.totalCommission)}</h4>
               <span className="stats-card-unit">сўм</span>
             </div>
             <div className="stats-card card-hover fade-in">
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column" }}>
                 <p className="stats-card-title">Ўртача буюртма миқдори</p>
-                <p
-                  style={{
-                    fontSize: "10px",
-                    marginTop: "-10px",
-                  }}
-                  className="stats-card-title"
-                >
+                <p style={{ fontSize: "10px", marginTop: "-10px" }} className="stats-card-title">
                   ( Комиссиясиз )
                 </p>
               </div>
-              <h4 className="stats-card-value">
-                {Math.round(dailyStats.averageCheck).toLocaleString("uz-UZ")}
-              </h4>
+              <h4 className="stats-card-value">{formatPrice(Math.round(dailyStats.averageCheck))}</h4>
               <span className="stats-card-unit">сўм</span>
             </div>
           </div>
         )}
       </section>
-      
+
       <section className="section chart-container">
         <h3 className="section-title">
           <svg>
@@ -506,24 +527,13 @@ export default function Asboblar() {
           </p>
         ) : (
           <>
-            <div
-              className="chart"
-              style={{ height: "300px", marginBottom: "var(--space-4)" }}
-            >
+            <div className="chart" style={{ height: "300px", marginBottom: "var(--space-4)" }}>
               <h4>Буюртмалар сони</h4>
-              <Line
-                id="orderChart"
-                data={orderChartData}
-                options={chartOptions}
-              />
+              <Line id="orderChart" data={orderChartData} options={chartOptions} />
             </div>
             <div className="chart" style={{ height: "300px" }}>
               <h4>Комиссия</h4>
-              <Line
-                id="commissionChart"
-                data={commissionChartData}
-                options={chartOptions}
-              />
+              <Line id="commissionChart" data={commissionChartData} options={chartOptions} />
             </div>
           </>
         )}

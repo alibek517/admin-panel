@@ -13,7 +13,6 @@ import {
   Eye,
 } from "lucide-react";
 
-// Filter options for order statuses
 const filters = [
   { label: "Барчаси", name: "ALL", icon: Package },
   { label: "Навбатда", name: "PENDING", icon: CircleDot },
@@ -23,7 +22,6 @@ const filters = [
   { label: "Тугалланган", name: "ARCHIVE", icon: CheckCheck },
 ];
 
-// Map order status to CSS class for styling
 const getStatusClass = (status) => {
   switch (status) {
     case "PENDING":
@@ -42,29 +40,31 @@ const getStatusClass = (status) => {
 };
 
 export default function ZakazTarixi() {
-  // State variables
+  const today = new Date().toISOString().split("T")[0];
   const [orders, setOrders] = useState([]);
   const [categoryList, setCategoryList] = useState([]);
   const [tables, setTables] = useState([]);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [searchInput, setSearchInput] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [sortAscending, setSortAscending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [commissionRate, setCommissionRate] = useState(0);
   const [openFoodItems, setOpenFoodItems] = useState(null);
 
-  // Calculate total price of order items
-  const calculateTotalPrice = (orderItems) => {
-    if (!Array.isArray(orderItems)) return 0;
-    return orderItems.reduce(
-      (sum, item) => sum + parseFloat(item.product?.price || 0) * (item.count || 0),
-      0
-    );
+  const calculateTotalPrice = (order) => {
+    const itemsPrice = order?.orderItems?.reduce((sum, item) => {
+      const price = item?.product?.price ? parseFloat(item.product.price) : 0;
+      const count = item?.count ? parseInt(item.count) : 0;
+      return sum + price * count;
+    }, 0) || 0;
+    return itemsPrice;
   };
 
-  // Calculate summary for orders
+  const getCommissionRate = (order) => {
+    return order?.tableId && order?.uslug ? parseFloat(order.uslug) : 0;
+  };
+
   const calculateSummary = () => {
     const filteredOrders = getFilteredOrders();
     let totalPrice = 0;
@@ -72,7 +72,8 @@ export default function ZakazTarixi() {
     let totalWithCommission = 0;
 
     filteredOrders.forEach((order) => {
-      const orderTotal = calculateTotalPrice(order.orderItems);
+      const orderTotal = calculateTotalPrice(order);
+      const commissionRate = getCommissionRate(order);
       const orderCommission = orderTotal * (commissionRate / 100);
       totalPrice += orderTotal;
       totalCommission += orderCommission;
@@ -87,14 +88,13 @@ export default function ZakazTarixi() {
     };
   };
 
-  // Format price with spaces for thousands
   const formatPrice = (price) => {
-    const priceStr = price.toString();
+    const integerPrice = Math.floor(price);
+    const priceStr = integerPrice.toString();
     const formatted = priceStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return `${formatted} сўм`;
   };
 
-  // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -107,24 +107,21 @@ export default function ZakazTarixi() {
           },
         };
 
-        const [ordersResponse, categoriesResponse, tablesResponse, percentResponse] =
-          await Promise.all([
-            axios.get("https://alikafecrm.uz/order", config),
-            axios.get("https://alikafecrm.uz/category", config),
-            axios.get("https://alikafecrm.uz/tables", config),
-            axios.get("https://alikafecrm.uz/percent/1", config),
-          ]);
+        const [ordersResponse, categoriesResponse, tablesResponse] = await Promise.all([
+          axios.get("https://alikafecrm.uz/order", config),
+          axios.get("https://alikafecrm.uz/category", config),
+          axios.get("https://alikafecrm.uz/tables", config),
+        ]);
 
-        // Sanitize orders to ensure orderItems is an array
         const sanitizedOrders = ordersResponse.data.map((order) => ({
           ...order,
           orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+          uslug: parseFloat(order.uslug) || null,
         }));
 
         setOrders(sanitizedOrders);
         setCategoryList(categoriesResponse.data || []);
         setTables(tablesResponse.data.data || []);
-        setCommissionRate(parseFloat(percentResponse.data?.percent) || 0);
       } catch (error) {
         console.error("Error fetching data:", error);
         alert("Маълумотларни юклашда хатолик юз берди.");
@@ -136,7 +133,6 @@ export default function ZakazTarixi() {
     fetchData();
   }, []);
 
-  // Map table IDs to their number and name
   const tableMap = tables.reduce(
     (map, table) => ({
       ...map,
@@ -148,7 +144,6 @@ export default function ZakazTarixi() {
     {}
   );
 
-  // Filter and sort orders
   const getFilteredOrders = () => {
     return orders
       .filter((order) => {
@@ -159,15 +154,14 @@ export default function ZakazTarixi() {
           (order.tableId &&
             (tableMap[order.tableId]?.number?.toString().includes(searchInput) ||
               tableMap[order.tableId]?.name?.toLowerCase().includes(searchInput.toLowerCase()))) ||
-          (order.carrierNumber && order.carrierNumber.toLowerCase().includes(searchInput.toLowerCase())) ||
-          false;
+          (order.carrierNumber && order.carrierNumber.toString().includes(searchInput));
         const orderDate = new Date(order.createdAt);
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
         const matchesDateRange =
           (!start || orderDate >= start) &&
           (!end || orderDate <= new Date(end).setHours(23, 59, 59, 999));
-        return matchesFilterStatus && matchesSearchInput && matchesDateRange;
+        return matchesFilterStatus && matchesSearchInput && matchesDateRange && order.tableId;
       })
       .sort((a, b) => {
         const dateA = new Date(a.createdAt);
@@ -176,7 +170,6 @@ export default function ZakazTarixi() {
       });
   };
 
-  // Toggle food items visibility
   const toggleFoodItems = (orderId) => {
     setOpenFoodItems(openFoodItems === orderId ? null : orderId);
   };
@@ -213,7 +206,7 @@ export default function ZakazTarixi() {
                       color: "#6c757d",
                     }}
                   >
-                    ({startDate} дан {endDate} гача)
+                    ( {startDate} д а н {endDate} г а ч а )
                   </span>
                 )}
               </h3>
@@ -313,7 +306,7 @@ export default function ZakazTarixi() {
 
             <div className="controls">
               <div className="search-container">
-                <div className="search-input">
+                <div style={{ display: "flex", alignItems: "center" }} className="search-input">
                   <Search className="icon" />
                   <input
                     type="text"
@@ -322,7 +315,7 @@ export default function ZakazTarixi() {
                     onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
-                <div className="date-input">
+                <div style={{ display: "flex", alignItems: "center" }} className="date-input">
                   <Calendar className="icon" />
                   <input
                     type="date"
@@ -331,7 +324,7 @@ export default function ZakazTarixi() {
                     placeholder="Бошланиш санаси"
                   />
                 </div>
-                <div className="date-input">
+                <div style={{ display: "flex", alignItems: "center" }} className="date-input">
                   <Calendar className="icon" />
                   <input
                     type="date"
@@ -379,23 +372,21 @@ export default function ZakazTarixi() {
               </thead>
               <tbody>
                 {filteredHistory.map((order) => {
-                  const totalPrice = calculateTotalPrice(order.orderItems);
+                  const totalPrice = calculateTotalPrice(order);
+                  const commissionRate = getCommissionRate(order);
                   const commission = totalPrice * (commissionRate / 100);
                   const totalWithCommission = totalPrice + commission;
-                  const isDelivery = !order.tableId;
                   return (
                     <React.Fragment key={order.id}>
                       <tr>
                         <td>{order.id}</td>
                         <td>
-                          {isDelivery
-                            ? order.carrierNumber || "Йўқ"
-                            : tableMap[order.tableId]
-                              ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
-                              : "Йўқ"}
+                          {tableMap[order.tableId]
+                            ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
+                            : ""}
                         </td>
                         <td>{formatPrice(totalPrice)}</td>
-                        <td>{formatPrice(commission)}</td>
+                        <td>{formatPrice(commission)} ({commissionRate}%)</td>
                         <td>{formatPrice(totalWithCommission)}</td>
                         <td>
                           {order.createdAt
@@ -427,11 +418,18 @@ export default function ZakazTarixi() {
                         <tr>
                           <td colSpan="8" className="food-items">
                             {order.orderItems.length > 0 ? (
-                              order.orderItems.map((item) => (
-                                <div key={item.id}>
-                                  {`${item.product?.name || "Номаълум"} (${item.count || 0})`}
-                                </div>
-                              ))
+                              order.orderItems.map((item) => {
+                                const category = categoryList.find(
+                                  (cat) => cat.id === item.product?.categoryId
+                                );
+                                return (
+                                  <div key={item.id}>
+                                    {`${item.product?.name || "Номаълум"} (${
+                                      item.count || 0
+                                    }) - Категория: ${category?.name || "Номаълум"}`}
+                                  </div>
+                                );
+                              })
                             ) : (
                               <div>Таомлар йўқ</div>
                             )}

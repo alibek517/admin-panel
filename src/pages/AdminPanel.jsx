@@ -4,7 +4,7 @@ import axios from "axios";
 import { Printer, Edit, Trash2, Eye } from "lucide-react";
 import Receipt from "../components/Receipt.jsx";
 import "./styles/AdminPanel.css";
-import Header from "../components/header.jsx";
+import Header from "../components/Header.jsx";
 
 export default function AdminPanel() {
   const [orders, setOrders] = useState([]);
@@ -14,7 +14,6 @@ export default function AdminPanel() {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [commissionRate, setCommissionRate] = useState(0);
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
 
@@ -25,19 +24,22 @@ export default function AdminPanel() {
     },
   });
 
-  const calculateTotalPrice = (orderItems) => {
-    if (!orderItems || !Array.isArray(orderItems)) {
-      console.warn("Invalid orderItems:", orderItems);
-      return 0;
-    }
-    return orderItems.reduce(
-      (sum, item) => sum + parseFloat(item.product?.price || 0) * item.count,
-      0
-    );
+  const calculateTotalPrice = (order) => {
+    const itemsPrice = order?.orderItems?.reduce((sum, item) => {
+      const price = item?.product?.price ? parseFloat(item.product.price) : 0;
+      const count = item?.count ? parseInt(item.count) : 0;
+      return sum + price * count;
+    }, 0) || 0;
+    return itemsPrice;
+  };
+
+  const getCommissionRate = (order) => {
+    return order?.tableId && order?.uslug ? parseFloat(order.uslug) : 0;
   };
 
   const formatPrice = (price) => {
-    const priceStr = price.toString();
+    const validPrice = isNaN(price) || price === null ? 0 : Math.floor(price);
+    const priceStr = validPrice.toString();
     const formatted = priceStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return `${formatted} сўм`;
   };
@@ -49,6 +51,9 @@ export default function AdminPanel() {
   const handlePrintOrder = (order) => {
     const isDelivery = !order.tableId;
     const table = tables.find((table) => table.id === order.tableId);
+    const totalPrice = calculateTotalPrice(order);
+    const commissionRate = getCommissionRate(order);
+    const commission = totalPrice * (commissionRate / 100);
     setCurrentOrder({
       id: order.id || null,
       orderItems: order.orderItems || [],
@@ -57,12 +62,11 @@ export default function AdminPanel() {
         : table
         ? `${table.name} - ${table.number}`
         : "Йўқ",
-      totalPrice: calculateTotalPrice(order.orderItems),
-      commission: calculateTotalPrice(order.orderItems) * (commissionRate / 100),
-      totalWithCommission:
-        calculateTotalPrice(order.orderItems) +
-        calculateTotalPrice(order.orderItems) * (commissionRate / 100),
+      totalPrice: totalPrice,
+      commission: commission,
+      totalWithCommission: totalPrice + commission,
       createdAt: order.createdAt || null,
+      uslug: parseFloat(order.uslug) || 0,
     });
     setTimeout(() => {
       if (receiptRef.current) {
@@ -75,16 +79,27 @@ export default function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, tablesRes, percentRes] = await Promise.all([
+      const [ordersRes, tablesRes] = await Promise.all([
         axios.get("https://alikafecrm.uz/order", createApiRequest(token)),
         axios.get("https://alikafecrm.uz/tables", createApiRequest(token)),
-        axios.get("https://alikafecrm.uz/percent/1", createApiRequest(token)),
       ]);
 
       const sanitizedOrders = ordersRes.data
         .map((order) => ({
           ...order,
-          orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+          orderItems: Array.isArray(order.orderItems)
+            ? order.orderItems.map((item) => ({
+                ...item,
+                product: item.product
+                  ? {
+                      ...item.product,
+                      price: parseFloat(item.product.price) || 0,
+                    }
+                  : { price: 0, name: "Номаълум таом" },
+                count: parseInt(item.count) || 0,
+              }))
+            : [],
+          uslug: parseFloat(order.uslug) || null,
         }))
         .sort((a, b) => {
           if (a.status === "ARCHIVE" && b.status !== "ARCHIVE") return 1;
@@ -92,16 +107,13 @@ export default function AdminPanel() {
           return new Date(b.createdAt) - new Date(a.createdAt);
         });
 
-      console.log("Orders:", sanitizedOrders);
-
       setOrders((prevOrders) => {
         if (JSON.stringify(prevOrders) !== JSON.stringify(sanitizedOrders)) {
           return sanitizedOrders;
         }
         return prevOrders;
       });
-      setTables(tablesRes.data.data);
-      setCommissionRate(parseFloat(percentRes.data?.percent) || 0);
+      setTables(tablesRes.data.data || []);
     } catch (error) {
       console.error("Маълумотларни олишда хатолик:", error);
       alert("Маълумотларни олишда хатолик юз берди.");
@@ -171,7 +183,8 @@ export default function AdminPanel() {
     let totalWithCommission = 0;
 
     filteredOrders.forEach((order) => {
-      const orderTotal = calculateTotalPrice(order.orderItems);
+      const orderTotal = calculateTotalPrice(order);
+      const commissionRate = getCommissionRate(order);
       const orderCommission = orderTotal * (commissionRate / 100);
       totalPrice += orderTotal;
       totalCommission += orderCommission;
@@ -287,7 +300,7 @@ export default function AdminPanel() {
                     color: "#6c757d",
                   }}
                 >
-                  ({startDate} дан {endDate} гача)
+                  ( {startDate} дан {endDate} гача )
                 </span>
               )}
             </h3>
@@ -406,7 +419,7 @@ export default function AdminPanel() {
                   style={{
                     padding: "var(--space-2)",
                     borderRadius: "var(--radius-md)",
-                    border: `1px solid var(--color-neutral-300)`,
+                    border: "1px solid var(--color-neutral-300)",
                     marginTop: "var(--space-1)",
                   }}
                 />
@@ -421,7 +434,7 @@ export default function AdminPanel() {
                   style={{
                     padding: "var(--space-2)",
                     borderRadius: "var(--radius-md)",
-                    border: `1px solid var(--color-neutral-300)`,
+                    border: "1px solid var(--color-neutral-300)",
                     marginTop: "var(--space-1)",
                   }}
                 />
@@ -453,6 +466,7 @@ export default function AdminPanel() {
                       <th>Стол/Телефон</th>
                       <th>Бошланғич сана</th>
                       <th>Жами сумма</th>
+                      <th>Комиссия (%)</th>
                       <th>Ҳолати</th>
                       <th>Амаллар</th>
                     </tr>
@@ -460,8 +474,10 @@ export default function AdminPanel() {
                   <tbody>
                     {filteredOrders.map((order, index) => {
                       const isDelivery = !order.tableId;
-                      const totalPrice = calculateTotalPrice(order.orderItems);
-                      const totalWithCommission = totalPrice + totalPrice * (commissionRate / 100);
+                      const totalPrice = calculateTotalPrice(order);
+                      const commissionRate = getCommissionRate(order);
+                      const commission = totalPrice * (commissionRate / 100);
+                      const totalWithCommission = totalPrice + commission;
                       const table = tableMap[order.tableId];
                       return (
                         <tr key={`${order.id}-${index}`}>
@@ -484,6 +500,7 @@ export default function AdminPanel() {
                             })}
                           </td>
                           <td>{formatPrice(totalWithCommission)}</td>
+                          <td>{commissionRate}%</td>
                           <td>
                             <span
                               className={`status-badge ${
@@ -596,33 +613,33 @@ export default function AdminPanel() {
                           borderRadius: "var(--radius-md)",
                           marginRight: "var(--space-3)",
                         }}
+                        onError={(e) => {
+                          e.target.src = "/placeholder-food.jpg";
+                        }}
                       />
                       <span>
-                        {item.product.name} ({item.count})
+                        {item.product?.name || "Номаълум таом"} ({item.count}) -{" "}
+                        {formatPrice((item.product?.price || 0) * (item.count || 0))}
                       </span>
                     </div>
                   ))}
                 </div>
                 <p>
-                  <b>Ҳолати:</b> {getStatusText(selectedOrder.status)}
-                </p>
-                <p>
                   <b>Умумий нарxи:</b>{" "}
-                  {formatPrice(calculateTotalPrice(selectedOrder.orderItems))}
+                  {formatPrice(calculateTotalPrice(selectedOrder))}
                 </p>
                 <p>
-                  <b>Комиссия ({commissionRate}%):</b>{" "}
+                  <b>Комиссия ({getCommissionRate(selectedOrder)}%):</b>{" "}
                   {formatPrice(
-                    calculateTotalPrice(selectedOrder.orderItems) *
-                      (commissionRate / 100)
+                    calculateTotalPrice(selectedOrder) *
+                      (getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
                 <p>
                   <b>Жами (комиссия билан):</b>{" "}
                   {formatPrice(
-                    calculateTotalPrice(selectedOrder.orderItems) +
-                      calculateTotalPrice(selectedOrder.orderItems) *
-                        (commissionRate / 100)
+                    calculateTotalPrice(selectedOrder) *
+                      (1 + getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
 
@@ -642,7 +659,7 @@ export default function AdminPanel() {
                         width: "100%",
                         padding: "var(--space-2)",
                         borderRadius: "var(--radius-md)",
-                        border: `1px solid var(--color-neutral-300)`,
+                        border: "1px solid var(--color-neutral-300)",
                         marginTop: "var(--space-2)",
                       }}
                     >
@@ -658,7 +675,10 @@ export default function AdminPanel() {
                         try {
                           await axios.put(
                             `https://alikafecrm.uz/order/${selectedOrder.id}`,
-                            { status: selectedOrder.status },
+                            {
+                              status: selectedOrder.status,
+                              uslug: parseFloat(selectedOrder.uslug) || null,
+                            },
                             createApiRequest(token)
                           );
                           alert("Буюртма янгиланди");
@@ -701,6 +721,7 @@ export default function AdminPanel() {
                 commission: 0,
                 totalWithCommission: 0,
                 createdAt: null,
+                uslug: 0,
               }
             }
           />

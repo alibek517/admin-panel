@@ -108,7 +108,72 @@ img {
   box-shadow: var(--shadow-sm);
   height: auto;
 }
+.food-card {
+  cursor: grab;
+  transition: transform 0.2s, opacity 0.2s;
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  touch-action: none; /* Improve mobile dragging */
+}
 
+.food-card.dragging {
+  opacity: 0.7;
+  transform: scale(1.02);
+  z-index: 1000;
+}
+
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Adjust to match your grid */
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+}
+
+.category-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.category-tab {
+  padding: var(--spacing-2) var(--spacing-4);
+  margin-right: var(--spacing-2);
+  border: none;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.category-tab.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.category-tab:hover {
+  background: var(--color-primary-light);
+  color: var(--color-white);
+}
+
+.scroll-arrow {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: var(--spacing-2);
+}
+
+.scroll-arrow:hover {
+  background: var(--color-primary-dark);
+}
 .category-tabs::-webkit-scrollbar {
   display: none;
   height: auto;
@@ -223,7 +288,6 @@ img {
 }
 
 .food-card-price {
-  margin-top: auto;
   font-weight: 700;
   font-size: 1.25rem;
   color: var(--color-primary);
@@ -351,9 +415,9 @@ img {
 }
 
 .header-title {
+  color: #fff;
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--color-primary);
   padding-left: 40px;
 }
 
@@ -424,4 +488,192 @@ img {
 .text-danger {
   color: var(--color-red);
   margin-bottom: var(--spacing-3);
+}
+
+/* Assuming existing styles for .food-card, .btn, etc. are already in your CSS file */
+/* These are additional styles for the selection and swap functionality */
+
+/* Style for the food card when selected */
+.food-card {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fff;
+}
+
+.food-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.food-card.selected {
+  background-color: #e6f3ff; /* Light blue for selected items */
+  border-color: #4a90e2;
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+}
+
+/* Style for the toggle swap mode button */
+.btn-toggle-swap {
+  background-color: #4a90e2;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-toggle-swap:hover {
+  background-color: #357abd;
+}
+
+/* Style for the swap selected items button */
+.btn-swap {
+  background-color: #28a745;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 10px;
+  transition: background-color 0.3s ease;
+  margin-left: 600px;
+}
+
+.btn-swap:hover {
+  background-color: #218838;
+}
+
+/* Ensure buttons in header are aligned properly */
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 24px;
+}
+.food-card {
+  background-color: var(--color-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Ensures elements are evenly spaced */
+  width: 100%;
+  gap: var(--spacing-3); /* Adds consistent spacing between elements */
+}
+
+.food-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.food-card.selected {
+  background-color: #e6f3ff; /* Light blue for selected items */
+  border-color: #4a90e2;
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+}
+
+.food-card-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0; /* Prevents image from shrinking */
+}
+
+.food-card-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Allows content to take available space */
+  gap: var(--spacing-2);
+  min-width: 0; /* Prevents overflow in flex container */
+}
+
+.food-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Handles long names gracefully */
+}
+
+.food-card-meta {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-light);
+  font-size: 0.875rem;
+}
+
+.food-card-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.food-card-time-icon {
+  color: var(--color-text-light);
+}
+
+.food-card-price {
+  background-color: burlywood;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text);
+  flex-shrink: 0; /* Prevents price from shrinking */
+}
+
+.food-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-shrink: 0; /* Prevents actions from shrinking */
+}
+
+.food-card-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.food-card-button.edit {
+  background-color: var(--color-error); /* Red for edit button */
+}
+
+.food-card-button.delete {
+  background-color: var(--color-success); /* Greenyellow for delete button */
+}
+
+.food-card-button:hover {
+  opacity: 0.8;
+}
+
+.food-card.selected .food-card-actions {
+  pointer-events: none; /* Disable actions in swap mode */
+}
+
+.food-card-actions button {
+  pointer-events: auto; /* Re-enable when not in swap mode */
 }

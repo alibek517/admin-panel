@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./styles/header.css";
 import axios from "axios";
 import { socket } from "../socket.js";
@@ -12,87 +12,87 @@ export default function Header() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [commissionRate, setCommissionRate] = useState(0);
   const processedEvents = useRef(new Set());
 
-  const calculateTotalPrice = (orderItems) => {
-    return orderItems.reduce(
-      (sum, item) => sum + parseFloat(item.product?.price || 0) * item.count,
-      0
-    );
+  const formatPrice = (price) => {
+    return Number(price).toLocaleString("uz-UZ");
   };
 
-  const calculateCommissions = (orders) => {
+  const calculateTotalPrice = useCallback((order) => {
+    const itemsPrice = order?.orderItems?.reduce((sum, item) => {
+      const price = item?.product?.price ? parseFloat(item.product.price) : 0;
+      const count = item?.count ? parseInt(item.count) : 0;
+      return sum + price * count;
+    }, 0) || 0;
+    return itemsPrice;
+  }, []);
+
+  const getCommissionRate = useCallback((order) => {
+    return order?.tableId && order?.uslug ? parseFloat(order.uslug) : 0;
+  }, []);
+
+  const calculateCommissions = useCallback((orders = []) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
     todayEnd.setHours(23, 59, 59, 999);
-
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(today.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     const totalCommission = orders.reduce((sum, order) => {
-      if (order.commission) {
-        return sum + order.commission;
-      }
-      const orderAmount = calculateTotalPrice(order.orderItems);
-      return sum + orderAmount * (commissionRate / 100);
+      if (!order) return sum;
+      const totalPrice = calculateTotalPrice(order);
+      const commissionRate = getCommissionRate(order);
+      const commission = totalPrice * (commissionRate / 100);
+      return sum + commission;
     }, 0);
 
-    const dailyCommission = orders
-      .filter(
-        (order) =>
-          new Date(order.createdAt) >= today &&
-          new Date(order.createdAt) <= todayEnd
-      )
-      .reduce((sum, order) => {
-        if (order.commission) {
-          return sum + order.commission;
-        }
-        const orderAmount = calculateTotalPrice(order.orderItems);
-        return sum + orderAmount * (commissionRate / 100);
-      }, 0);
+    const dailyCommission = orders.reduce((sum, order) => {
+      if (!order || new Date(order.createdAt) < today || new Date(order.createdAt) > todayEnd) return sum;
+      const totalPrice = calculateTotalPrice(order);
+      const commissionRate = getCommissionRate(order);
+      const commission = totalPrice * (commissionRate / 100);
+      return sum + commission;
+    }, 0);
 
-    const last30DaysCommission = orders
-      .filter((order) => new Date(order.createdAt) >= thirtyDaysAgo)
-      .reduce((sum, order) => {
-        if (order.commission) {
-          return sum + order.commission;
-        }
-        const orderAmount = calculateTotalPrice(order.orderItems);
-        return sum + orderAmount * (commissionRate / 100);
-      }, 0);
+    const last30DaysCommission = orders.reduce((sum, order) => {
+      if (!order || new Date(order.createdAt) < thirtyDaysAgo) return sum;
+      const totalPrice = calculateTotalPrice(order);
+      const commissionRate = getCommissionRate(order);
+      const commission = totalPrice * (commissionRate / 100);
+      return sum + commission;
+    }, 0);
 
     return { totalCommission, dailyCommission, last30DaysCommission };
-  };
+  }, [calculateTotalPrice, getCommissionRate]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const percentResponse = await axios.get("https://alikafecrm.uz/percent/1", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const fetchedCommissionRate = percentResponse.data?.percent || 0;
-      setCommissionRate(fetchedCommissionRate);
+      setLoading(true);
+      setError(null);
 
       const ordersResponse = await axios.get("https://alikafecrm.uz/order", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+
       const orders = ordersResponse.data.map((order) => ({
         ...order,
         orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+        uslug: parseFloat(order.uslug) || null,
         createdAt: order.createdAt || new Date().toISOString(),
       }));
 
-      let usersData = [{ email: "AdminInfo@gmail.com", role: "CUSTOMER" }];
+      let usersData = [{ email: "AdminInfo@gmail.com", role: "CUSTOMER", username: "Admin" }];
       try {
         const usersResponse = await axios.get("https://alikafecrm.uz/user", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
-        usersData = usersResponse.data;
+        usersData = Array.isArray(usersResponse.data) ? usersResponse.data : usersData;
       } catch (userError) {
-        console.warn("Фойдаланувчилар APIдан олишда хатолик:", userError);
+        console.warn("Error fetching users:", userError);
       }
 
       const customerUsers = usersData.filter((user) => user.role === "CUSTOMER");
@@ -102,22 +102,18 @@ export default function Header() {
       const commissionData = calculateCommissions(orders);
       setCommissions(commissionData);
     } catch (error) {
-      console.error("Хатолик юз берди:", error);
+      console.error("Error fetching data:", error);
+      setError("Маълумотларни юклашда хатолик юз берди");
     } finally {
       setLoading(false);
     }
-  };
+  }, [calculateCommissions]);
 
   useEffect(() => {
     fetchData();
 
-    const handleConnect = () => {
-      setIsConnected(true);
-    };
-
-    const handleDisconnect = () => {
-      setIsConnected(false);
-    };
+    const handleConnect = () => setIsConnected(true);
+    const handleDisconnect = () => setIsConnected(false);
 
     const handleOrderCreated = (newOrder) => {
       if (!newOrder || !newOrder.id) return;
@@ -129,10 +125,12 @@ export default function Header() {
         const sanitizedOrder = {
           ...newOrder,
           orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
+          uslug: parseFloat(newOrder.uslug) || null,
           createdAt: newOrder.createdAt || new Date().toISOString(),
         };
-        const orderAmount = calculateTotalPrice(sanitizedOrder.orderItems);
-        const commission = sanitizedOrder.commission || orderAmount * (commissionRate / 100);
+        const totalPrice = calculateTotalPrice(sanitizedOrder);
+        const commissionRate = getCommissionRate(sanitizedOrder);
+        const commission = totalPrice * (commissionRate / 100);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -158,39 +156,14 @@ export default function Header() {
       const eventKey = `orderUpdated:${updatedOrder.id}:${updatedOrder.updatedAt || Date.now()}`;
       if (processedEvents.current.has(eventKey)) return;
       processedEvents.current.add(eventKey);
-
-      setCommissions((prev) => {
-        const sanitizedOrder = {
-          ...updatedOrder,
-          orderItems: Array.isArray(updatedOrder.orderItems) ? [...updatedOrder.orderItems] : [],
-          createdAt: updatedOrder.createdAt || new Date().toISOString(),
-        };
-        const orderAmount = calculateTotalPrice(sanitizedOrder.orderItems);
-        const newCommission = sanitizedOrder.commission || orderAmount * (commissionRate / 100);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(today);
-        todayEnd.setHours(23, 59, 59, 999);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-        const isToday = new Date(sanitizedOrder.createdAt) >= today && new Date(sanitizedOrder.createdAt) <= todayEnd;
-        const isLast30Days = new Date(sanitizedOrder.createdAt) >= thirtyDaysAgo;
-
-        fetchData();
-        return prev;
-      });
+      fetchData();
     };
 
     const handleOrderDeleted = (data) => {
-      const id = data?.id;
-      if (!id) return;
-      const eventKey = `orderDeleted:${id}:${Date.now()}`;
+      if (!data?.id) return;
+      const eventKey = `orderDeleted:${data.id}:${Date.now()}`;
       if (processedEvents.current.has(eventKey)) return;
       processedEvents.current.add(eventKey);
-
       fetchData();
     };
 
@@ -207,22 +180,23 @@ export default function Header() {
       socket.off("orderUpdated", handleOrderUpdated);
       socket.off("orderDeleted", handleOrderDeleted);
     };
-  }, [commissionRate]);
+  }, [fetchData]);
 
   return (
     <header className="main-header">
+      {error && <div className="error-message">{error}</div>}
       <div className="stats-container">
         <div className="stat-item">
           <span className="stat-label">Комиссия жами:</span>
-          <span className="stat-value">{loading ? "..." : commissions.totalCommission.toLocaleString("uz-UZ")} сўм</span>
+          <span className="stat-value">{loading ? "..." : formatPrice(commissions.totalCommission)} сўм</span>
         </div>
         <div className="stat-item">
           <span className="stat-label">Бугунги комиссия:</span>
-          <span className="stat-value">{loading ? "..." : commissions.dailyCommission.toLocaleString("uz-UZ")} сўм</span>
+          <span className="stat-value">{loading ? "..." : formatPrice(commissions.dailyCommission)} сўм</span>
         </div>
         <div className="stat-item">
           <span className="stat-label">Охирги 30 кунги комиссия:</span>
-          <span className="stat-value">{loading ? "..." : commissions.last30DaysCommission.toLocaleString("uz-UZ")} сўм</span>
+          <span className="stat-value">{loading ? "..." : formatPrice(commissions.last30DaysCommission)} сўм</span>
         </div>
       </div>
       <div className="user-dropdown">
@@ -230,10 +204,11 @@ export default function Header() {
           className="dropdown-toggle"
           value={selectedUser}
           onChange={(e) => setSelectedUser(e.target.value)}
+          disabled={loading}
         >
           {users.length > 0 ? (
             users.map((user) => (
-              <option key={user.id} value={user.username}>
+              <option key={user.id || user.username} value={user.username}>
                 {user.username} {user.name ? `(${user.name})` : ""}
               </option>
             ))
@@ -241,6 +216,10 @@ export default function Header() {
             <option>Фойдаланувчи топилмади</option>
           )}
         </select>
+      </div>
+      <div className="connection-status !isConnected">
+        <span className={`status-indicator ${isConnected ? "online" : "offline"}`}>{isConnected ? "Online" : "Offline"}</span>
+        
       </div>
     </header>
   );

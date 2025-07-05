@@ -8,8 +8,10 @@ export default function Stollar() {
   const [modal, setModal] = useState(false);
   const [orderModal, setOrderModal] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
-  const [filter, setFilter] = useState("Барча");
+  const [filter, setFilter] = useState("Барча"); // Status filter
+  const [nameFilter, setNameFilter] = useState("Барча"); // Name filter
   const [newStol, setNewStol] = useState({
+    name: "",
     number: "",
     status: "Бўш",
   });
@@ -28,6 +30,12 @@ export default function Stollar() {
     );
   };
 
+  // Clean up extra spaces in number field
+  const cleanNumber = (number) => number.replace(/\s+/g, " ").trim();
+
+  // Extract unique table names for filtering
+  const uniqueNames = ["Барча", ...new Set(stollar.map((stol) => stol.name))];
+
   useEffect(() => {
     const fetchStollar = async () => {
       try {
@@ -40,6 +48,7 @@ export default function Stollar() {
           const mappedData = result.data
             .map((stol) => ({
               ...stol,
+              number: cleanNumber(stol.number), // Clean up number field
               status: statusMapToFrontend[stol.status] || stol.status,
               orders: Array.isArray(stol.orders)
                 ? stol.orders
@@ -100,8 +109,8 @@ export default function Stollar() {
   };
 
   const handleAddStol = async () => {
-    if (!newStol.number) {
-      setError("Илтимос, стол рақамини киритинг");
+    if (!newStol.name || !newStol.number) {
+      setError("Илтимос, стол номи ва рақамини киритинг");
       return;
     }
     if (!["Бўш", "Банд"].includes(newStol.status)) {
@@ -113,7 +122,7 @@ export default function Stollar() {
       const res = await axios.post(
         API_URL,
         {
-          name: ".", // Automatically send "." as the name
+          name: newStol.name,
           number: newStol.number,
           status: statusMapToBackend[newStol.status],
         },
@@ -127,6 +136,7 @@ export default function Stollar() {
 
       const newTable = {
         ...res.data.data,
+        number: cleanNumber(res.data.data.number),
         status:
           statusMapToFrontend[res.data.data.status] || res.data.data.status,
         orders: [],
@@ -137,7 +147,7 @@ export default function Stollar() {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         )
       );
-      setNewStol({ number: "", status: "Бўш" });
+      setNewStol({ name: "", number: "", status: "Бўш" });
       setModal(false);
       setError(null);
     } catch (err) {
@@ -210,6 +220,26 @@ export default function Stollar() {
 
   const categories = ["Барча", "Бўш", "Банд"];
 
+  // Group tables by name to handle duplicates
+  const groupedTables = stollar.reduce((acc, stol) => {
+    const existing = acc.find((item) => item.name === stol.name);
+    if (existing) {
+      existing.tables.push(stol);
+      existing.orders = [...existing.orders, ...stol.orders];
+      existing.status = existing.status === "Банд" || stol.status === "Банд" ? "Банд" : "Бўш";
+    } else {
+      acc.push({
+        name: stol.name,
+        tables: [stol],
+        orders: stol.orders,
+        status: stol.status,
+        id: stol.id, // Use the first table's ID for actions
+        number: stol.number, // Use the first table's number for display
+      });
+    }
+    return acc;
+  }, []);
+
   return (
     <div className="app">
       <div className="main-content">
@@ -237,101 +267,106 @@ export default function Stollar() {
                   </button>
                 ))}
               </div>
+              <div className="name-filter">
+                <select
+                style={{marginTop:'30px'}}
+                  className="form-control"
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                >
+                  {uniqueNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="table-list">
               <ul>
-                <li className="table-item add-table-item">
-                  <button
-                    className="action-button primary add-table-button"
-                    onClick={() => {
-                      setModal(true);
-                      setError(null);
-                    }}
-                  >
-                    <Plus size={20} />
-                    Стол қўшиш
-                  </button>
-                </li>
-                {stollar
-                  .filter((s) => filter === "Барча" || s.status === filter)
-                  .map((stol) => {
-                    const tableOrders = getOrdersForTable(stol.id);
-                    return (
-                      <li
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "10px",
-                        }}
-                        key={stol.id}
-                        className={`table-item ${
-                          stol.status === "Банд" ? "band" : "bosh"
-                        }`}
-                      >
-                        <div className="table-item__header">
-                          <div className="table-item__info">
-                            <h3 className="table-title">{stol.number}</h3>
-                            <div className="table-item__details">
-                              <div className="table-item__stats">
-                                <span className="info-label">Статус:</span>
-                                <span
-                                  className={`status-badge ${
-                                    stol.status === "Банд" ? "band" : "bosh"
-                                  }`}
-                                >
-                                  {stol.status}
-                                </span>
-                              </div>
-                              <div className="table-item__stats">
-                                <span className="info-label">
-                                  Фаол буюртмалар:
-                                </span>
-                                <span className="info-value">
-                                  {tableOrders.length}
-                                </span>
-                              </div>
+                
+                {groupedTables
+                  .filter(
+                    (group) =>
+                      (filter === "Барча" || group.status === filter) &&
+                      (nameFilter === "Барча" || group.name === nameFilter)
+                  )
+                  .map((group) => (
+                    <li
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "10px",
+                      }}
+                      key={group.id}
+                      className={`table-item ${
+                        group.status === "Банд" ? "band" : "bosh"
+                      }`}
+                    >
+                      <div className="table-item__header">
+                        <div className="table-item__info">
+                          <h3 className="table-title">{group.name}</h3>
+                          <h3 className="table-title">{group.number}</h3>
+                          <div className="table-item__details">
+                            <div className="table-item__stats">
+                              <span className="info-label">Статус:</span>
+                              <span
+                                className={`status-badge ${
+                                  group.status === "Банд" ? "band" : "bosh"
+                                }`}
+                              >
+                                {group.status}
+                              </span>
+                            </div>
+                            <div className="table-item__stats">
+                              <span className="info-label">
+                                Фаол буюртмалар:
+                              </span>
+                              <span className="info-value">
+                                {group.orders.length}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <div className="table-item__actions">
-                          {tableOrders.length > 0 && (
-                            <button
-                              className="action-button primary"
-                              onClick={() => handleShowOrders(stol)}
-                              title="Буюртмаларни кўриш"
-                            >
-                              <Eye size={16} />
-                              Фаол буюртмани кўриш
-                            </button>
-                          )}
+                      </div>
+                      <div className="table-item__actions">
+                        {group.orders.length > 0 && (
                           <button
-                            className="action-button danger"
-                            onClick={() => handleDelete(stol.id, stol.number)}
-                            title="Ўчириш"
+                            className="action-button primary"
+                            onClick={() => handleShowOrders(group)}
+                            title="Буюртмаларни кўриш"
                           >
-                            <Trash size={16} />
-                            Столни ўчириш
+                            <Eye size={16} />
+                            Фаол буюртмани кўриш
                           </button>
-                          <button
-                            className={`action-button ${
-                              stol.status === "Бўш" ? "success" : "primary"
-                            }`}
-                            onClick={() =>
-                              handleStatusChange(stol.id, stol.status)
-                            }
-                            title={
-                              stol.status === "Бўш"
-                                ? "Банд қилиш"
-                                : "Бўшатиш"
-                            }
-                          >
-                            <Edit size={16} />
-                            {stol.status === "Бўш" ? "Банд қилиш" : "Бўшатиш"}
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
+                        )}
+                        <button
+                          className="action-button danger"
+                          onClick={() => handleDelete(group.id, group.number)}
+                          title="Ўчириш"
+                        >
+                          <Trash size={16} />
+                          Столни ўчириш
+                        </button>
+                        <button
+                          className={`action-button ${
+                            group.status === "Бўш" ? "success" : "primary"
+                          }`}
+                          onClick={() =>
+                            handleStatusChange(group.id, group.status)
+                          }
+                          title={
+                            group.status === "Бўш"
+                              ? "Банд қилиш"
+                              : "Бўшатиш"
+                          }
+                        >
+                          <Edit size={16} />
+                          {group.status === "Бўш" ? "Банд қилиш" : "Бўшатиш"}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
               </ul>
             </div>
           </div>
@@ -349,6 +384,18 @@ export default function Stollar() {
                 <h2 className="modal-title">Янги стол қўшиш</h2>
               </div>
               <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Стол номи</label>
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Стол номи"
+                    value={newStol.name}
+                    onChange={(e) =>
+                      setNewStol({ ...newStol, name: e.target.value })
+                    }
+                  />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Стол рақами</label>
                   <input
@@ -410,10 +457,10 @@ export default function Stollar() {
                 </h2>
               </div>
               <div className="modal-body">
-                {getOrdersForTable(selectedTable.id).length === 0 ? (
+                {selectedTable.orders.length === 0 ? (
                   <p className="text-secondary">Фаол буюртмалар йўқ</p>
                 ) : (
-                  getOrdersForTable(selectedTable.id).map((order) => (
+                  selectedTable.orders.map((order) => (
                     <div key={order.id} className="order-item">
                       <div className="order-items-list">
                         <p className="info-label order-info-label">

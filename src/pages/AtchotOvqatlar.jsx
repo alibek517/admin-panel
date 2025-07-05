@@ -1,65 +1,58 @@
-// src/components/ProductSales.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ProductSales = () => {
+  const today = new Date().toISOString().split('T')[0]; // Default to today
   const [salesData, setSalesData] = useState({});
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(''); // Will be set to first category
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [categories, setCategories] = useState([]);
-  const [orders, setOrders] = useState([]); // Store orders to avoid repeated API calls
+  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
-    const fetchSalesData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('https://alikafecrm.uz/order');
-        const ordersData = response.data;
-        setOrders(ordersData); // Store orders
+        // Fetch categories
+        const categoriesResponse = await axios.get('https://alikafecrm.uz/category');
+        const categoriesData = categoriesResponse.data;
+        const formattedCategories = categoriesData.map(category => ({
+          id: category.id.toString(),
+          name: category.name
+        }));
+        setCategories(formattedCategories);
 
-        // Extract unique categories
-        const categoryMap = new Map();
-        ordersData.forEach((order) =>
-          order.orderItems.forEach((item) => {
-            const { categoryId } = item.product;
-            let categoryName;
-            switch (categoryId) {
-              case 10:
-                categoryName = 'Ичимликлар'; // Drinks
-                break;
-              case 18:
-                categoryName = 'Салатлар'; // Salads
-                break;
-              case 20:
-                categoryName = 'Асосий таомлар'; // Main Dishes
-                break;
-              case 27:
-                categoryName = 'Десертлар'; // Desserts
-                break;
-              default:
-                categoryName = `Категория ${categoryId}`;
-            }
-            categoryMap.set(categoryId, categoryName);
-          })
-        );
-        setCategories(
-          Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }))
-        );
+        // Set default category to the first one if available
+        if (formattedCategories.length > 0) {
+          setSelectedCategory(formattedCategories[0].id);
+        }
 
-        // Process orders
-        updateSalesData(ordersData, searchQuery, selectedCategory, startDate, endDate);
+        // Fetch orders
+        const ordersResponse = await axios.get('https://alikafecrm.uz/order');
+        const ordersData = ordersResponse.data;
+        setOrders(ordersData);
+
+        // Process orders with default filters
+        updateSalesData(
+          ordersData,
+          searchQuery,
+          formattedCategories.length > 0 ? formattedCategories[0].id : '',
+          startDate,
+          endDate
+        );
         setLoading(false);
       } catch (err) {
         setLoading(false);
+        setError('Failed to fetch data');
       }
     };
 
-    fetchSalesData();
-  }, []); 
+    fetchData();
+  }, []);
 
   const updateSalesData = (ordersData, query, category, start, end) => {
     const productCounts = {};
@@ -67,7 +60,6 @@ const ProductSales = () => {
 
     ordersData.forEach((order) => {
       if (['COMPLETED', 'ARCHIVE'].includes(order.status)) {
-        // Date filter
         const orderDate = order.createdAt.split('T')[0];
         if (
           (!start || orderDate >= start) &&
@@ -75,14 +67,14 @@ const ProductSales = () => {
         ) {
           order.orderItems.forEach((item) => {
             const productName = item.product.name;
-            const productPrice = item.product.price || 0; // Get price
+            const productPrice = item.product.price || 0;
             const count = item.count;
             const productCategory = item.product.categoryId.toString();
 
-            // Search and category filter
+            // Apply search and category filter (only if category is selected)
             if (
               productName.toLowerCase().includes(query.toLowerCase()) &&
-              (category === 'all' || productCategory === category)
+              productCategory === category
             ) {
               if (!productCounts[productName]) {
                 productCounts[productName] = {
@@ -98,7 +90,6 @@ const ProductSales = () => {
       }
     });
 
-    // Log for verification
     console.log('Филтрланган махсулотлар:', productCounts);
     console.log('Умумий сотилган махсулотлар:', totalCount);
 
@@ -107,13 +98,12 @@ const ProductSales = () => {
   };
 
   useEffect(() => {
-    // Re-process data when filters change (only if orders are loaded)
-    if (orders.length > 0) {
+    if (orders.length > 0 && selectedCategory) {
       updateSalesData(orders, searchQuery, selectedCategory, startDate, endDate);
     }
   }, [searchQuery, selectedCategory, startDate, endDate, orders]);
 
-  // Inline styles
+  // Inline styles (unchanged)
   const styles = {
     container: {
       maxWidth: '800px',
@@ -244,10 +234,10 @@ const ProductSales = () => {
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           style={styles.select}
+          disabled={categories.length === 0}
         >
-          <option value="all">Барча категория</option>
           {categories.map((category) => (
-            <option key={category.id} value={category.id.toString()}>
+            <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
@@ -258,14 +248,12 @@ const ProductSales = () => {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             style={styles.input}
-            placeholder="Бошланиш санаси"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             style={styles.input}
-            placeholder="Тугалланиш санаси"
           />
         </div>
       </div>

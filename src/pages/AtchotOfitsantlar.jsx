@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
 const styles = {
   container: {
     padding: '24px',
@@ -143,11 +142,16 @@ const styles = {
   }
 };
 
+
 const AtchotOfitsantlar = () => {
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Initialize startDate and endDate with today's date
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [dateRangeText, setDateRangeText] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -174,7 +178,6 @@ const AtchotOfitsantlar = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        // Replace axios with fetch
         const response = await fetch('https://alikafecrm.uz/order');
         if (!response.ok) {
           throw new Error('Ma\'lumotlarni yuklashda xatolik');
@@ -182,13 +185,14 @@ const AtchotOfitsantlar = () => {
         const fetchedOrders = await response.json();
         
         setOrders(fetchedOrders);
-        setFilteredOrders(fetchedOrders);
+        // Filter orders for today by default
+        const todayOrders = fetchedOrders.filter((order) =>
+          isDateInRange(order.createdAt, today, today)
+        );
+        setFilteredOrders(todayOrders);
 
         if (fetchedOrders.length > 0) {
-          const dates = fetchedOrders.map(order => new Date(order.createdAt));
-          const minDate = new Date(Math.min(...dates));
-          const maxDate = new Date(Math.max(...dates));
-          setDateRangeText(`Буюртмалар: ${formatDate(minDate)} дан ${formatDate(maxDate)} гача`);
+          setDateRangeText(`Буюртмалар: ${formatDate(today)}`);
         } else {
           setError('Буюртмалар топилмади.');
         }
