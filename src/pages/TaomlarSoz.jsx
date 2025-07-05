@@ -313,9 +313,9 @@ export default function TaomlarSoz() {
   const FoodCard = ({ item }) => {
     return (
       <article
-  className={`  ${selectedItems.includes(item.id) ? "selected" : ""}`}
+  className={`  ${selectedItems.includes(item.id) ? "selectedd" : ""}`}
   onClick={() => handleSelectItem(item.id) }
-  style={{display: "flex", cursor: "pointer", justifyContent:"space-between", alignItems: "center"}}
+  style={{display: "flex", cursor: "pointer", justifyContent:"space-between", alignItems: "center",marginTop: "20px", padding: "10px", borderRadius: "var(--radius-md)"}}
   
 >
   <img

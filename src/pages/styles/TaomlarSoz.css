@@ -116,7 +116,11 @@ img {
   box-shadow: var(--shadow-sm);
   touch-action: none; /* Improve mobile dragging */
 }
-
+.selectedd{
+  background-color: #e6f3ff; /* Light blue for selected items */
+  border-color: #4a90e2;
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+}
 .food-card.dragging {
   opacity: 0.7;
   transform: scale(1.02);
