@@ -7,13 +7,22 @@ import "./styles/AdminPanel.css";
 import Header from "../components/Header.jsx";
 
 export default function AdminPanel() {
+  // Helper function to get today's date in yyyy-mm-dd format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalType, setModalType] = useState("");
   const [currentOrder, setCurrentOrder] = useState(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
 
@@ -126,13 +135,18 @@ export default function AdminPanel() {
       return;
     }
 
-    if (new Date(startDate) > new Date(endDate)) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    if (start > end) {
       alert("Бошланғич сана якуний санадан катта бўлмаслиги керак.");
       return;
     }
 
     const confirmClear = window.confirm(
-      `Ростдан ҳам ${startDate} дан ${endDate} гача бўлган арxиви буюртмаларни ўчирмоқчимисиз? Бу амални ортга қайтариб бўлмайди!`
+      `Ростдан ҳам ${startDate} 00:00 дан ${endDate} 23:59 гача бўлган арxиви буюртмаларни ўчирмоқчимисиз? Бу амални ортга қайтариб бўлмайди!`
     );
     if (!confirmClear) return;
 
@@ -140,8 +154,8 @@ export default function AdminPanel() {
       const archiveOrders = orders.filter(
         (order) =>
           order.status === "ARCHIVE" &&
-          new Date(order.createdAt) >= new Date(startDate) &&
-          new Date(order.createdAt) <= new Date(endDate)
+          new Date(order.createdAt) >= start &&
+          new Date(order.createdAt) <= end
       );
 
       if (archiveOrders.length === 0) {
@@ -157,8 +171,8 @@ export default function AdminPanel() {
 
       alert("Арxиви буюртмалар муваффақиятли ўчирилди.");
       await fetchData();
-      setStartDate("");
-      setEndDate("");
+      setStartDate(getTodayDate());
+      setEndDate(getTodayDate());
     } catch (error) {
       console.error("Ўчириш хатоси:", error);
       const message = error.response?.data?.message || "Буюртмаларни ўчиришда хатолик юз берди.";
@@ -170,9 +184,15 @@ export default function AdminPanel() {
     if (!startDate || !endDate) {
       return orders;
     }
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
     return orders.filter((order) => {
       const orderDate = new Date(order.createdAt);
-      return orderDate >= new Date(startDate) && orderDate <= new Date(endDate);
+      return orderDate >= start && orderDate <= end;
     });
   };
 
@@ -300,7 +320,7 @@ export default function AdminPanel() {
                     color: "#6c757d",
                   }}
                 >
-                  ( {startDate} дан {endDate} гача )
+                  ( {startDate} 00:00 дан {endDate} 23:59 гача )
                 </span>
               )}
             </h3>
@@ -405,7 +425,7 @@ export default function AdminPanel() {
             <div
               style={{
                 display: "flex",
-                gap: "var(--space-3)",
+                sucked: "var(--space-3)",
                 alignItems: "center",
               }}
             >
