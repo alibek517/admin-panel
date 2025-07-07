@@ -50,7 +50,6 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// ModalBasket Component
 const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, serviceFee, isConfirming }) => {
   const [carrierNumber, setCarrierNumber] = useState("+998");
   const inputRef = useRef(null);
@@ -63,13 +62,17 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    if (value === "+998" || /^\+998\d{9}$/.test(value)) {
-      setCarrierNumber(value);
+    // Allow typing as long as the input starts with +998
+    if (value.startsWith("+998")) {
+      // Restrict to digits after +998 and limit to 13 characters total
+      const digits = value.slice(4).replace(/[^0-9]/g, "");
+      setCarrierNumber("+998" + digits);
     }
   };
 
   const handleKeyDown = (e) => {
     const cursorPosition = inputRef.current.selectionStart;
+    // Prevent backspace from deleting +998
     if (e.key === "Backspace" && cursorPosition <= 4) {
       e.preventDefault();
     }
@@ -77,7 +80,8 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (carrierNumber !== "+998" && carrierNumber.length !== 13) {
+    // Validate phone number on submission
+    if (carrierNumber !== "+998" && !/^\+998\d{9}$/.test(carrierNumber)) {
       alert("Илтимос, тўлиқ телефон рақамини киритинг (+998123456789)");
       return;
     }

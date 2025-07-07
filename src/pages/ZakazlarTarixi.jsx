@@ -416,7 +416,7 @@ export default function ZakazTarixi() {
                       </tr>
                       {openFoodItems === order.id && (
                         <tr>
-                          <td colSpan="8" className="food-items">
+                          <td colSpan="8" className="food-itemss">
                             {order.orderItems.length > 0 ? (
                               order.orderItems.map((item) => {
                                 const category = categoryList.find(

@@ -306,14 +306,14 @@ tr:last-child td {
   color: var(--primary);
 }
 
-.food-items {
+.food-itemss {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
   max-width: 300px;
 }
 
-.food-items div {
+.food-itemss div {
   line-height: 1.4;
   color: var(--gray-600);
   font-size: 0.9375rem;
@@ -415,11 +415,11 @@ tr:last-child td {
     font-size: 0.8125rem;
   }
   
-  .food-items {
+  .food-itemss {
     max-width: 250px;
   }
   
-  .food-items div {
+  .food-itemss div {
     font-size: 0.875rem;
   }
 }

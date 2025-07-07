@@ -31,12 +31,12 @@ const DeliveryReport = () => {
             Authorization: `Bearer ${token}`,
           },
         });
-        const orders = response.data.filter(
-          order => order.carrierNumber && order.carrierNumber !== 'null'
-        ).map(order => ({
-          ...order,
-          orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
-        }));
+        const orders = response.data
+          .filter(order => order.carrierNumber && order.carrierNumber !== 'null')
+          .map(order => ({
+            ...order,
+            orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
+          }));
         setReport(orders);
         applyFilter(orders, startDate, endDate, searchInput);
       } catch (error) {
@@ -55,10 +55,33 @@ const DeliveryReport = () => {
     fetchDeliveryReport();
   }, []);
 
+  const calculateItemTotal = (item) => {
+    const product = item.product || {};
+    try {
+      const price = parseInt(product.price || 0);
+      const count = item.count || 0;
+      return { total: price * count, count: count };
+    } catch {
+      return { total: 0, count: 0 };
+    }
+  };
+
+  const calculateOrderTotal = (order) => {
+    return (order.orderItems || []).reduce(
+      (acc, item) => {
+        const { total, count } = calculateItemTotal(item);
+        return {
+          total: acc.total + total,
+          count: acc.count + count,
+        };
+      },
+      { total: 0, count: 0 }
+    );
+  };
+
   const applyFilter = (orders, start, end, search) => {
     let filtered = [...orders];
 
-    // Date range filter
     if (start && end) {
       const startDateTime = new Date(start);
       startDateTime.setHours(0, 0, 0, 0);
@@ -71,7 +94,6 @@ const DeliveryReport = () => {
       });
     }
 
-    // Search filter
     if (search) {
       filtered = filtered.filter(order =>
         order.id.toString().includes(search) ||
@@ -186,19 +208,6 @@ const DeliveryReport = () => {
     }
   };
 
-  const calculateItemTotal = (item) => {
-    const product = item.product || {};
-    try {
-      return parseInt(product.price || 0) * (item.count || 0);
-    } catch {
-      return 0;
-    }
-  };
-
-  const calculateOrderTotal = (order) => {
-    return (order.orderItems || []).reduce((sum, item) => sum + calculateItemTotal(item), 0);
-  };
-
   const formatPrice = (price) => {
     try {
       const priceStr = price.toString();
@@ -209,12 +218,13 @@ const DeliveryReport = () => {
     }
   };
 
-  const totalAmount = filteredOrders.reduce((sum, order) => sum + calculateOrderTotal(order), 0);
+  const totalAmount = filteredOrders.reduce((sum, order) => sum + calculateOrderTotal(order).total, 0);
+  const totalItems = filteredOrders.reduce((sum, order) => sum + calculateOrderTotal(order).count, 0);
 
   const toggleOrderItems = (orderId) => {
     setExpandedOrders(prev => ({
       ...prev,
-      [orderId]: !prev[orderId]
+      [orderId]: !prev[orderId],
     }));
   };
 
@@ -257,7 +267,7 @@ const DeliveryReport = () => {
                       color: "#6c757d",
                     }}
                   >
-                    ( {startDate.replace(/-/g, '.')} д а н {endDate.replace(/-/g, '.')} г а ч а )
+                    ( {startDate.replace(/-/g, '.')} дан {endDate.replace(/-/g, '.')} гача )
                   </span>
                 )}
               </h3>
@@ -287,6 +297,27 @@ const DeliveryReport = () => {
                   </div>
                   <div style={{ color: "#6c757d", fontSize: "14px" }}>
                     Буюртмалар сони
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "var(--space-3)",
+                    backgroundColor: "white",
+                    borderRadius: "var(--radius-md)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      color: "#007bff",
+                    }}
+                  >
+                    {totalItems} та
+                  </div>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    Умумий махсулотлар сони
                   </div>
                 </div>
                 <div
@@ -382,7 +413,7 @@ const DeliveryReport = () => {
                             style={{ cursor: 'pointer' }}
                           />
                         </td>
-                        <td>{formatPrice(calculateOrderTotal(order))}</td>
+                        <td>{formatPrice(calculateOrderTotal(order).total)}</td>
                         <td>
                           <button
                             className="delete-button"
@@ -397,8 +428,8 @@ const DeliveryReport = () => {
                           <td colSpan="6" className="food-items">
                             {(order.orderItems || []).length > 0 ? (
                               order.orderItems.map((item, idx) => (
-                                <div key={idx}>
-                                  {item.product?.name || 'Номаълум'} - {formatPrice(calculateItemTotal(item))}
+                                <div style={{width:'555px',display:'flex',alignItems:'center'}} key={idx}>
+                                  <h3 style={{display:'inline'}}>{calculateItemTotal(item).count}</h3>-{item.product?.name || 'Номаълум'} - {formatPrice(calculateItemTotal(item).total)}
                                 </div>
                               ))
                             ) : (
@@ -700,13 +731,14 @@ const DeliveryReport = () => {
           display: flex;
           flex-direction: column;
           gap: 0.375rem;
-          max-width: 300px;
+          width: 280px;
         }
 
         .food-items div {
           line-height: 1.4;
           color: var(--gray-600);
           font-size: 0.9375rem;
+          width: 280px;
         }
 
         .delete-button {
@@ -810,14 +842,6 @@ const DeliveryReport = () => {
           th:last-child,
           td:last-child {
             padding-right: 1rem;
-          }
-
-          .food-items {
-            max-width: 100%;
-          }
-
-          .food-items div {
-            font-size: 0.875rem;
           }
         }
       `}</style>
