@@ -1569,14 +1569,19 @@ export default function Taomlar() {
     }
   };
 
-  const filteredTaomlar =
-    selectedCategory && categories.length
-      ? taomlar.filter(
-          (taom) =>
-            taom.categoryId &&
-            taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-        )
-      : [];
+  const filteredTaomlar = React.useMemo(() => {
+    return (
+      selectedCategory && categories.length
+        ? taomlar
+            .filter(
+              (taom) =>
+                taom.categoryId &&
+                taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+            )
+            .sort((a, b) => a.id - b.id) // Sort by id in ascending order
+        : taomlar.sort((a, b) => a.id - b.id) // Sort all products if no category selected
+    );
+  }, [selectedCategory, categories, taomlar]);
 
   const filteredTables = filterPlace
     ? tables.filter((table) => table.name === filterPlace)

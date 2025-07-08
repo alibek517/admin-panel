@@ -905,10 +905,14 @@ export default function Dostavka() {
 
   const filteredTaomlar = React.useMemo(() => {
     return selectedCategory
-      ? taomlar.filter(
-          (taom) => taom.categoryId && taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-        )
-      : taomlar;
+      ? taomlar
+          .filter(
+            (taom) =>
+              taom.categoryId &&
+              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+          )
+          .sort((a, b) => a.id - b.id) // Sort by id in ascending order
+      : taomlar.sort((a, b) => a.id - b.id); // Sort all products if no category selected
   }, [selectedCategory, taomlar, categories]);
 
   const totalPrice = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.count, 0);
