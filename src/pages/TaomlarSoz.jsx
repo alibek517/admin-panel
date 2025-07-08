@@ -96,7 +96,7 @@ export default function TaomlarSoz() {
           categoryId: item.categoryId ? Number(item.categoryId) : null,
           index: item.index || "0",
         }))
-        .sort((a, b) => Number(a.id) - Number(b.id));
+        .sort((a, b) => Number(a.index) - Number(b.index));
 
       setMenu(sortedMenu);
     } catch (err) {
@@ -272,29 +272,29 @@ export default function TaomlarSoz() {
     setShowModal(true);
   };
 
-  const handleSelectItem = (id) => {
+  const handleSelectItem = (index) => {
     if (!swapMode) return;
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
+    if (selectedItems.includes(index)) {
+      setSelectedItems(selectedItems.filter((itemIndex) => itemIndex !== index));
     } else if (selectedItems.length < 2) {
-      setSelectedItems([...selectedItems, id]);
+      setSelectedItems([...selectedItems, index]);
     } else {
       alert("Faqat ikkita taomni tanlash mumkin!");
     }
   };
 
-  const handleSwapIds = async () => {
+  const handleSwapIndices = async () => {
     if (selectedItems.length !== 2) {
       alert("Iltimos, almashish uchun roppa-rosa ikkita taomni tanlang!");
       return;
     }
 
-    const [id1, id2] = selectedItems;
+    const [index1, index2] = selectedItems;
 
     try {
       await axios.post(
-        "https://alikafecrm.uz/product/swap-ids",
-        { id1: Number(id1), id2: Number(id2) },
+        "https://alikafecrm.uz/product/swap-indices",
+        { index1: Number(index1), index2: Number(index2) },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -302,10 +302,10 @@ export default function TaomlarSoz() {
       await fetchMenu();
       setSelectedItems([]);
       setSwapMode(false);
-      console.log("IDs swapped successfully");
+      console.log("Indices swapped successfully");
     } catch (err) {
-      console.error("ID'larni almashtirishda xatolik:", err);
-      alert(`ID'larni almashtirishda xatolik: ${err.response?.data?.message || err.message}`);
+      console.error("Indekslarni almashtirishda xatolik:", err);
+      alert(`Indekslarni almashtirishda xatolik: ${err.response?.data?.message || err.message}`);
       await fetchMenu();
     }
   };
@@ -313,47 +313,46 @@ export default function TaomlarSoz() {
   const FoodCard = ({ item }) => {
     return (
       <article
-  className={`  ${selectedItems.includes(item.id) ? "selectedd" : ""}`}
-  onClick={() => handleSelectItem(item.id) }
-  style={{display: "flex", cursor: "pointer", justifyContent:"space-between", alignItems: "center",marginTop: "20px", padding: "10px", borderRadius: "var(--radius-md)"}}
-  
->
-  <img
-    className="food-card-image"
-    src={`https://alikafecrm.uz${item.image}`}
-    alt={item.name}
-  />
-  <div className="food-card-content">
-    <h3 className="food-card-title">{item.name}</h3>
-    <div className="food-card-meta">
-      <div className="food-card-time">
-        <Clock size={16} className="food-card-time-icon" />
-        <span>{item.cookingTime ? `${item.cookingTime} мин` : "Вақти йўқ"}</span>
-      </div>
-    </div>
-  </div>
-  <div style={{marginRight:'350px'}} className="food-card-price">{formatPrice(item.price)}</div>
-  <div className="food-card-actions">
-    <button
-      className="food-card-button edit"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleEdit(item);
-      }}
-    >
-      <Edit color="#fff" size={16} />
-    </button>
-    <button
-      className="food-card-button delete"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleDelete(item.id);
-      }}
-    >
-      <Trash color="#fff" size={16} />
-    </button>
-  </div>
-</article>
+        className={` ${selectedItems.includes(item.index) ? "selectedd" : ""}`}
+        onClick={() => handleSelectItem(item.index)}
+        style={{ display: "flex", cursor: "pointer", justifyContent: "space-between", alignItems: "center", marginTop: "20px", padding: "10px", borderRadius: "var(--radius-md)" }}
+      >
+        <img
+          className="food-card-image"
+          src={`https://alikafecrm.uz${item.image}`}
+          alt={item.name}
+        />
+        <div className="food-card-content">
+          <h3 className="food-card-title">{item.name}</h3>
+          <div className="food-card-meta">
+            <div className="food-card-time">
+              <Clock size={16} className="food-card-time-icon" />
+              <span>{item.cookingTime ? `${item.cookingTime} мин` : "Вақти йўқ"}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginRight: '350px' }} className="food-card-price">{formatPrice(item.price)}</div>
+        <div className="food-card-actions">
+          <button
+            className="food-card-button edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(item);
+            }}
+          >
+            <Edit color="#fff" size={16} />
+          </button>
+          <button
+            className="food-card-button delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(item.id);
+            }}
+          >
+            <Trash color="#fff" size={16} />
+          </button>
+        </div>
+      </article>
     );
   };
 
@@ -372,7 +371,7 @@ export default function TaomlarSoz() {
   const filteredMenu = newCategory
     ? menu.filter((item) => item.category?.name === newCategory)
     : [...menu];
-  const sortedMenu = filteredMenu.sort((a, b) => Number(a.id) - Number(b.id));
+  const sortedMenu = filteredMenu.sort((a, b) => Number(a.index) - Number(b.index));
 
   const formatPrice = (price) => {
     const priceStr = price.toString();
@@ -398,9 +397,9 @@ export default function TaomlarSoz() {
           {swapMode && selectedItems.length === 2 && (
             <button
               className="btn btn-swap"
-              onClick={handleSwapIds}
+              onClick={handleSwapIndices}
             >
-              Tanlanganlarni almashtirish
+              Indekslarni almashtirish
             </button>
           )}
           <button
@@ -410,7 +409,7 @@ export default function TaomlarSoz() {
               setSelectedItems([]);
             }}
           >
-            {swapMode ? "X" : "Joy o'zgartirish rejimini yoqish"}
+            {swapMode ? "X" : "Indeks o'zgartirish rejimini yoqish"}
           </button>
         </div>
       </header>
