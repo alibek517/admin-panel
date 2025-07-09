@@ -195,7 +195,7 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
           </div>
           <span className="spacer">{" ".repeat(spaceCount) || "-"}</span>
           <div>
-            <label htmlFor="suffix">Стол суффикси:</label>
+            <label htmlFor="suffix">Стол номери:</label>
             <input
               type="number"
               id="suffix"
@@ -267,6 +267,12 @@ const EditOrderModal = ({
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
 
+    const itemToDelete = editingOrder.orderItems.find((item) => item.id === itemId);
+    if (itemToDelete && itemToDelete.status === "READY") {
+      setLocalError("Тайёр таомларни ўчириб бўлмайди.");
+      return;
+    }
+
     try {
       setLocalIsSaving(true);
       setLocalError("");
@@ -335,6 +341,10 @@ const EditOrderModal = ({
     const product = products.find((p) => p.id === parseInt(productId));
     if (!product) {
       setLocalError("Танланган таом топилмади.");
+      return;
+    }
+    if (product.isFinished) {
+      setLocalError("Бу таом тугаган, қўшиш мумкин эмас.");
       return;
     }
 
@@ -431,7 +441,7 @@ const EditOrderModal = ({
                     <button
                       className="modal__item-remove"
                       onClick={() => handleRemoveItem(item.id)}
-                      disabled={localIsSaving}
+                      disabled={localIsSaving || item.status === "READY"}
                     >
                       Ўчириш
                     </button>
@@ -470,8 +480,8 @@ const EditOrderModal = ({
               >
                 <option value="">Таом танланг</option>
                 {filteredProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} ({formatPrice(product.price)})
+                  <option key={product.id} value={product.id} disabled={product.isFinished}>
+                    {product.name} ({formatPrice(product.price)}) {product.isFinished ? "(Тугаган)" : ""}
                   </option>
                 ))}
               </select>
@@ -710,10 +720,6 @@ export default function Taomlar() {
         setSuccessMsg("Хизмат нархи муваффақиятли ўзгартирилди!");
       } catch (error) {
         console.error("Uslug update error:", error);
-        setError(
-          console.log(`Хизмат нархини ўзгартиришда хатолик: ${error.response?.data?.message || error.message}`)
-          
-        );
       }
     },
     [token, commissionPercent]
@@ -803,7 +809,7 @@ export default function Taomlar() {
         setCart([]);
         setSelectedTableId(null);
         setSelectedTableOrder(null);
-        setUslug(commissionPercent.toString()); // Reset uslug to default commissionPercent
+        setUslug(commissionPercent.toString());
         setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
       } catch (error) {
         console.error("Print and pay error:", error);
@@ -823,6 +829,16 @@ export default function Taomlar() {
       console.error("No order selected for deletion");
       return;
     }
+
+    const hasReadyItems = selectedTableOrder.orderItems.some(
+      (item) => item.status === "READY"
+    );
+    if (hasReadyItems) {
+      setError("Буюртмада тайёр таомлар мавжуд, ўчириб бўлмайди.");
+      setShowDeleteModal(false);
+      return;
+    }
+
     try {
       setIsSaving(true);
       await axios.delete(`${API_ENDPOINTS.orders}/${selectedTableOrder.id}`, {
@@ -1436,6 +1452,10 @@ export default function Taomlar() {
   }, [selectedTableOrder, calculateTotalPrice, setError]);
 
   const addToCart = (taom) => {
+    if (taom.isFinished) {
+      setError("Бу таом тугаган, саватга қўшиш мумкин эмас.");
+      return;
+    }
     setCart((prev) => {
       const foundTaom = prev.find((item) => item.id === taom.id);
       if (foundTaom) {
@@ -1449,6 +1469,10 @@ export default function Taomlar() {
   };
 
   const removeFromCart = (taom) => {
+    if (taom.isFinished) {
+      setError("Бу таом тугаган, саватдан ўчириш мумкин эмас.");
+      return;
+    }
     setCart((prev) =>
       prev
         .map((item) =>
@@ -1477,14 +1501,14 @@ export default function Taomlar() {
 
   const handleOrderConfirm = async (orderData) => {
     const products = orderData.orderItems
-      .filter((item) => item?.productId && item.count > 0)
+      .filter((item) => item?.productId && item.count > 0 && !item.isFinished)
       .map((item) => ({
         productId: Number(item.productId),
         count: Number(item.count),
       }));
 
     if (!products.length) {
-      setError("Буюртмада камида битта маҳсулот бўлиши керак.");
+      setError("Буюртмада камида битта мавжуд маҳсулот бўлиши керак.");
       console.error("Order confirmation failed: No valid products");
       return;
     }
@@ -1578,8 +1602,8 @@ export default function Taomlar() {
                 taom.categoryId &&
                 taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
             )
-            .sort((a, b) => a.id - b.id) // Sort by id in ascending order
-        : taomlar.sort((a, b) => a.id - b.id) // Sort all products if no category selected
+            .sort((a, b) => a.id - b.id)
+        : taomlar.sort((a, b) => a.id - b.id)
     );
   }, [selectedCategory, categories, taomlar]);
 
@@ -1809,7 +1833,7 @@ export default function Taomlar() {
                         <button
                           className="action-btn delete-btn"
                           onClick={() => setShowDeleteModal(true)}
-                          disabled={isSaving}
+                          disabled={isSaving || selectedTableOrder.orderItems.some((item) => item.status === "READY")}
                         >
                           <Trash size={20} />
                         </button>
@@ -1897,19 +1921,39 @@ export default function Taomlar() {
             ) : (
               <ul style={{ maxHeight: "600px" }} className="products-list">
                 {filteredTaomlar.map((taom) => (
-                  <li key={taom.id} className="product-item">
-                    <div onClick={() => addToCart(taom)} className="product-info">
-                      <span className="product-name">{taom.name || "Номаълум таом"}</span>
+                  <li
+                    key={taom.id}
+                    className={`product-item ${taom.isFinished ? "finished" : ""}`}
+                  >
+                    <div
+                      onClick={() => !taom.isFinished && addToCart(taom)}
+                      className="product-info"
+                      style={{
+                        cursor: taom.isFinished ? "not-allowed" : "pointer",
+                        opacity: taom.isFinished ? 0.5 : 1,
+                      }}
+                    >
+                      <span className="product-name">
+                        {taom.name || "Номаълум таом"} {taom.isFinished ? "(Тугаган)" : ""}
+                      </span>
                       <span className="product-price">({formatPrice(taom.price)})</span>
                     </div>
                     <div className="menu-card__controls">
-                      <button className="control-btn" onClick={() => removeFromCart(taom)}>
+                      <button
+                        className="control-btn"
+                        onClick={() => removeFromCart(taom)}
+                        disabled={taom.isFinished}
+                      >
                         -
                       </button>
                       <span className="control-value">
                         {Math.max(cart.find((item) => item.id === taom.id)?.count || 0, 0)}
                       </span>
-                      <button className="control-btn" onClick={() => addToCart(taom)}>
+                      <button
+                        className="control-btn"
+                        onClick={() => addToCart(taom)}
+                        disabled={taom.isFinished}
+                      >
                         +
                       </button>
                     </div>
@@ -1937,40 +1981,40 @@ export default function Taomlar() {
         <AddTableModal
           isOpen={showAddTableModal}
           onClose={() => setShowAddTableModal(false)}
-  onConfirm={async (tableData) => {
-    try {
-      await axios.post(API_ENDPOINTS.tables, tableData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const res = await axios.get(API_ENDPOINTS.tables, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const tablesData = Array.isArray(res.data?.data)
-        ? res.data.data
-        : Array.isArray(res.data)
-        ? res.data
-        : [];
-      setTables(
-        tablesData.map((table) => ({
-          ...table,
-          status: normalizeStatus(table.status),
-          orders: Array.isArray(table.orders) ? table.orders : [],
-        }))
-      );
-      const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
-        Boolean
-      );
-      setPlaces(uniquePlaces);
-      setFilterPlace(uniquePlaces[0] || "");
-      setSuccessMsg("Стол муваффақиятли қўшилди!");
-      console.log("Table added successfully", tableData);
-    } catch (err) {
-      console.error("Add table error:", err);
-      setError(
-        `Хатолик: ${err.response?.data?.message || "Стол қўшишда хатолик."}`
-      );
-    }
-  }}
+          onConfirm={async (tableData) => {
+            try {
+              await axios.post(API_ENDPOINTS.tables, tableData, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const res = await axios.get(API_ENDPOINTS.tables, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const tablesData = Array.isArray(res.data?.data)
+                ? res.data.data
+                : Array.isArray(res.data)
+                ? res.data
+                : [];
+              setTables(
+                tablesData.map((table) => ({
+                  ...table,
+                  status: normalizeStatus(table.status),
+                  orders: Array.isArray(table.orders) ? table.orders : [],
+                }))
+              );
+              const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
+                Boolean
+              );
+              setPlaces(uniquePlaces);
+              setFilterPlace(uniquePlaces[0] || "");
+              setSuccessMsg("Стол муваффақиятли қўшилди!");
+              console.log("Table added successfully", tableData);
+            } catch (err) {
+              console.error("Add table error:", err);
+              setError(
+                `Хатолик: ${err.response?.data?.message || "Стол қўшишда хатолик."}`
+              );
+            }
+          }}
           places={places}
         />
       )}

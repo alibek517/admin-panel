@@ -62,9 +62,7 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
 
   const handleInputChange = (e) => {
     const value = e.target.value;
-    // Allow typing as long as the input starts with +998
     if (value.startsWith("+998")) {
-      // Restrict to digits after +998 and limit to 13 characters total
       const digits = value.slice(4).replace(/[^0-9]/g, "");
       setCarrierNumber("+998" + digits);
     }
@@ -72,7 +70,6 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
 
   const handleKeyDown = (e) => {
     const cursorPosition = inputRef.current.selectionStart;
-    // Prevent backspace from deleting +998
     if (e.key === "Backspace" && cursorPosition <= 4) {
       e.preventDefault();
     }
@@ -80,7 +77,6 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Validate phone number on submission
     if (carrierNumber !== "+998" && !/^\+998\d{9}$/.test(carrierNumber)) {
       alert("Илтимос, тўлиқ телефон рақамини киритинг (+998123456789)");
       return;
@@ -196,6 +192,16 @@ const EditOrderModal = ({
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
 
+    // Check if the item to be removed is READY and if it's the only READY item
+    const currentItem = editingOrder.orderItems.find((item) => item.id === itemId);
+    if (currentItem?.status === "READY") {
+      const readyItems = editingOrder.orderItems.filter((item) => item.status === "READY");
+      if (readyItems.length === 1) {
+        setLocalError("Буюртмада фақат битта тайёр маҳсулот бор, унда бу маҳсулотни ўчириб бўлмайди.");
+        return;
+      }
+    }
+
     try {
       setLocalIsSaving(true);
       setLocalError("");
@@ -251,6 +257,10 @@ const EditOrderModal = ({
       setLocalError("Танланган маҳсулот топилмади.");
       return;
     }
+    if (product.isFinished) {
+      setLocalError("Бу маҳсулот тугаган, қўшиш мумкин эмас.");
+      return;
+    }
 
     try {
       setLocalIsSaving(true);
@@ -264,7 +274,7 @@ const EditOrderModal = ({
       const response = await axios.put(`${API_ENDPOINTS.ORDERS}/${editingOrder.id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+      // ... rest of the function remains unchanged
       const updatedOrder = response.data;
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
 
@@ -334,7 +344,8 @@ const EditOrderModal = ({
                     <button
                       className="modal__item-remove"
                       onClick={() => handleRemoveItem(item.id)}
-                      disabled={localIsSaving}
+                      disabled={localIsSaving || (item.status === "READY" && editingOrder.orderItems.filter((i) => i.status === "READY").length === 1)}
+                      aria-label={`Remove ${item.product?.name || "Номаълум маҳсулот"}`}
                     >
                       Ўчириш
                     </button>
@@ -373,8 +384,12 @@ const EditOrderModal = ({
               >
                 <option value="">Маҳсулот танланг</option>
                 {filteredProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} ({formatPrice(product.price)})
+                  <option
+                    key={product.id}
+                    value={product.id}
+                    disabled={product.isFinished}
+                  >
+                    {product.name} ({formatPrice(product.price)}) {product.isFinished ? "(Тугаган)" : ""}
                   </option>
                 ))}
               </select>
@@ -429,13 +444,13 @@ export default function Dostavka() {
   // Function to determine order status based on orderItems
   const determineOrderStatus = (orderItems) => {
     if (!orderItems || orderItems.length === 0) return "PENDING";
-  
+
     const allReady = orderItems.every((item) => item.status === "READY");
     if (allReady) return "READY";
-  
+
     const hasCooking = orderItems.some((item) => item.status === "COOKING");
     const hasPending = orderItems.some((item) => item.status === "PENDING");
-  
+
     if (hasCooking && !hasPending) return "COOKING";
     return "PENDING";
   };
@@ -609,6 +624,16 @@ export default function Dostavka() {
   const debouncedHandleCloseAndPrint = useDebounce(handleCloseAndPrint, 500);
 
   const handleDeleteOrder = async (orderId) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // Check if the order has exactly one READY item
+    const readyItems = order.orderItems?.filter((item) => item.status === "READY") || [];
+    if (readyItems.length === 1) {
+      alert("Буюртмада фақат битта тайёр маҳсулот бор, унда буюртмани ўчириб бўлмайди.");
+      return;
+    }
+
     if (!window.confirm("Буюртмани ўчирмоқчимисиз?")) return;
     try {
       setOrders((prev) =>
@@ -634,11 +659,18 @@ export default function Dostavka() {
   };
 
   const addToCart = (taom) => {
-    if (!taom?.id || !taom?.price) return;
+    if (!taom?.id || !taom?.price || taom.isFinished) {
+      if (taom.isFinished) {
+        setError("Bu mahsulot tugagan, qo'shib bo'lmaydi!");
+      }
+      return;
+    }
     setCart((prev) => {
       const foundTaom = prev.find((item) => item.id === taom.id);
       if (foundTaom) {
-        return prev.map((item) => (item.id === taom.id ? { ...item, count: item.count + 1 } : item));
+        return prev.map((item) =>
+          item.id === taom.id ? { ...item, count: item.count + 1 } : item
+        );
       }
       return [...prev, { ...taom, count: 1, status: "PENDING" }];
     });
@@ -765,20 +797,20 @@ export default function Dostavka() {
         });
         const deliveryOrders = Array.isArray(res.data)
           ? res.data
-              .filter((order) => ["PENDING", "COOKING", "READY"].includes(order.status))
-              .map((order) => {
-                const totalPrice = order.orderItems?.reduce((sum, item) => {
-                  const price = parseFloat(item.product?.price) || 0;
-                  const count = parseInt(item.count) || 0;
-                  return sum + price * count;
-                }, 0) || 0;
-                const status = determineOrderStatus(order.orderItems);
-                return {
-                  ...order,
-                  totalPrice: Math.round(totalPrice * 100) / 100,
-                  status,
-                };
-              })
+            .filter((order) => ["PENDING", "COOKING", "READY"].includes(order.status))
+            .map((order) => {
+              const totalPrice = order.orderItems?.reduce((sum, item) => {
+                const price = parseFloat(item.product?.price) || 0;
+                const count = parseInt(item.count) || 0;
+                return sum + price * count;
+              }, 0) || 0;
+              const status = determineOrderStatus(order.orderItems);
+              return {
+                ...order,
+                totalPrice: Math.round(totalPrice * 100) / 100,
+                status,
+              };
+            })
           : [];
         setOrders(deliveryOrders);
       } catch (err) {
@@ -797,7 +829,18 @@ export default function Dostavka() {
           signal: controller.signal,
           timeout: 10000,
         });
-        setTaomlar(Array.isArray(res.data) ? res.data : []);
+        setTaomlar(
+          Array.isArray(res.data)
+            ? res.data.map((product) => ({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              categoryId: product.categoryId,
+              isFinished: product.isFinished || false, // Ensure isFinished is included
+              // Add other fields as needed
+            }))
+            : []
+        );
       } catch (err) {
         if (err.name !== "AbortError") {
           setError("Маҳсулотларни юклашда хатолик юз берди: " + err.message);
@@ -906,15 +949,17 @@ export default function Dostavka() {
   const filteredTaomlar = React.useMemo(() => {
     return selectedCategory
       ? taomlar
-          .filter(
-            (taom) =>
-              taom.categoryId &&
-              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-          )
-          .sort((a, b) => a.id - b.id) // Sort by id in ascending order
-      : taomlar.sort((a, b) => a.id - b.id); // Sort all products if no category selected
+        .filter(
+          (taom) =>
+            taom.categoryId &&
+            taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+        )
+        .sort((a, b) => a.id - b.id)
+      : taomlar.sort((a, b) => a.id - b.id);
   }, [selectedCategory, taomlar, categories]);
-
+  const clearCart = () => {
+    setCart([]);
+  };
   const totalPrice = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.count, 0);
   const totalWithServiceFee = totalPrice + Number(serviceFee);
 
@@ -1047,6 +1092,7 @@ export default function Dostavka() {
         <div className="cart-column">
           <h3>Буюртма савати</h3>
           <table className="basket-table">
+            {/* Table content remains unchanged */}
             <thead>
               <tr>
                 <th>Номи</th>
@@ -1072,14 +1118,24 @@ export default function Dostavka() {
               )}
             </tbody>
           </table>
-          <button
-            className="confirm-order-btn"
-            disabled={cart.length === 0 || isConfirming}
-            onClick={() => setShowModal(true)}
-            aria-label="Буюртмани расмийлаштириш"
-          >
-            <ShoppingCart size={16} /> Буюртмани расмийлаштириш
-          </button>
+          <div className="cart-actions">
+            <button
+              className="clear-cart-btn"
+              onClick={clearCart}
+              disabled={cart.length === 0}
+              aria-label="Саватни тозалаш"
+            >
+              <Trash size={16} /> Саватни тозалаш
+            </button>
+            <button
+              className="confirm-order-btn"
+              disabled={cart.length === 0 || isConfirming}
+              onClick={() => setShowModal(true)}
+              aria-label="Буюртмани расмийлаштириш"
+            >
+              <ShoppingCart size={16} /> Буюртмани расмийлаштириш
+            </button>
+          </div>
         </div>
 
         <div className="products-column">
@@ -1088,7 +1144,8 @@ export default function Dostavka() {
               categories.map((category) => (
                 <button
                   key={category.id}
-                  className={`category-btn ${selectedCategory === category.name ? "active" : ""}`}
+                  className={`category-btn ${selectedCategory === category.name ? "active" : ""
+                    }`}
                   onClick={() => setSelectedCategory(category.name)}
                   aria-label={`Категория: ${category.name}`}
                 >
@@ -1105,19 +1162,47 @@ export default function Dostavka() {
           ) : (
             <ul className="products-list">
               {filteredTaomlar.map((taom) => (
-                <li key={taom.id} className="product-item">
-                  <div onClick={() => addToCart(taom)} className="product-info" role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && addToCart(taom)}>
-                    <span className="product-name">{taom.name || "Номаълум таом"}</span>
+                <li
+                  key={taom.id}
+                  className={`product-item ${taom.isFinished ? "finished" : ""}`}
+                >
+                  <div
+                    onClick={() => !taom.isFinished && addToCart(taom)}
+                    className="product-info"
+                    style={{
+                      cursor: taom.isFinished ? "not-allowed" : "pointer",
+                      opacity: taom.isFinished ? 0.5 : 1,
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && !taom.isFinished && addToCart(taom)}
+                  >
+                    <span className="product-name">
+                      {taom.name || "Номаълум таом"} {taom.isFinished ? "(Тугаган)" : ""}
+                    </span>
                     <span className="product-price">({formatPrice(taom.price)})</span>
                   </div>
                   <div className="menu-card__controls">
-                    <button className="control-btn" onClick={() => removeFromCart(taom)} aria-label={`Remove ${taom.name}`}>
+                    <button
+                      className="control-btn"
+                      onClick={() => removeFromCart(taom)}
+                      aria-label={`Remove ${taom.name}`}
+                      disabled={taom.isFinished}
+                    >
                       -
                     </button>
                     <span className="control-value">
-                      {Math.max(cart.find((item) => item.id === taom.id)?.count || 0, 0)}
+                      {Math.max(
+                        cart.find((item) => item.id === taom.id)?.count || 0,
+                        0
+                      )}
                     </span>
-                    <button className="control-btn" onClick={() => addToCart(taom)} aria-label={`Add ${taom.name}`}>
+                    <button
+                      className="control-btn"
+                      onClick={() => addToCart(taom)}
+                      aria-label={`Add ${taom.name}`}
+                      disabled={taom.isFinished}
+                    >
                       +
                     </button>
                   </div>
@@ -1290,7 +1375,7 @@ export default function Dostavka() {
         .submit-btn,
         .modal__add-btn,
         .modal__item-remove {
-          padding: 10 FastAPIpx 20px;
+          padding: 10px 20px;
           border: none;
           border-radius: var(--border-radius);
           font-size: 0.875rem;
@@ -1668,13 +1753,50 @@ export default function Dostavka() {
           font-size: 0.875rem;
           transition: var(--transition);
         }
+        .product-item.finished .control-btn:disabled {
+          background-color: var(--neutral-gray);
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
 
         .category-btn.active,
         .category-btn:hover {
           background-color: var(--primary-color);
           color: var(--background-light);
         }
+.cart-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 20px;
+}
 
+.clear-cart-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background-color: var(--danger-color);
+  color: var(--background-light);
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.clear-cart-btn:disabled {
+  background-color: var(--neutral-gray);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.clear-cart-btn:hover:not(:disabled) {
+  background-color: #c82333;
+}
         .products-list {
           list-style: none;
           padding: 0;
