@@ -7,7 +7,7 @@ import { useReactToPrint } from "react-to-print";
 import io from "socket.io-client";
 import Receipt from "../components/Receipt.jsx";
 
-// Centralized API configuration
+// Consolidated API constants
 const API_BASE_URL = "https://alikafecrm.uz";
 const API_ENDPOINTS = {
   ORDERS: `${API_BASE_URL}/order`,
@@ -16,10 +16,10 @@ const API_ENDPOINTS = {
   SERVICE_FEE: `${API_BASE_URL}/percent/3`,
 };
 
-// Configure axios retries
+// Axios retry configuration
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
-// Initialize Socket.IO client
+// Socket.IO client initialization
 const socket = io(API_BASE_URL, {
   auth: { token: localStorage.getItem("token") },
   autoConnect: false,
@@ -30,10 +30,26 @@ const socket = io(API_BASE_URL, {
   transports: ["websocket", "polling"],
 });
 
-// Audio playback function
+// Utility functions
 const playSound = () => {
   const audio = new Audio("/synthesize.mp3");
-  audio.play().catch((error) => console.error("Audio ijro etishda xatolik:", error));
+  audio.play().catch((error) => console.error("Audio playback error:", error));
+};
+
+const handleApiError = (error, defaultMessage) => {
+  const statusMessages = {
+    401: "Авторизация хатоси. Илтимос, қайта киринг.",
+    403: "Рухсат йўқ. Администратор билан боғланинг.",
+    404: "Маълумот топилмади.",
+    422: "Нотўғри маълумот юборилди.",
+    500: "Сервер хатоси. Кейинроқ уриниб кўринг.",
+  };
+  return (
+    error.response?.data?.message ||
+    statusMessages[error.response?.status] ||
+    defaultMessage ||
+    "Номаълум хатолик юз берди."
+  );
 };
 
 // Debounce hook
@@ -50,7 +66,8 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, serviceFee, isConfirming }) => {
+// ModalBasket component
+const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setOrderDescriptions, orderToEdit = null, serviceFee, isConfirming }) => {
   const [carrierNumber, setCarrierNumber] = useState("+998");
   const inputRef = useRef(null);
 
@@ -75,19 +92,35 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
     }
   };
 
+  const handleDescriptionChange = (productId, value) => {
+    setOrderDescriptions((prev) => ({
+      ...prev,
+      [productId]: value,
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (cart.length === 0) {
+      alert("Саватда маҳсулотлар йўқ!");
+      return;
+    }
     if (carrierNumber !== "+998" && !/^\+998\d{9}$/.test(carrierNumber)) {
       alert("Илтимос, тўлиқ телефон рақамини киритинг (+998123456789)");
       return;
     }
+    const orderItemsWithDescriptions = cart.map((item) => ({
+      ...item,
+      description: orderDescriptions[item.id] || "",
+    }));
     onConfirm({
-      orderItems: cart,
+      orderItems: orderItemsWithDescriptions,
       carrierNumber: carrierNumber,
       orderId: orderToEdit?.id || null,
       serviceFee,
     });
     setCarrierNumber("+998");
+    setOrderDescriptions({});
     onClose();
   };
 
@@ -100,13 +133,14 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
           <h3 id="modal-title">{orderToEdit ? "Буюртмани таҳрирлаш" : "Доставка буюртмасини расмийлаштириш"}</h3>
           <button
             className="modal-close"
-            aria-label="Close modal"
+            aria-label="Модални ёпиш"
             onClick={() => {
               setCarrierNumber("+998");
+              setOrderDescriptions({});
               onClose();
             }}
           >
-            ×
+            <X size={24} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="add-place-form">
@@ -122,13 +156,32 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
               placeholder="+998901234567"
               maxLength={13}
               aria-required="false"
+              style={{ padding: "10px", width: "100%", maxWidth: "300px", borderRadius: "4px", border: "1px solid #ccc" }}
             />
           </div>
+          {cart.length > 0 && (
+            <div className="form-group">
+              <label>Маҳсулотлар тафсилотлари:</label>
+              {cart.map((item) => (
+                <div key={item.id} className="cart-item-description">
+                  <span>{item.name} (x{item.count})</span>
+                  <textarea
+                    value={orderDescriptions[item.id] || ""}
+                    onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
+                    placeholder="Таъриф киритинг (масалан, қадоқлаш тури, махсус сўровлар)"
+                    style={{ width: "100%", minHeight: "60px", padding: "8px", marginTop: "5px", borderRadius: "4px", border: "1px solid #ccc" }}
+                    aria-label={`Таъриф учун ${item.name}`}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="form-actions">
             <button
               type="button"
               onClick={() => {
                 setCarrierNumber("+998");
+                setOrderDescriptions({});
                 onClose();
               }}
               className="cancel-btn"
@@ -145,7 +198,7 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderToEdit = null, ser
   );
 };
 
-// EditOrderModal Component
+// EditOrderModal component
 const EditOrderModal = ({
   isOpen,
   onClose,
@@ -158,8 +211,10 @@ const EditOrderModal = ({
   setError,
   socket,
   categories,
+  orderDescriptions,
+  setOrderDescriptions,
 }) => {
-  const [newItem, setNewItem] = useState({ categoryId: "", productId: "", count: 1 });
+  const [newItem, setNewItem] = useState({ categoryId: "", productId: "", count: 1, description: "" });
   const [editingOrder, setEditingOrder] = useState(order);
   const [localError, setLocalError] = useState("");
   const [localIsSaving, setLocalIsSaving] = useState(false);
@@ -170,8 +225,13 @@ const EditOrderModal = ({
         ...order,
         totalPrice: calculateTotalPrice(order.orderItems),
       });
+      const initialDescriptions = order.orderItems.reduce((acc, item) => ({
+        ...acc,
+        [item.productId || item.product?.id]: item.description || "",
+      }), {});
+      setOrderDescriptions((prev) => ({ ...prev, ...initialDescriptions }));
     }
-  }, [order]);
+  }, [order, setOrderDescriptions]);
 
   useEffect(() => {
     if (localIsSaving) {
@@ -192,7 +252,6 @@ const EditOrderModal = ({
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
 
-    // Check if the item to be removed is READY and if it's the only READY item
     const currentItem = editingOrder.orderItems.find((item) => item.id === itemId);
     if (currentItem?.status === "READY") {
       const readyItems = editingOrder.orderItems.filter((item) => item.status === "READY");
@@ -229,11 +288,17 @@ const EditOrderModal = ({
           price: parseFloat(item.product?.price) || 0,
           count: item.count || 0,
           status: item.status || "PENDING",
+          description: item.description || "",
         }))
       );
+      setOrderDescriptions((prev) => {
+        const newDescriptions = { ...prev };
+        delete newDescriptions[currentItem.productId || currentItem.product?.id];
+        return newDescriptions;
+      });
       setSuccessMsg("Маҳсулот муваффақиятли ўчирилди!");
     } catch (error) {
-      const message = error.response?.data?.message || "Маҳсулотни ўчиришда хатолик.";
+      const message = handleApiError(error, "Маҳсулотни ўчиришда хатолик.");
       setLocalError(message);
       setLocalIsSaving(false);
       setError(message);
@@ -243,7 +308,7 @@ const EditOrderModal = ({
   const handleAddItem = async () => {
     if (localIsSaving || !editingOrder) return;
 
-    const { categoryId, productId, count } = newItem;
+    const { categoryId, productId, count, description } = newItem;
     if (!categoryId) {
       setLocalError("Илтимос, аввал категория танланг.");
       return;
@@ -252,21 +317,26 @@ const EditOrderModal = ({
       setLocalError("Илтимос, маҳсулот танланг ва сонини тўғри киритинг.");
       return;
     }
-    const product = products.find((p) => p.id === parseInt(productId));
-    if (!product) {
-      setLocalError("Танланган маҳсулот топилмади.");
-      return;
-    }
-    if (product.isFinished) {
-      setLocalError("Бу маҳсулот тугаган, қўшиш мумкин эмас.");
-      return;
-    }
 
+    // Fetch the latest product data from the server to check isFinished
     try {
+      const productResponse = await axios.get(`${API_ENDPOINTS.PRODUCTS}/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const product = productResponse.data;
+      if (!product) {
+        setLocalError("Танланган маҳсулот топилмади.");
+        return;
+      }
+      if (product.isFinished) {
+        setLocalError("Бу маҳсулот тугаган, қўшиш мумкин эмас.");
+        return;
+      }
+
       setLocalIsSaving(true);
       setLocalError("");
       const payload = {
-        products: [{ productId: Number(productId), count: Number(count) }],
+        products: [{ productId: Number(productId), count: Number(count), description: description || "" }],
         carrierNumber: editingOrder.carrierNumber,
         userId: editingOrder.userId,
         status: editingOrder.status,
@@ -274,7 +344,7 @@ const EditOrderModal = ({
       const response = await axios.put(`${API_ENDPOINTS.ORDERS}/${editingOrder.id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // ... rest of the function remains unchanged
+
       const updatedOrder = response.data;
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
 
@@ -291,12 +361,17 @@ const EditOrderModal = ({
           price: parseFloat(item.product?.price) || 0,
           count: item.count || 0,
           status: item.status || "PENDING",
+          description: item.description || "",
         }))
       );
-      setNewItem({ categoryId: "", productId: "", count: 1 });
+      setOrderDescriptions((prev) => ({
+        ...prev,
+        [productId]: description,
+      }));
+      setNewItem({ categoryId: "", productId: "", count: 1, description: "" });
       setSuccessMsg("Маҳсулот муваффақиятли қўшилди!");
     } catch (error) {
-      const message = error.response?.data?.message || "Маҳсулот қўшишда хатолик.";
+      const message = handleApiError(error, "Маҳсулот қўшишда хатолик.");
       setLocalError(message);
       setLocalIsSaving(false);
       setError(message);
@@ -314,7 +389,7 @@ const EditOrderModal = ({
       <div className="modal1" onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
           <h2 id="edit-modal-title">Буюртма №{order?.id} ни таҳрирлаш</h2>
-          <button className="modal__close-btn" aria-label="Close modal" onClick={onClose}>
+          <button className="modal__close-btn" aria-label="Модални ёпиш" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
@@ -340,12 +415,15 @@ const EditOrderModal = ({
                       <span className="modal__item-details">
                         Сони: {item.count} | {formatPrice(item.product?.price || 0)} | Статус: {item.status}
                       </span>
+                      <span className="modal__item-description" style={{ display: "block", marginTop: "5px", color: item.description ? "#333" : "#999" }}>
+                        Таъриф: {item.description || "Таъриф йўқ"}
+                      </span>
                     </div>
                     <button
                       className="modal__item-remove"
                       onClick={() => handleRemoveItem(item.id)}
                       disabled={localIsSaving || (item.status === "READY" && editingOrder.orderItems.filter((i) => i.status === "READY").length === 1)}
-                      aria-label={`Remove ${item.product?.name || "Номаълум маҳсулот"}`}
+                      aria-label={`Очириш ${item.product?.name || "Номаълум маҳсулот"}`}
                     >
                       Ўчириш
                     </button>
@@ -363,10 +441,11 @@ const EditOrderModal = ({
                 className="modal__select"
                 value={newItem.categoryId}
                 onChange={(e) =>
-                  setNewItem({ ...newItem, categoryId: e.target.value, productId: "" })
+                  setNewItem({ ...newItem, categoryId: e.target.value, productId: "", description: "" })
                 }
                 disabled={localIsSaving}
                 aria-label="Категория танланг"
+                style={{ padding: "10px", width: "100%", maxWidth: "200px", borderRadius: "4px", border: "1px solid #ccc" }}
               >
                 <option value="">Категория танланг</option>
                 {categories.map((category) => (
@@ -381,6 +460,7 @@ const EditOrderModal = ({
                 onChange={(e) => setNewItem({ ...newItem, productId: e.target.value })}
                 disabled={localIsSaving || !newItem.categoryId}
                 aria-label="Маҳсулот танланг"
+                style={{ padding: "10px", width: "100%", maxWidth: "200px", borderRadius: "4px", border: "1px solid #ccc" }}
               >
                 <option value="">Маҳсулот танланг</option>
                 {filteredProducts.map((product) => (
@@ -404,6 +484,16 @@ const EditOrderModal = ({
                 placeholder="Сони"
                 disabled={localIsSaving}
                 aria-label="Маҳсулот сони"
+                style={{ padding: "10px", width: "100%", maxWidth: "100px", borderRadius: "4px", border: "1px solid #ccc" }}
+              />
+              <textarea
+                className="modal__input"
+                value={newItem.description}
+                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                placeholder="Таъриф киритинг (масалан, Қатиқ га, Йўғсиз)"
+                disabled={localIsSaving}
+                aria-label="Янги маҳсулот таърифи"
+                style={{ width: "100%", minHeight: "60px", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
               />
               <button
                 className="modal__add-btn"
@@ -420,10 +510,12 @@ const EditOrderModal = ({
   );
 };
 
+// Main Dostavka component
 export default function Dostavka() {
   const [orders, setOrders] = useState([]);
   const [taomlar, setTaomlar] = useState([]);
   const [cart, setCart] = useState([]);
+  const [orderDescriptions, setOrderDescriptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -441,7 +533,6 @@ export default function Dostavka() {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  // Function to determine order status based on orderItems
   const determineOrderStatus = (orderItems) => {
     if (!orderItems || orderItems.length === 0) return "PENDING";
 
@@ -474,7 +565,7 @@ export default function Dostavka() {
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
     onError: (error) => {
-      console.error("Print error:", error);
+      console.error("Чоп этишда хатолик:", error);
       setError("Чоп этишда хатолик юз берди.");
     },
   });
@@ -484,18 +575,47 @@ export default function Dostavka() {
     setIsConfirming(true);
 
     if (!orderData?.orderItems?.length) {
-      setError("Буюртмада камида битта маҳсулот бўлиши керак.");
+      setError("Буюртмада камida битта маҳсулот бўлиши керак.");
       setShowModal(false);
       setIsConfirming(false);
       return;
     }
 
     try {
+      // Fetch the latest product data from the server to check isFinished
+      const productIds = orderData.orderItems.map((item) => item.id);
+      const productResponses = await Promise.all(
+        productIds.map((id) =>
+          axios.get(`${API_ENDPOINTS.PRODUCTS}/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      const latestProducts = productResponses.map((res) => res.data);
+
+      // Check isFinished status for each item in the cart
+      const finishedItems = orderData.orderItems
+        .map((item) => {
+          const product = latestProducts.find((p) => p.id === item.id);
+          return product?.isFinished ? item.name : null;
+        })
+        .filter(Boolean);
+
+      if (finishedItems.length > 0) {
+        setError(
+          `Қуйидаги маҳсулотлар тугаган, буюртма бериб бўлмайди: ${finishedItems.join(", ")}`
+        );
+        setShowModal(false);
+        setIsConfirming(false);
+        return;
+      }
+
       const products = orderData.orderItems
         .filter((item) => item?.id && item.count > 0)
         .map((item) => ({
           productId: Number(item.id),
           count: Number(item.count),
+          description: item.description || "",
         }));
 
       if (!products.length) {
@@ -506,7 +626,8 @@ export default function Dostavka() {
       }
 
       const totalPrice = orderData.orderItems.reduce((acc, item) => {
-        const price = Number(item?.price) || 0;
+        const product = latestProducts.find((p) => p.id === item.id);
+        const price = Number(product?.price) || Number(item.price) || 0;
         return acc + price * item.count;
       }, 0);
 
@@ -563,9 +684,10 @@ export default function Dostavka() {
       });
 
       setCart([]);
+      setOrderDescriptions({});
       setServiceFee(0);
     } catch (err) {
-      setError(`Хатолик: ${err.response?.data?.message || "Буюртма яратиш/таҳрирлашда хатолик юз берди."}`);
+      setError(`Хатолик: ${handleApiError(err, "Буюртма яратиш/таҳрирлашда хатолик юз берди.")}`);
     } finally {
       setIsConfirming(false);
       setShowModal(false);
@@ -613,7 +735,7 @@ export default function Dostavka() {
       setSuccessMsg(`Буюртма #${order.id} тўланди ва чоп этилди!`);
       setCurrentOrder(null);
     } catch (error) {
-      setError("Чоп этиш ёки статусни ўзгартиришда хатолик юз берди: " + error.message);
+      setError(`Чоп этиш ёки статусни ўзгартиришда хатолик юз берди: ${handleApiError(error, "Номаълум хатолик.")}`);
       setCurrentOrder(null);
     } finally {
       setIsPrinting(false);
@@ -627,7 +749,6 @@ export default function Dostavka() {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
 
-    // Check if the order has exactly one READY item
     const readyItems = order.orderItems?.filter((item) => item.status === "READY") || [];
     if (readyItems.length === 1) {
       alert("Буюртмада фақат битта тайёр маҳсулот бор, унда буюртмани ўчириб бўлмайди.");
@@ -649,7 +770,7 @@ export default function Dostavka() {
         setSuccessMsg("Буюртма муваффақиятли ўчирилди!");
       }, 500);
     } catch (err) {
-      setError("Буюртмани ўчиришда хатолик юз берди: " + err.message);
+      setError(`Буюртмани ўчиришда хатолик юз берди: ${handleApiError(err, "Номаълум хатолик.")}`);
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId ? { ...o, isDeleting: false } : o
@@ -661,7 +782,7 @@ export default function Dostavka() {
   const addToCart = (taom) => {
     if (!taom?.id || !taom?.price || taom.isFinished) {
       if (taom.isFinished) {
-        setError("Bu mahsulot tugagan, qo'shib bo'lmaydi!");
+        setError("Бу маҳсулот тугаган, қўшиб бўлмайди!");
       }
       return;
     }
@@ -669,10 +790,12 @@ export default function Dostavka() {
       const foundTaom = prev.find((item) => item.id === taom.id);
       if (foundTaom) {
         return prev.map((item) =>
-          item.id === taom.id ? { ...item, count: item.count + 1 } : item
+          item.id === taom.id
+            ? { ...item, count: item.count + 1, description: orderDescriptions[taom.id] || "" }
+            : item
         );
       }
-      return [...prev, { ...taom, count: 1, status: "PENDING" }];
+      return [...prev, { ...taom, count: 1, status: "PENDING", description: orderDescriptions[taom.id] || "" }];
     });
   };
 
@@ -680,7 +803,11 @@ export default function Dostavka() {
     if (!taom?.id) return;
     setCart((prev) =>
       prev
-        .map((item) => (item.id === taom.id ? { ...item, count: item.count - 1 } : item))
+        .map((item) =>
+          item.id === taom.id
+            ? { ...item, count: item.count - 1, description: orderDescriptions[taom.id] || "" }
+            : item
+        )
         .filter((item) => item.count > 0)
     );
   };
@@ -694,23 +821,23 @@ export default function Dostavka() {
 
     socket.connect();
     socket.on("connect", () => {
-      console.log("Socket.IO connected:", socket.id);
-      setSuccessMsg("Wifi серверга уланди!");
+      console.log("Socket.IO ulandi:", socket.id);
+      setSuccessMsg("WiFi серверга уланди!");
     });
 
     socket.on("reconnect", (attempt) => {
-      console.log(`Socket.IO reconnected after ${attempt} attempts`);
-      setSuccessMsg("Wifi серверга қайта уланди!");
+      console.log(`Socket.IO ${attempt} urinishdan so‘ng qayta ulandi`);
+      setSuccessMsg("WiFi серверга қайта уланди!");
     });
 
     socket.on("connect_error", (err) => {
-      console.error("Socket connection error:", err.message);
-      setError(`Wifi уланишида хатолик: ${err.message}`);
+      console.error("WiFi ulanishida xatolik:", err.message);
+      setError(`WiFi ulanishida xatolik: ${err.message}`);
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("Socket disconnected:", reason);
-      setSuccessMsg(`Wifi уланиши узилди: ${reason}`);
+      console.log("Socket uzildi:", reason);
+      setError(`WiFi ulanishi uzildi: ${reason}`);
     });
 
     socket.on("order_created", (newOrder) => {
@@ -728,7 +855,7 @@ export default function Dostavka() {
           ...prev,
         ];
       });
-      setSuccessMsg(`Янги буюртма #${newOrder.id} яратилди!`);
+      setSuccessMsg(`Yangi buyurtma #${newOrder.id} yaratildi!`);
     });
 
     socket.on("order_updated", (updatedOrder) => {
@@ -748,7 +875,7 @@ export default function Dostavka() {
             : o
         );
       });
-      setSuccessMsg(`Буюртма #${updatedOrder.id} янгиланди!`);
+      setSuccessMsg(`Buyurtma #${updatedOrder.id} yangilandi!`);
     });
 
     socket.on("orderItemStatusUpdated", (updatedOrderItem) => {
@@ -757,7 +884,7 @@ export default function Dostavka() {
           if (order.id === updatedOrderItem.orderId) {
             const updatedItems = order.orderItems.map((item) =>
               item.id === updatedOrderItem.id
-                ? { ...item, status: updatedOrderItem.status }
+                ? { ...item, status: updatedOrderItem.status, description: item.description || "" }
                 : item
             );
             const totalPrice = updatedItems.reduce((sum, item) => {
@@ -778,13 +905,13 @@ export default function Dostavka() {
         })
       );
       setSuccessMsg(
-        `Буюртма маҳсулоти #${updatedOrderItem.id} статуси ${updatedOrderItem.status} га ўзгарди!`
+        `Buyurtma mahsuloti #${updatedOrderItem.id} statusi ${updatedOrderItem.status} ga o‘zgardi!`
       );
     });
 
     socket.on("order_deleted", (orderId) => {
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      setSuccessMsg(`Буюртма #${orderId} ўчирилди!`);
+      setSuccessMsg(`Buyurtma #${orderId} o‘chirildi!`);
     });
 
     const fetchOrders = async () => {
@@ -815,7 +942,7 @@ export default function Dostavka() {
         setOrders(deliveryOrders);
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError("Буюртмаларни юклашда хатолик юз берди: " + err.message);
+          setError(`Buyurtmalarni yuklashda xatolik yuz berdi: ${handleApiError(err, "Номаълум хатолик.")}`);
         }
       }
       return controller;
@@ -836,14 +963,13 @@ export default function Dostavka() {
               name: product.name,
               price: product.price,
               categoryId: product.categoryId,
-              isFinished: product.isFinished || false, // Ensure isFinished is included
-              // Add other fields as needed
+              isFinished: product.isFinished || false,
             }))
             : []
         );
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError("Маҳсулотларни юклашда хатолик юз берди: " + err.message);
+          setError(`Mahsulotlarni yuklashda xatolik yuz berdi: ${handleApiError(err, "Номаълум хатолик.")}`);
         }
       }
       return controller;
@@ -864,7 +990,7 @@ export default function Dostavka() {
         }
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError("Категорияларни юклашда хатолик юз берди: " + err.message);
+          setError(`Kategoriyalarni yuklashda xatolik yuz berdi: ${handleApiError(err, "Номаълум хатолик.")}`);
         }
       }
       return controller;
@@ -881,7 +1007,7 @@ export default function Dostavka() {
         setServiceFee(res.data?.percent || 0);
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError("Хизмат ҳақини юклашда хатолик юз берди: " + err.message);
+          setError(`Xizmat haqini yuklashda xatolik yuz berdi: ${handleApiError(err, "Номаълум хатолик.")}`);
         }
       }
       return controller;
@@ -898,7 +1024,7 @@ export default function Dostavka() {
       .then(() => setLoading(false))
       .catch((err) => {
         setLoading(false);
-        setError("Маълумотларни юклашда хатолик юз берди: " + err.message);
+        setError(`Ma‘lumotlarni yuklashda xatolik yuz berdi: ${handleApiError(err, "Номаълум хатолик.")}`);
       });
 
     return () => {
@@ -949,17 +1075,20 @@ export default function Dostavka() {
   const filteredTaomlar = React.useMemo(() => {
     return selectedCategory
       ? taomlar
-        .filter(
-          (taom) =>
-            taom.categoryId &&
-            taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-        )
-        .sort((a, b) => a.id - b.id)
+          .filter(
+            (taom) =>
+              taom.categoryId &&
+              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+          )
+          .sort((a, b) => a.id - b.id)
       : taomlar.sort((a, b) => a.id - b.id);
   }, [selectedCategory, taomlar, categories]);
+
   const clearCart = () => {
     setCart([]);
+    setOrderDescriptions({});
   };
+
   const totalPrice = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.count, 0);
   const totalWithServiceFee = totalPrice + Number(serviceFee);
 
@@ -982,7 +1111,7 @@ export default function Dostavka() {
               setSuccessMsg(null);
               setError(null);
             }}
-            aria-label="Close message"
+            aria-label="Хабарни ёпиш"
           >
             ×
           </button>
@@ -1001,6 +1130,7 @@ export default function Dostavka() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Буюртмаларни қидириш"
+              style={{ padding: "10px", width: "100%", borderRadius: "4px", border: "1px solid #ccc" }}
             />
           </div>
           {filteredOrders.length === 0 ? (
@@ -1092,7 +1222,6 @@ export default function Dostavka() {
         <div className="cart-column">
           <h3>Буюртма савати</h3>
           <table className="basket-table">
-            {/* Table content remains unchanged */}
             <thead>
               <tr>
                 <th>Номи</th>
@@ -1105,7 +1234,7 @@ export default function Dostavka() {
               {cart.length > 0 ? (
                 cart.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.name || "Noma'lum"}</td>
+                    <td>{item.name || "Номаълум"}</td>
                     <td>{item.count}</td>
                     <td>{formatPrice(item.price)}</td>
                     <td>{formatPrice(item.price * item.count)}</td>
@@ -1113,11 +1242,14 @@ export default function Dostavka() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4">Саватда таомлар йўқ</td>
+                  <td colSpan="5">Саватда таомлар йўқ</td>
                 </tr>
               )}
             </tbody>
           </table>
+          <div className="cart-totals">
+            <p>Жами: {formatPrice(totalPrice)}</p>
+          </div>
           <div className="cart-actions">
             <button
               className="clear-cart-btn"
@@ -1144,8 +1276,7 @@ export default function Dostavka() {
               categories.map((category) => (
                 <button
                   key={category.id}
-                  className={`category-btn ${selectedCategory === category.name ? "active" : ""
-                    }`}
+                  className={`category-btn ${selectedCategory === category.name ? "active" : ""}`}
                   onClick={() => setSelectedCategory(category.name)}
                   aria-label={`Категория: ${category.name}`}
                 >
@@ -1186,7 +1317,7 @@ export default function Dostavka() {
                     <button
                       className="control-btn"
                       onClick={() => removeFromCart(taom)}
-                      aria-label={`Remove ${taom.name}`}
+                      aria-label={`Очириш ${taom.name}`}
                       disabled={taom.isFinished}
                     >
                       -
@@ -1200,7 +1331,7 @@ export default function Dostavka() {
                     <button
                       className="control-btn"
                       onClick={() => addToCart(taom)}
-                      aria-label={`Add ${taom.name}`}
+                      aria-label={`Қўшиш ${taom.name}`}
                       disabled={taom.isFinished}
                     >
                       +
@@ -1222,6 +1353,8 @@ export default function Dostavka() {
           }}
           onConfirm={debouncedHandleOrderConfirm}
           cart={cart}
+          orderDescriptions={orderDescriptions}
+          setOrderDescriptions={setOrderDescriptions}
           orderToEdit={orderToEdit}
           serviceFee={serviceFee}
           isConfirming={isConfirming}
@@ -1241,6 +1374,8 @@ export default function Dostavka() {
           setError={setError}
           socket={socket}
           categories={categories}
+          orderDescriptions={orderDescriptions}
+          setOrderDescriptions={setOrderDescriptions}
         />
       )}
 
@@ -1348,6 +1483,7 @@ export default function Dostavka() {
 
         .form-group input,
         .form-group select,
+        .form-group textarea,
         .modal__select,
         .modal__input {
           padding: 8px;
@@ -1359,10 +1495,18 @@ export default function Dostavka() {
 
         .form-group input:focus,
         .form-group select:focus,
+        .form-group textarea:focus,
         .modal__select:focus,
         .modal__input:focus {
           border-color: var(--primary-color);
           outline: none;
+        }
+
+        .cart-item-description {
+          margin-top: 10px;
+          padding: 10px;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
         }
 
         .form-actions {
@@ -1708,6 +1852,49 @@ export default function Dostavka() {
           font-weight: bold;
         }
 
+        .cart-totals {
+          margin-bottom: 20px;
+          font-size: 1rem;
+        }
+
+        .cart-totals p {
+          margin: 5px 0;
+        }
+
+        .cart-actions {
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          margin-top: 20px;
+        }
+
+        .clear-cart-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 12px;
+          background-color: var(--danger-color);
+          color: var(--background-light);
+          border: none;
+          border-radius: var(--border-radius);
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: var(--transition);
+        }
+
+        .clear-cart-btn:disabled {
+          background-color: var(--neutral-gray);
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .clear-cart-btn:hover:not(:disabled) {
+          background-color: #c82333;
+        }
+
         .confirm-order-btn {
           display: flex;
           align-items: center;
@@ -1721,7 +1908,6 @@ export default function Dostavka() {
           border-radius: var(--border-radius);
           font-size: 1rem;
           font-weight: 600;
-          margin-top: 20px;
           cursor: pointer;
           transition: var(--transition);
         }
@@ -1753,50 +1939,13 @@ export default function Dostavka() {
           font-size: 0.875rem;
           transition: var(--transition);
         }
-        .product-item.finished .control-btn:disabled {
-          background-color: var(--neutral-gray);
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
 
         .category-btn.active,
         .category-btn:hover {
           background-color: var(--primary-color);
           color: var(--background-light);
         }
-.cart-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  margin-top: 20px;
-}
 
-.clear-cart-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  background-color: var(--danger-color);
-  color: var(--background-light);
-  border: none;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.clear-cart-btn:disabled {
-  background-color: var(--neutral-gray);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.clear-cart-btn:hover:not(:disabled) {
-  background-color: #c82333;
-}
         .products-list {
           list-style: none;
           padding: 0;
@@ -1850,6 +1999,12 @@ export default function Dostavka() {
 
         .control-btn:hover {
           background-color: #0056b3;
+        }
+
+        .control-btn:disabled {
+          background-color: var(--neutral-gray);
+          cursor: not-allowed;
+          opacity: 0.6;
         }
 
         .control-value {

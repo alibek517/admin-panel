@@ -13,10 +13,17 @@ const ModalBasket = ({
   const [isTableOrder, setIsTableOrder] = useState(true);
   const [tableId, setTableId] = useState(selectedTableId || "");
   const [carrierNumber, setCarrierNumber] = useState("");
+  const [orderDescriptions, setOrderDescriptions] = useState({});
 
   useEffect(() => {
     setTableId(selectedTableId || "");
-  }, [selectedTableId]);
+    // Initialize descriptions for cart items
+    const initialDescriptions = cart.reduce((acc, item) => ({
+      ...acc,
+      [item.id]: "",
+    }), {});
+    setOrderDescriptions(initialDescriptions);
+  }, [selectedTableId, cart]);
 
   const formatPrice = (price) => {
     const priceStr = price.toString();
@@ -29,6 +36,13 @@ const ModalBasket = ({
     0
   );
 
+  const handleDescriptionChange = (productId, value) => {
+    setOrderDescriptions((prev) => ({
+      ...prev,
+      [productId]: value,
+    }));
+  };
+
   const handleConfirm = () => {
     const phoneRegex = /^\+998\d{9}$/;
     if (!isTableOrder && !phoneRegex.test(carrierNumber)) {
@@ -40,6 +54,7 @@ const ModalBasket = ({
       productId: Number(item.id),
       count: Number(item.count),
       product: { price: Number(item.price), name: item.name },
+      description: orderDescriptions[item.id] || "",
     }));
 
     onConfirm({
@@ -115,6 +130,32 @@ const ModalBasket = ({
               </label>
             </div>
           )}
+
+          <div className="cart-items">
+            <h3>Mahsulotlar tafsilotlari:</h3>
+            {cart.map((item) => (
+              <div key={item.id} className="cart-item-description">
+                <span>
+                  {item.name} (x{item.count})
+                </span>
+                <textarea
+                  value={orderDescriptions[item.id] || ""}
+                  onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
+                  placeholder="Ta'rif kiriting (masalan, qadoqlash turi, maxsus so'rovlar)"
+                  className="modal__input"
+                  style={{
+                    width: "100%",
+                    minHeight: "60px",
+                    padding: "8px",
+                    marginTop: "5px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                  }}
+                  aria-label={`Ta'rif uchun ${item.name}`}
+                />
+              </div>
+            ))}
+          </div>
 
           <table className="basket-table">
             <thead>

@@ -2,28 +2,13 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import "./styles/taomlar.css";
 import axios from "axios";
-import { socket } from "../socket.js";
 import {
-  Clock,
-  ShoppingCart,
-  X,
-  Plus,
-  Trash,
-  Pencil,
-  Printer,
-  ArrowLeftRight,
-  Lock,
+  Clock, ShoppingCart, X, Plus, Trash, Pencil, Printer, ArrowLeftRight, Lock, RefreshCw
 } from "lucide-react";
 import ModalBasket from "../components/modal/modal-basket";
 import Receipt from "../components/Receipt.jsx";
 
 const handleApiError = (error, defaultMessage) => {
-  console.error(defaultMessage, {
-    message: error.message,
-    status: error.response?.status,
-    data: error.response?.data,
-  });
-
   const statusMessages = {
     401: "Авторизация хатоси. Илтимос, қайта киринг.",
     403: "Рухсат йўқ. Администратор билан боғланинг.",
@@ -31,12 +16,11 @@ const handleApiError = (error, defaultMessage) => {
     422: "Нотўғри маълумот юборилди.",
     500: "Сервер хатоси. Кейинроқ уриниб кўринг.",
   };
-
-  const message =
+  return (
     error.response?.data?.message ||
     statusMessages[error.response?.status] ||
-    defaultMessage;
-  return message;
+    defaultMessage
+  );
 };
 
 const deepClone = (obj) => {
@@ -74,6 +58,32 @@ const normalizeStatus = (status) => {
   return normalized === "busy" || normalized === "band" ? "busy" : "empty";
 };
 
+// Modified checkFinishedProducts to return the list of finished products
+const checkFinishedProducts = (products, taomlar) => {
+  return products.filter((item) => {
+    const product = taomlar.find((p) => p.id === item.productId);
+    return !product || product.isFinished;
+  });
+};
+
+const FinishedProductsModal = ({ isOpen, onClose, finishedProducts, onConfirm }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h3>Quyidagi taomlar tugagan yoki topilmadi:</h3>
+        <ul  style={{listStyle:'none'}}>
+          {finishedProducts.map((item) => (
+            <li key={item.id}>{item.name}</li>
+          ))}
+        </ul>
+        <button style={{backgroundColor:'orange'}} onClick={onConfirm}>OK</button>
+      </div>
+    </div>
+  );
+};
+
+// Existing Modal component (unchanged)
 const Modal = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
   return (
@@ -91,6 +101,7 @@ const Modal = ({ isOpen, onClose, children, title }) => {
   );
 };
 
+// AddPlaceModal component (unchanged)
 const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   const [placeName, setPlaceName] = useState("");
   const handleSubmit = (e) => {
@@ -131,6 +142,7 @@ const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+// AddTableModal component (unchanged)
 const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   const [selectedPlace, setSelectedPlace] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -224,6 +236,7 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   );
 };
 
+// EditOrderModal component (unchanged)
 const EditOrderModal = ({
   isOpen,
   onClose,
@@ -237,14 +250,22 @@ const EditOrderModal = ({
   setCart,
   setSuccessMsg,
   setError,
-  socket,
   commissionPercent,
   categories,
 }) => {
-  const [newItem, setNewItem] = useState({ categoryId: "", productId: "", count: 1 });
+  const [newItem, setNewItem] = useState({ categoryId: "", productId: "", count: 1, description: "" });
   const [editingOrder, setEditingOrder] = useState(order);
   const [localError, setLocalError] = useState("");
   const [localIsSaving, setLocalIsSaving] = useState(isSaving);
+  const [orderDescriptions, setOrderDescriptions] = useState({});
+
+  useEffect(() => {
+    const initialDescriptions = editingOrder?.orderItems?.reduce((acc, item) => ({
+      ...acc,
+      [item.id]: item.description || "",
+    }), {}) || {};
+    setOrderDescriptions(initialDescriptions);
+  }, [editingOrder]);
 
   useEffect(() => {
     if (localIsSaving) {
@@ -259,15 +280,12 @@ const EditOrderModal = ({
     price ? price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " сўм" : "0 сўм";
 
   const calculateTotalPrice = (orderItems) =>
-    orderItems.reduce((sum, item) => sum + parseFloat(item.product?.price || 0) * item.count, 0);
-
-  const calculateTotalPricee = (orderItems) =>
-    orderItems.reduce((sum, item) => sum + parseFloat(item.product?.price || 0) * item.count, 0);
+    orderItems?.reduce((sum, item) => sum + parseFloat(item.product?.price || 0) * (item.count || 0), 0) || 0;
 
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
 
-    const itemToDelete = editingOrder.orderItems.find((item) => item.id === itemId);
+    const itemToDelete = editingOrder?.orderItems?.find((item) => item.id === itemId);
     if (itemToDelete && itemToDelete.status === "READY") {
       setLocalError("Тайёр таомларни ўчириб бўлмайди.");
       return;
@@ -285,23 +303,16 @@ const EditOrderModal = ({
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const updatedOrder = response.data;
+      const updatedOrder = response.data || {};
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-      const totalPricee = calculateTotalPricee(updatedOrder.orderItems);
-
-      if (socket.connected) {
-        socket.emit("orderUpdated", updatedOrder);
-      } else {
-        console.warn("Socket not connected, orderUpdated event not emitted");
-      }
 
       setTables((prev) =>
         prev.map((table) =>
           table.id === updatedOrder.tableId
             ? {
                 ...table,
-                status: updatedOrder.orderItems.length ? "busy" : "empty",
-                orders: updatedOrder.orderItems.length ? [{ ...updatedOrder, table }] : [],
+                status: updatedOrder.orderItems?.length ? "busy" : "empty",
+                orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
               }
             : table
         )
@@ -309,17 +320,23 @@ const EditOrderModal = ({
       setEditingOrder({ ...updatedOrder, totalPrice });
       setSelectedTableOrder({ ...updatedOrder, totalPrice });
       setCart(
-        updatedOrder.orderItems.map((item) => ({
-          id: item.productId || item.product?.id,
+        updatedOrder.orderItems?.map((item) => ({
+          id: item.productId || item.product?.id || 0,
           name: item.product?.name || "Номаълум таом",
           price: parseFloat(item.product?.price) || 0,
           count: item.count || 0,
           status: item.status || "PENDING",
-        }))
+          description: item.description || "",
+        })) || []
       );
       setSuccessMsg("Таом муваффақиятли ўчирилди!");
+      setOrderDescriptions((prev) => {
+        const newDescriptions = { ...prev };
+        delete newDescriptions[itemId];
+        return newDescriptions;
+      });
     } catch (error) {
-      const message = error.response?.data?.message || "Таом ўчиришда хатолик.";
+      const message = handleApiError(error, "Таом ўчиришда хатолик.");
       setLocalError(message);
       setLocalIsSaving(false);
       setError(message);
@@ -329,7 +346,7 @@ const EditOrderModal = ({
   const handleAddItem = async () => {
     if (localIsSaving || !editingOrder) return;
 
-    const { categoryId, productId, count } = newItem;
+    const { categoryId, productId, count, description } = newItem;
     if (!categoryId) {
       setLocalError("Илтимос, аввал категория танланг.");
       return;
@@ -352,8 +369,22 @@ const EditOrderModal = ({
       setLocalIsSaving(true);
       setLocalError("");
 
+      const productsRes = await axios.get(API_ENDPOINTS.products, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+      const updatedProduct = updatedProducts.find((p) => p.id === parseInt(productId));
+      if (!updatedProduct) {
+        setLocalError("Таом маълумотлари топилмади.");
+        return;
+      }
+      if (updatedProduct.isFinished) {
+        setLocalError("Бу таом тугаган, қўшиш мумкин эмас.");
+        return;
+      }
+
       const payload = {
-        products: [{ productId: Number(productId), count: Number(count) }],
+        products: [{ productId: Number(productId), count: Number(count), description: description || "" }],
         tableId: editingOrder.tableId,
         userId: editingOrder.userId,
         status: editingOrder.status,
@@ -364,15 +395,8 @@ const EditOrderModal = ({
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const updatedOrder = response.data;
+      const updatedOrder = response.data || {};
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-      const totalPricee = calculateTotalPricee(updatedOrder.orderItems);
-
-      if (socket.connected) {
-        socket.emit("orderUpdated", updatedOrder);
-      } else {
-        console.warn("Socket not connected, orderUpdated event not emitted");
-      }
 
       setTables((prev) =>
         prev.map((table) =>
@@ -384,18 +408,26 @@ const EditOrderModal = ({
       setEditingOrder({ ...updatedOrder, totalPrice });
       setSelectedTableOrder({ ...updatedOrder, totalPrice });
       setCart(
-        updatedOrder.orderItems.map((item) => ({
-          id: item.productId || item.product?.id,
+        updatedOrder.orderItems?.map((item) => ({
+          id: item.productId || item.product?.id || 0,
           name: item.product?.name || "Номаълум таом",
           price: parseFloat(item.product?.price) || 0,
           count: item.count || 0,
           status: item.status || "PENDING",
-        }))
+          description: item.description || "",
+        })) || []
       );
-      setNewItem({ categoryId: "", productId: "", count: 1 });
+      setNewItem({ categoryId: "", productId: "", count: 1, description: "" });
       setSuccessMsg("Таом муваффақиятли қўшилди!");
+      setOrderDescriptions((prev) => ({
+        ...prev,
+        ...updatedOrder.orderItems.reduce((acc, item) => ({
+          ...acc,
+          [item.id]: item.description || "",
+        }), {}),
+      }));
     } catch (error) {
-      const message = error.response?.data?.message || "Таом қўшишда хатолик.";
+      const message = handleApiError(error, "Таом қўшишда хатолик.");
       setLocalError(message);
       setLocalIsSaving(false);
       setError(message);
@@ -410,7 +442,7 @@ const EditOrderModal = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal1" onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
-          <h2 className="modal__title">Буюртма №{order?.id} ни таҳрирлаш</h2>
+          <h2 className="modal__title">Буюртма №{order?.id || "N/A"} ни таҳрирлаш</h2>
           <button className="modal__close-btn" onClick={onClose}>
             <X size={24} />
           </button>
@@ -423,10 +455,10 @@ const EditOrderModal = ({
             {editingOrder?.orderItems?.length ? (
               <div className="modal__items-list">
                 {editingOrder.orderItems.map((item) => (
-                  <div className="modal__item" key={item.id || item.productId}>
+                  <div className="modal__item" key={item.id || item.productId || Math.random()}>
                     <img
                       src={`${API_BASE}${item.product?.image || "/placeholder-food.jpg"}`}
-                      alt={item.product?.name}
+                      alt={item.product?.name || "Номаълум"}
                       className="modal__item-img"
                       onError={(e) => {
                         e.target.src = "/placeholder-food.jpg";
@@ -435,8 +467,9 @@ const EditOrderModal = ({
                     <div className="modal__item-info">
                       <span className="modal__item-name">{item.product?.name || "Номаълум таом"}</span>
                       <span className="modal__item-details">
-                        Сони: {item.count} | {formatPrice(item.product?.price || 0)}
+                        Сони: {item.count || 0} | {formatPrice(item.product?.price || 0)}
                       </span>
+                      <span>{orderDescriptions[item.id] || " "}</span>
                     </div>
                     <button
                       className="modal__item-remove"
@@ -459,7 +492,7 @@ const EditOrderModal = ({
                 className="modal__select"
                 value={newItem.categoryId}
                 onChange={(e) =>
-                  setNewItem({ ...newItem, categoryId: e.target.value, productId: "" })
+                  setNewItem({ ...newItem, categoryId: e.target.value, productId: "", description: "" })
                 }
                 style={{ color: "#000" }}
                 disabled={localIsSaving}
@@ -497,6 +530,22 @@ const EditOrderModal = ({
                 style={{ color: "#000" }}
                 disabled={localIsSaving}
               />
+              <textarea
+                value={newItem.description || ""}
+                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                placeholder="Ta'rif kiriting (masalan, qadoqlash turi, maxsus so'rovlar)"
+                className="modal__input"
+                style={{
+                  width: "100%",
+                  minHeight: "60px",
+                  padding: "8px",
+                  marginTop: "5px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                }}
+                aria-label="Ta'rif uchun yangi taom"
+                disabled={localIsSaving}
+              />
               <button
                 style={{
                   color: "#fff",
@@ -519,6 +568,7 @@ const EditOrderModal = ({
   );
 };
 
+// ChangeTableModal component (unchanged)
 const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId, isSaving }) => {
   const [selectedTableId, setSelectedTableId] = useState("");
   const [selectedPlace, setSelectedPlace] = useState("");
@@ -546,7 +596,7 @@ const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId,
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Буюртма №${selectedOrderId} учун столни ўзгартириш`}
+      title={`Буюртма №${selectedOrderId || "N/A"} учун столни ўзгартириш`}
     >
       <div className="modal-content">
         {isSaving && <p className="saving-message">Сақланмоқда...</p>}
@@ -603,12 +653,13 @@ const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId,
   );
 };
 
+// DeleteConfirmModal component (unchanged)
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Буюртмани ўчириш">
       <div className="delete-confirm-content">
         <p>
-          Сиз ҳақиқатан ҳам <strong>№{orderId}</strong> буюртмани ўчиришни хоҳлайсизми?
+          Сиз ҳақиқатан ҳам <strong>№{orderId || "N/A"}</strong> буюртмани ўчиришни хоҳлайсизми?
         </p>
         <p className="warning-text">Бу амални бекор қилиб бўлмайди!</p>
       </div>
@@ -624,12 +675,13 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   );
 };
 
+// DeleteTableModal component (unchanged)
 const DeleteTableModal = ({ isOpen, onClose, onConfirm, table }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Столни ўчириш">
       <div className="delete-confirm-content">
         <p>
-          Сиз ҳақиқатан ҳам <strong>{table?.name} - {table?.number}</strong> столни ўчиришни хоҳлайсизми?
+          Сиз ҳақиқатан ҳам <strong>{table?.name || "Номаълум"} - {table?.number || "N/A"}</strong> столни ўчиришни хоҳлайсизми?
         </p>
         <p className="warning-text">Бу амални бекор қилиб бўлмайди!</p>
       </div>
@@ -645,7 +697,33 @@ const DeleteTableModal = ({ isOpen, onClose, onConfirm, table }) => {
   );
 };
 
-export default function Taomlar() {
+const ResetFinishedProductsModal = ({ isOpen, onClose, onConfirm, setCart }) => {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Тугаган таомларни тиклаш">
+      <div className="delete-confirm-content">
+        <p>Сиз ҳақиқатан ҳам барча тугаган таомларни қайта тиклашни хоҳлайсизми?</p>
+        <p className="warning-text">Бу амал барча таомларни мавжуд қилиб белгилайди ва саватни тозалайди!</p>
+      </div>
+      <div className="form-actions">
+        <button type="button" onClick={onClose} className="cancel-btn">
+          Бекор қилиш
+        </button>
+        <button
+          onClick={() => {
+            onConfirm();
+            setCart([]);
+          }}
+          className="submit-btn"
+        >
+          Тиклаш ва Тозалаш
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+// Main Taomlar component with updates
+const Taomlar = React.memo(() => {
   const [taomlar, setTaomlar] = useState([]);
   const [cart, setCart] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -655,6 +733,9 @@ export default function Taomlar() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showChangeTableModal, setShowChangeTableModal] = useState(false);
   const [showDeleteTableModal, setShowDeleteTableModal] = useState(false);
+  const [showResetProductsModal, setShowResetProductsModal] = useState(false);
+  const [showFinishedProductsModal, setShowFinishedProductsModal] = useState(false); 
+  const [finishedProducts, setFinishedProducts] = useState([]); // New state for finished products
   const [tableToDelete, setTableToDelete] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -671,10 +752,12 @@ export default function Taomlar() {
   const [uslug, setUslug] = useState("");
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminCode, setAdminCode] = useState("");
-  const [isConnected, setIsConnected] = useState(socket.connected);
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
-  const processedEvents = useRef(new Set());
+
+  useEffect(() => {
+    console.log("taomlar updated:", taomlar, new Date().toISOString());
+  }, [taomlar]);
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -689,19 +772,11 @@ export default function Taomlar() {
   }, []);
 
   const calculateTotalPrice = useCallback((orderItems) => {
-    return orderItems.reduce(
+    return orderItems?.reduce(
       (sum, item) =>
         sum + parseFloat(item.product?.price || item.price || 0) * (item.count || 0),
       0
-    );
-  }, []);
-
-  const calculateTotalPricee = useCallback((orderItems) => {
-    return orderItems.reduce(
-      (sum, item) =>
-        sum + parseFloat(item.product?.price || item.price || 0) * (item.count || 0),
-      0
-    );
+    ) || 0;
   }, []);
 
   const handleUslugChange = useCallback(
@@ -720,6 +795,7 @@ export default function Taomlar() {
         setSuccessMsg("Хизмат нархи муваффақиятли ўзгартирилди!");
       } catch (error) {
         console.error("Uslug update error:", error);
+        setError(handleApiError(error, "Хизмат нархини ўзгартиришда хатолик."));
       }
     },
     [token, commissionPercent]
@@ -729,7 +805,7 @@ export default function Taomlar() {
     contentRef: receiptRef,
     onError: (error) => {
       console.error("Print error:", error);
-      setError("Чоп этишда хатолик юз берди.");
+      setError("Чоп этишда хатолик: Принтерни текширинг.");
     },
   });
 
@@ -752,13 +828,13 @@ export default function Taomlar() {
         });
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (!receiptRef.current) {
-          setError("Чоп этиш учун маълумотлар тайёр эмас.");
+          console.log("Чоп этиш учун маълумотлар тайёр эмас.");
           return;
         }
         handlePrint();
       } catch (error) {
         console.error("Print error:", error);
-        setError("Чоп этишда хатолик юз берди.");
+        setError(handleApiError(error, "Чоп этишда хатолик."));
       }
     },
     [handlePrint, uslug, commissionPercent, token]
@@ -778,11 +854,6 @@ export default function Taomlar() {
           { status: "ARCHIVE", uslug: commissionToSend },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (socket.connected) {
-          socket.emit("orderUpdated", { id: order.id, status: "ARCHIVE", uslug: commissionToSend });
-        } else {
-          console.warn("Socket not connected, orderUpdated event not emitted");
-        }
         if (order.tableId) {
           await axios.patch(
             `${API_ENDPOINTS.tables}/${order.tableId}`,
@@ -802,7 +873,7 @@ export default function Taomlar() {
         });
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (!receiptRef.current) {
-          setError("Чоп этиш учун маълумотлар тайёр эмас.");
+          console.log("Чоп этиш учун маълумотлар тайёр эмас.");
           return;
         }
         handlePrint();
@@ -813,9 +884,7 @@ export default function Taomlar() {
         setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
       } catch (error) {
         console.error("Print and pay error:", error);
-        setError(
-          `Хатолик: ${error.response?.data?.message || "Чоп этиш ва тўлашда хатолик."}`
-        );
+        setError(handleApiError(error, "Чоп этиш ва тўлашда хатолик."));
       } finally {
         setIsSaving(false);
       }
@@ -830,7 +899,7 @@ export default function Taomlar() {
       return;
     }
 
-    const hasReadyItems = selectedTableOrder.orderItems.some(
+    const hasReadyItems = selectedTableOrder.orderItems?.some(
       (item) => item.status === "READY"
     );
     if (hasReadyItems) {
@@ -844,11 +913,6 @@ export default function Taomlar() {
       await axios.delete(`${API_ENDPOINTS.orders}/${selectedTableOrder.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (socket.connected) {
-        socket.emit("orderDeleted", { id: selectedTableOrder.id });
-      } else {
-        console.warn("Socket not connected, orderDeleted event not emitted");
-      }
       const tableId = selectedTableOrder.tableId;
       if (tableId) {
         const hasOtherOrders = tables.some((t) =>
@@ -875,9 +939,7 @@ export default function Taomlar() {
       console.log(`Order ${selectedTableOrder.id} deleted successfully`);
     } catch (error) {
       console.error("Delete order error:", error);
-      setError(
-        `Ўчиришда хатолик: ${error.response?.data?.message || error.message}`
-      );
+      setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
     } finally {
       setIsSaving(false);
       setShowDeleteModal(false);
@@ -908,12 +970,7 @@ export default function Taomlar() {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        const updatedOrder = response.data;
-        if (socket.connected) {
-          socket.emit("orderUpdated", updatedOrder);
-        } else {
-          console.warn("Socket not connected, orderUpdated event not emitted");
-        }
+        const updatedOrder = response.data || {};
         await axios.patch(
           `${API_ENDPOINTS.tables}/${newTableId}`,
           { status: "busy" },
@@ -970,9 +1027,7 @@ export default function Taomlar() {
         );
       } catch (error) {
         console.error("Change table error:", error);
-        setError(
-          handleApiError(error, "Стол ўзгартиришда хатолик.")
-        );
+        setError(handleApiError(error, "Стол ўзгартиришда хатолик."));
       } finally {
         setIsSaving(false);
         setShowChangeTableModal(false);
@@ -980,6 +1035,46 @@ export default function Taomlar() {
     },
     [selectedTableOrder, token, tables, uslug, calculateTotalPrice]
   );
+
+  const handleResetFinishedProducts = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      const productsRes = await axios.get(API_ENDPOINTS.products, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const currentProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+      
+      const finishedProducts = currentProducts.filter((product) => product.isFinished);
+      if (finishedProducts.length === 0) {
+        setSuccessMsg("Тугаган таомлар йўқ.");
+        setShowResetProductsModal(false);
+        return;
+      }
+
+      await Promise.all(
+        finishedProducts.map((product) =>
+          axios.patch(
+            `${API_ENDPOINTS.products}/${product.id}`,
+            { isFinished: false },
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        )
+      );
+
+      const updatedProductsRes = await axios.get(API_ENDPOINTS.products, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedProducts = Array.isArray(updatedProductsRes.data) ? updatedProductsRes.data : [];
+      setTaomlar(updatedProducts);
+      setCart([]);
+      setSuccessMsg("Quyidagi taomlar tugagan yoki topilmadi holatidan tiklandi va savat tozalandi!");
+    } catch (error) {
+      setError(handleApiError(error, "Таомларни тиклашда хатолик."));
+    } finally {
+      setIsSaving(false);
+      setShowResetProductsModal(false);
+    }
+  }, [token]);
 
   const handleAdminCodeChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
@@ -1000,7 +1095,7 @@ export default function Taomlar() {
       setIsAdminMode(false);
       setError(null);
     } else {
-      setError("Нотўғри код.");
+      setError("Нотўғри код. Илтимос, 1234 ни киритинг.");
       setAdminCode("");
     }
   };
@@ -1034,7 +1129,7 @@ export default function Taomlar() {
       setSuccessMsg("Стол муваффақиятли ўчирилди!");
     } catch (error) {
       console.error("Delete table error:", error);
-      setError(`Ўчиришда хатолик: ${error.response?.data?.message || error.message}`);
+      setError(handleApiError(error, "Стол ўчиришда хатолик."));
     } finally {
       setIsSaving(false);
       setShowDeleteTableModal(false);
@@ -1056,25 +1151,31 @@ export default function Taomlar() {
     const fetchData = async () => {
       setLoading(true);
       try {
+        console.log("Fetching data with token:", token);
         const [tablesRes, productsRes, categoriesRes, percentRes] = await Promise.all([
           axios.get(API_ENDPOINTS.tables, {
             headers: { Authorization: `Bearer ${token}` },
             signal,
+          }).catch((err) => {
+            throw new Error(`Столларни юклашда хатолик: ${err.message}`);
           }),
           axios.get(API_ENDPOINTS.products, {
             headers: { Authorization: `Bearer ${token}` },
             signal,
+          }).catch((err) => {
+            throw new Error(`Маҳсулотларни юклашда хатолик: ${err.message}`);
           }),
           axios.get(API_ENDPOINTS.categories, {
             headers: { Authorization: `Bearer ${token}` },
             signal,
           }).catch((err) => {
-            console.error("Categories fetch error:", err);
-            throw new Error("Категорияларни юклашда хатолик.");
+            throw new Error(`Категорияларни юклашда хатолик: ${err.message}`);
           }),
           axios.get(API_ENDPOINTS.percent, {
             headers: { Authorization: `Bearer ${token}` },
             signal,
+          }).catch((err) => {
+            throw new Error(`Хизмат нархини юклашда хатолик: ${err.message}`);
           }),
         ]);
 
@@ -1095,7 +1196,15 @@ export default function Taomlar() {
         setTables(normalizedTables);
         setPlaces(uniquePlaces);
         setFilterPlace(uniquePlaces[0] || "");
-        setTaomlar(Array.isArray(productsRes.data) ? productsRes.data : []);
+        setTaomlar((prev) => {
+          const newProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+          if (JSON.stringify(prev) !== JSON.stringify(newProducts)) {
+            console.log("Updating taomlar with new data:", newProducts);
+            return newProducts;
+          }
+          console.log("No change in taomlar, skipping update");
+          return prev;
+        });
         const categoriesData = Array.isArray(categoriesRes.data?.data)
           ? categoriesRes.data.data
           : Array.isArray(categoriesRes.data)
@@ -1106,7 +1215,7 @@ export default function Taomlar() {
           setSelectedCategory(categoriesData[0].name);
         }
         setCommissionPercent(parseFloat(percentRes.data?.percent) || 0);
-        setUslug(percentRes.data?.percent.toString() || "0");
+        setUslug(percentRes.data?.percent?.toString() || "0");
         console.log("Data fetched successfully", {
           tables: tablesData.length,
           products: productsRes.data.length,
@@ -1114,8 +1223,7 @@ export default function Taomlar() {
         });
       } catch (err) {
         if (err.name === "AbortError") return;
-        console.error("Data fetch error:", err);
-        setError(err.message || "Маълумотларни юклашда хатолик.");
+        setError(handleApiError(err, "Маълумотларни юклашда хатолик."));
       } finally {
         setLoading(false);
       }
@@ -1123,7 +1231,31 @@ export default function Taomlar() {
 
     fetchData();
 
-    return () => controller.abort();
+    const interval = setInterval(async () => {
+      try {
+        const productsRes = await axios.get(API_ENDPOINTS.products, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        });
+        setTaomlar((prev) => {
+          const newProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+          if (JSON.stringify(prev) !== JSON.stringify(newProducts)) {
+            console.log("Polling: Updating taomlar with new data:", newProducts);
+            return newProducts;
+          }
+          console.log("Polling: No change in taomlar, skipping update");
+          return prev;
+        });
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        console.error("Polling error:", err);
+      }
+    }, 30000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, [token]);
 
   useEffect(() => {
@@ -1190,270 +1322,16 @@ export default function Taomlar() {
     }
   }, [successMsg]);
 
-  useEffect(() => {
-    const handleConnect = () => {
-      console.log("Socket connected:", socket.id);
-      setIsConnected(true);
-    };
-
-    const handleDisconnect = () => {
-      console.log("Socket disconnected");
-      setIsConnected(false);
-    };
-
-    const handleOrderCreated = (newOrder) => {
-      try {
-        console.log("Received orderCreated event:", newOrder);
-        if (!newOrder || !newOrder.id) {
-          console.error("Invalid order data received:", newOrder);
-          return;
-        }
-        const eventKey = `orderCreated:${newOrder.id}:${newOrder.createdAt || Date.now()}`;
-        if (processedEvents.current.has(eventKey)) {
-          console.log(`Duplicate orderCreated event ignored: ${eventKey}`);
-          return;
-        }
-        processedEvents.current.add(eventKey);
-        setTables((prev) => {
-          if (prev.some((table) => table.orders?.some((order) => order.id === newOrder.id))) {
-            console.log(`Order ${newOrder.id} already exists, ignoring creation`);
-            return prev;
-          }
-          const sanitizedOrder = deepClone({
-            ...newOrder,
-            orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
-            table: newOrder.table || { name: "Йўқ", number: "Йўқ" },
-            createdAt: newOrder.createdAt || new Date().toISOString(),
-          });
-          return prev.map((table) =>
-            table.id === newOrder.tableId
-              ? {
-                  ...table,
-                  status: "busy",
-                  orders: [...(table.orders || []), sanitizedOrder],
-                }
-              : table
-          );
-        });
-      } catch (error) {
-        console.error("Error in handleOrderCreated:", error);
-        setError(handleApiError(error, "Буюртма қабул қилишда хатолик."));
-      }
-    };
-
-    const handleOrderUpdated = (updatedOrder) => {
-      try {
-        console.log("Received orderUpdated event:", updatedOrder);
-        if (!updatedOrder || !updatedOrder.id) {
-          console.error("Invalid order data received:", updatedOrder);
-          return;
-        }
-        const eventKey = `orderUpdated:${updatedOrder.id}:${updatedOrder.updatedAt || Date.now()}`;
-        if (processedEvents.current.has(eventKey)) {
-          console.log(`Duplicate orderUpdated event ignored: ${eventKey}`);
-          return;
-        }
-        processedEvents.current.add(eventKey);
-
-        setTables((prev) => {
-          const orderExists = prev.some((table) =>
-            table.orders?.some((order) => order.id === updatedOrder.id)
-          );
-          if (!orderExists) {
-            console.warn(`Order ${updatedOrder.id} not found in local state, ignoring update`);
-            return prev;
-          }
-
-          let oldTableId = null;
-          prev.forEach((table) => {
-            if (table.orders?.some((order) => order.id === updatedOrder.id)) {
-              oldTableId = table.id;
-            }
-          });
-
-          const updatedTables = prev.map((table) => {
-            if (table.id === updatedOrder.tableId) {
-              const updatedOrders = table.orders?.some((order) => order.id === updatedOrder.id)
-                ? table.orders.map((order) =>
-                    order.id === updatedOrder.id
-                      ? {
-                          ...order,
-                          ...updatedOrder,
-                          orderItems: Array.isArray(updatedOrder.orderItems)
-                            ? [...updatedOrder.orderItems]
-                            : order.orderItems,
-                          table: updatedOrder.table || order.table,
-                        }
-                      : order
-                  )
-                : [...(table.orders || []), { ...updatedOrder, table: table }];
-              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-              return {
-                ...table,
-                orders: updatedOrders,
-                status: hasActiveOrders ? "busy" : "empty",
-              };
-            }
-            if (table.id === oldTableId && oldTableId !== updatedOrder.tableId) {
-              const updatedOrders = table.orders.filter((order) => order.id !== updatedOrder.id);
-              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-              return {
-                ...table,
-                orders: updatedOrders,
-                status: hasActiveOrders ? "busy" : "empty",
-              };
-            }
-            return table;
-          });
-
-          return updatedTables;
-        });
-
-        if (selectedTableOrder?.id === updatedOrder.id) {
-          const clonedOrder = deepClone({
-            ...updatedOrder,
-            totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-          });
-          setSelectedTableOrder(clonedOrder);
-          setSelectedTableId(updatedOrder.tableId);
-          setCart(
-            updatedOrder.orderItems?.map((item) => ({
-              id: item.productId || item.product?.id || 0,
-              name: item.product?.name || "Номаълум таом",
-              price: parseFloat(item.product?.price) || 0,
-              count: item.count || 0,
-              status: item.status || "PENDING",
-            })) || []
-          );
-        }
-      } catch (error) {
-        console.error("Error in handleOrderUpdated:", error);
-        setError(handleApiError(error, "Буюртма янгилашда хатолик."));
-      }
-    };
-
-    const handleOrderDeleted = (data) => {
-      try {
-        console.log("Received orderDeleted event:", data);
-        const id = data?.id;
-        if (!id) {
-          console.error("Invalid order ID received:", data);
-          return;
-        }
-        const eventKey = `orderDeleted:${id}:${Date.now()}`;
-        if (processedEvents.current.has(eventKey)) {
-          console.log(`Duplicate orderDeleted event ignored: ${eventKey}`);
-          return;
-        }
-        processedEvents.current.add(eventKey);
-        setTables((prev) =>
-          prev.map((table) => {
-            if (table.orders?.some((order) => order.id === id)) {
-              const updatedOrders = table.orders.filter((order) => order.id !== id);
-              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-              return {
-                ...table,
-                orders: updatedOrders,
-                status: hasActiveOrders ? "busy" : "empty",
-              };
-            }
-            return table;
-          })
-        );
-        if (selectedTableOrder?.id === id) {
-          setSelectedTableOrder(null);
-          setCart([]);
-          setSelectedTableId(null);
-        }
-      } catch (error) {
-        console.error("Error in handleOrderDeleted:", error);
-        setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
-      }
-    };
-
-    const handleOrderItemStatusUpdated = (updatedItem) => {
-      try {
-        console.log("Received orderItemStatusUpdated event:", updatedItem);
-        if (!updatedItem || !updatedItem.id) {
-          console.error("Invalid item data received:", updatedItem);
-          return;
-        }
-        const eventKey = `orderItemStatusUpdated:${updatedItem.id}:${updatedItem.status}:${Date.now()}`;
-        if (processedEvents.current.has(eventKey)) {
-          console.log(`Duplicate orderItemStatusUpdated event ignored: ${eventKey}`);
-          return;
-        }
-        processedEvents.current.add(eventKey);
-        setTables((prev) =>
-          prev.map((table) => {
-            if (table.orders?.some((order) => order.orderItems.some((item) => item.id === updatedItem.id))) {
-              const updatedOrders = table.orders.map((order) => {
-                if (order.orderItems.some((item) => item.id === updatedItem.id)) {
-                  return {
-                    ...order,
-                    orderItems: order.orderItems.map((item) =>
-                      item.id === updatedItem.id ? { ...item, ...updatedItem } : item
-                    ),
-                  };
-                }
-                return order;
-              });
-              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-              return {
-                ...table,
-                orders: updatedOrders,
-                status: hasActiveOrders ? "busy" : "empty",
-              };
-            }
-            return table;
-          })
-        );
-        if (selectedTableOrder?.orderItems?.some((item) => item.id === updatedItem.id)) {
-          setSelectedTableOrder((prev) => ({
-            ...prev,
-            orderItems: prev.orderItems.map((item) =>
-              item.id === updatedItem.id ? { ...item, ...updatedItem } : item
-            ),
-          }));
-          setCart((prev) =>
-            prev.map((item) =>
-              item.id === updatedItem.productId
-                ? { ...item, status: updatedItem.status }
-                : item
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Error in handleOrderItemStatusUpdated:", error);
-        setError(handleApiError(error, "Таом ҳолатини янгилашда хатолик."));
-      }
-    };
-
-    socket.onAny((event, ...args) => {
-      console.log(`Received socket event: ${event}`, args);
-    });
-
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("orderCreated", handleOrderCreated);
-    socket.on("orderUpdated", handleOrderUpdated);
-    socket.on("orderDeleted", handleOrderDeleted);
-    socket.on("orderItemStatusUpdated", handleOrderItemStatusUpdated);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("orderCreated", handleOrderCreated);
-      socket.off("orderUpdated", handleOrderUpdated);
-      socket.off("orderDeleted", handleOrderDeleted);
-      socket.off("orderItemStatusUpdated", handleOrderItemStatusUpdated);
-      socket.offAny();
-    };
-  }, [selectedTableOrder, calculateTotalPrice, setError]);
-
   const addToCart = (taom) => {
-    if (taom.isFinished) {
-      setError("Бу таом тугаган, саватга қўшиш мумкин эмас.");
+    const product = taomlar.find((p) => p.id === taom.id);
+    if (!product) {
+      setError(`Таом топилмади: ${taom.name || "ID " + taom.id}`);
+      console.warn(`Product not found in taomlar: ${taom.id}`);
+      return;
+    }
+    if (product.isFinished) {
+      setError(`Бу таом тугаган, саватга қўшиш мумкин эмас: ${product.name}`);
+      console.warn(`Attempted to add finished product to cart: ${product.name}`);
       return;
     }
     setCart((prev) => {
@@ -1469,8 +1347,15 @@ export default function Taomlar() {
   };
 
   const removeFromCart = (taom) => {
-    if (taom.isFinished) {
-      setError("Бу таом тугаган, саватдан ўчириш мумкин эмас.");
+    const product = taomlar.find((p) => p.id === taom.id);
+    if (!product) {
+      setError(`Таом топилмади: ${taom.name || "ID " + taom.id}`);
+      console.warn(`Product not found in taomlar for removal: ${taom.id}`);
+      return;
+    }
+    if (product.isFinished) {
+      setError(`Бу таом тугаган, саватдан ўчириш мумкин эмас: ${product.name}`);
+      console.warn(`Attempted to remove finished product from cart: ${product.name}`);
       return;
     }
     setCart((prev) =>
@@ -1495,21 +1380,49 @@ export default function Taomlar() {
   };
 
   const totalPrice = calculateTotalPrice(cart);
-  const totalPricee = calculateTotalPricee(cart);
-  const totalWithCommission = totalPrice + totalPrice * (parseFloat(uslug) / 100);
-  const totalWithCommissione = totalPricee;
+  const totalWithCommission = totalPrice + totalPrice * (parseFloat(uslug) / 100 || 0);
 
+  // Updated handleOrderConfirm to use the modal
   const handleOrderConfirm = async (orderData) => {
+    console.log("Order confirmation started:", orderData);
     const products = orderData.orderItems
-      .filter((item) => item?.productId && item.count > 0 && !item.isFinished)
+      ?.filter((item) => item?.productId && item.count > 0)
       .map((item) => ({
         productId: Number(item.productId),
         count: Number(item.count),
-      }));
+        description: item.description || "",
+      })) || [];
 
     if (!products.length) {
       setError("Буюртмада камида битта мавжуд маҳсулот бўлиши керак.");
       console.error("Order confirmation failed: No valid products");
+      return;
+    }
+
+    try {
+      const productsRes = await axios.get(API_ENDPOINTS.products, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+      setTaomlar(updatedProducts);
+      console.log("Product data refreshed before order confirmation");
+
+      const finishedProductsList = checkFinishedProducts(products, updatedProducts);
+      if (finishedProductsList.length > 0) {
+        const finishedItems = finishedProductsList.map((item) => {
+          const product = updatedProducts.find((p) => p.id === item.productId);
+          return {
+            id: item.productId,
+            name: product ? product.name : `ID ${item.productId} (Топилмади)`,
+          };
+        });
+        setFinishedProducts(finishedItems);
+        setShowFinishedProductsModal(true);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to refresh products:", err);
+      setError(handleApiError(err, "Маҳсулот маълумотларини янгилашда хатолик."));
       return;
     }
 
@@ -1553,15 +1466,10 @@ export default function Taomlar() {
         : API_ENDPOINTS.orders;
       const method = isEditing ? axios.patch : axios.post;
 
+      console.log("Sending order:", { url, method, body });
       const response = await method(url, body, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (socket.connected) {
-        socket.emit(isEditing ? "orderUpdated" : "orderCreated", response.data);
-      } else {
-        console.warn(`Socket not connected, ${isEditing ? "orderUpdated" : "orderCreated"} event not emitted`);
-      }
 
       if (orderData.isTableOrder && tableId) {
         await axios.patch(
@@ -1585,9 +1493,7 @@ export default function Taomlar() {
       });
     } catch (err) {
       console.error("Order confirmation error:", err);
-      setError(
-        `Хатолик: ${err.response?.data?.message || "Буюртма юборувда хатолик."}`
-      );
+      setError(handleApiError(err, "Буюртма юборувда хатолик."));
     } finally {
       setShowModal(false);
     }
@@ -1613,16 +1519,6 @@ export default function Taomlar() {
 
   return (
     <section className="content-section">
-      <div
-        className={`connection-status ${isConnected ? "connected" : "disconnected"}`}
-      >
-        <span
-          className={`status-dot ${isConnected ? "connected" : "disconnected"}`}
-        ></span>
-        <span className="status-text">
-          {isConnected ? "Реал вақтда уланиш фаол" : "Офлайн режими"}
-        </span>
-      </div>
       {error && <div className="error-message">{error}</div>}
       {successMsg && <div className="success-message">{successMsg}</div>}
 
@@ -1702,6 +1598,13 @@ export default function Taomlar() {
               title="Янги жой қўшиш"
             >
               <Plus size={20} /> Жой қўшиш
+            </button>
+            <button
+              className="reset-products-btn"
+              onClick={() => setShowResetProductsModal(true)}
+              title="Тугаган таомларни тиклаш"
+            >
+              <RefreshCw size={20} /> Тугаган таомларни тиклаш
             </button>
           </div>
         )}
@@ -1787,18 +1690,16 @@ export default function Taomlar() {
                     <th>Миқдор</th>
                     <th>Нархи</th>
                     <th>Суммаси</th>
-                    <th>Ҳолати</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cart.length > 0 ? (
                     cart.map((item) => (
                       <tr key={item.id}>
-                        <td>{item.name}</td>
-                        <td>{item.count}</td>
+                        <td>{item.name || "Номаълум"}</td>
+                        <td>{item.count || 0}</td>
                         <td>{formatPrice(item.price)}</td>
                         <td>{formatPrice(item.price * item.count)}</td>
-                        <td>{dishStatusMap[item.status] || item.status}</td>
                       </tr>
                     ))
                   ) : (
@@ -1833,7 +1734,7 @@ export default function Taomlar() {
                         <button
                           className="action-btn delete-btn"
                           onClick={() => setShowDeleteModal(true)}
-                          disabled={isSaving || selectedTableOrder.orderItems.some((item) => item.status === "READY")}
+                          disabled={isSaving || selectedTableOrder.orderItems?.some((item) => item.status === "READY")}
                         >
                           <Trash size={20} />
                         </button>
@@ -1853,7 +1754,6 @@ export default function Taomlar() {
                         </button>
                       </div>
                     </div>
-                    <h3 className="basket-table__total">{formatPrice(totalWithCommissione)}</h3>
                     <h3 className="basket-table__total">{formatPrice(totalWithCommission)}</h3>
                     <div
                       style={{
@@ -1875,7 +1775,7 @@ export default function Taomlar() {
                         onClick={() => handlePrintAndPay(selectedTableOrder)}
                         disabled={isSaving}
                       >
-                        <Printer size={20} /> Оплатить и Закрыть
+                        Закрыть
                       </button>
                     </div>
                   </div>
@@ -2001,18 +1901,20 @@ export default function Taomlar() {
                   orders: Array.isArray(table.orders) ? table.orders : [],
                 }))
               );
-              const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
-                Boolean
-              );
-              setPlaces(uniquePlaces);
-              setFilterPlace(uniquePlaces[0] || "");
+              setPlaces((prev) => {
+                const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(Boolean);
+                if (!uniquePlaces.includes(filterPlace) && uniquePlaces.length > 0) {
+                  setFilterPlace(uniquePlaces[0]);
+                }
+                return uniquePlaces;
+              });
               setSuccessMsg("Стол муваффақиятли қўшилди!");
-              console.log("Table added successfully", tableData);
-            } catch (err) {
-              console.error("Add table error:", err);
-              setError(
-                `Хатолик: ${err.response?.data?.message || "Стол қўшишда хатолик."}`
-              );
+              console.log("Table added successfully", { tableData });
+            } catch (error) {
+              console.error("Add table error:", error);
+              setError(handleApiError(error, "Стол қўшишда хатолик."));
+            } finally {
+              setShowAddTableModal(false);
             }
           }}
           places={places}
@@ -2023,20 +1925,51 @@ export default function Taomlar() {
         <AddPlaceModal
           isOpen={showAddPlaceModal}
           onClose={() => setShowAddPlaceModal(false)}
-          onConfirm={(placeName) => {
-            setPlaces((prev) => [...prev, placeName]);
-            setFilterPlace(placeName);
-            console.log("Place added", placeName);
+          onConfirm={async (placeName) => {
+            try {
+              if (places.includes(placeName)) {
+                setError("Бу жой номи аллақачон мавжуд.");
+                return;
+              }
+              const tableData = {
+                name: placeName,
+                number: `${placeName} - 001`,
+                status: "empty",
+              };
+              await axios.post(API_ENDPOINTS.tables, tableData, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const res = await axios.get(API_ENDPOINTS.tables, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const tablesData = Array.isArray(res.data?.data)
+                ? res.data.data
+                : Array.isArray(res.data)
+                ? res.data
+                : [];
+              setTables(
+                tablesData.map((table) => ({
+                  ...table,
+                  status: normalizeStatus(table.status),
+                  orders: Array.isArray(table.orders) ? table.orders : [],
+                }))
+              );
+              setPlaces((prev) => {
+                const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(Boolean);
+                if (!filterPlace || !uniquePlaces.includes(filterPlace)) {
+                  setFilterPlace(placeName);
+                }
+                return uniquePlaces;
+              });
+              setSuccessMsg("Жой муваффақиятли қўшилди!");
+              console.log("Place added successfully", { placeName });
+            } catch (error) {
+              console.error("Add place error:", error);
+              setError(handleApiError(error, "Жой қўшишда хатолик."));
+            } finally {
+              setShowAddPlaceModal(false);
+            }
           }}
-        />
-      )}
-
-      {showDeleteModal && (
-        <DeleteConfirmModal
-          isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={handleDeleteOrder}
-          orderId={selectedTableOrder?.id}
         />
       )}
 
@@ -2054,8 +1987,7 @@ export default function Taomlar() {
           setCart={setCart}
           setSuccessMsg={setSuccessMsg}
           setError={setError}
-          socket={socket}
-          commissionPercent={parseFloat(uslug) || commissionPercent}
+          commissionPercent={commissionPercent}
           categories={categories}
         />
       )}
@@ -2066,8 +1998,17 @@ export default function Taomlar() {
           onClose={() => setShowChangeTableModal(false)}
           onConfirm={handleChangeTable}
           tables={tables}
-          selectedOrderId={selectedTableOrder?.id}
+          selectedOrderId={selectedTableOrder.id}
           isSaving={isSaving}
+        />
+      )}
+
+      {showDeleteModal && selectedTableOrder && (
+        <DeleteConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteOrder}
+          orderId={selectedTableOrder.id}
         />
       )}
 
@@ -2083,41 +2024,43 @@ export default function Taomlar() {
         />
       )}
 
+      {showResetProductsModal && (
+        <ResetFinishedProductsModal
+          isOpen={showResetProductsModal}
+          onClose={() => setShowResetProductsModal(false)}
+          onConfirm={handleResetFinishedProducts}
+          setCart={setCart}
+        />
+      )}
+
+      {showFinishedProductsModal && (
+        <FinishedProductsModal
+          isOpen={showFinishedProductsModal}
+          onClose={() => setShowFinishedProductsModal(false)}
+          finishedProducts={finishedProducts}
+          onConfirm={() => {
+            setCart((prevCart) =>
+              prevCart.map((item) =>
+                finishedProducts.some((fp) => fp.id === item.id)
+                  ? { ...item, count: 0 }
+                  : item
+              ).filter((item) => item.count > 0)
+            );
+            setShowFinishedProductsModal(false);
+          }}
+        />
+      )}
+
       <div style={{ display: "none" }}>
         <Receipt
           ref={receiptRef}
-          order={
-            selectedTableOrder
-              ? {
-                  id: selectedTableOrder.id || null,
-                  orderItems: selectedTableOrder.orderItems || [],
-                  tableNumber:
-                    tables.find((t) => t.id === selectedTableOrder.tableId)?.number || "",
-                  totalPrice: calculateTotalPrice(selectedTableOrder.orderItems),
-                  commission:
-                    calculateTotalPrice(selectedTableOrder.orderItems) *
-                    ((parseFloat(uslug) || commissionPercent) / 100),
-                  totalWithCommission:
-                    calculateTotalPrice(selectedTableOrder.orderItems) *
-                    (1 + (parseFloat(uslug) || commissionPercent) / 100),
-                  createdAt: selectedTableOrder.createdAt || null,
-                  uslug: parseFloat(uslug) || null,
-                  commissionPercent: parseFloat(uslug) || commissionPercent,
-                }
-              : {
-                  id: null,
-                  orderItems: [],
-                  tableNumber: "",
-                  totalPrice: 0,
-                  commission: 0,
-                  totalWithCommission: 0,
-                  createdAt: null,
-                  uslug: parseFloat(uslug) || null,
-                  commissionPercent: parseFloat(uslug) || commissionPercent,
-                }
-          }
+          order={selectedTableOrder}
+          commissionPercent={parseFloat(uslug) || commissionPercent}
+          formatPrice={formatPrice}
         />
       </div>
     </section>
   );
-}
+});
+
+export default Taomlar;

@@ -136,7 +136,12 @@ export default function Zakazlar() {
     selectedTableId: null,
     commissionPercent: 0,
   });
-
+  const [cachedData, setCachedData] = useState({
+    tables: [],
+    products: [],
+    categories: [],
+    percent: 0,
+  });
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const processedEvents = useRef(new Set());

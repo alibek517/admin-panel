@@ -81,7 +81,7 @@ export default function AdminPanel() {
       if (receiptRef.current) {
         handlePrint();
       } else {
-        alert("Чоп этиш учун маълумотлар тайёр эмас.");
+        console.log("Receipt ref is not set yet.");
       }
     }, 100);
   };
