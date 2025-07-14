@@ -7,7 +7,6 @@ import { useReactToPrint } from "react-to-print";
 import io from "socket.io-client";
 import Receipt from "../components/Receipt.jsx";
 
-// Consolidated API constants
 const API_BASE_URL = "https://alikafecrm.uz";
 const API_ENDPOINTS = {
   ORDERS: `${API_BASE_URL}/order`,
@@ -16,27 +15,20 @@ const API_ENDPOINTS = {
   SERVICE_FEE: `${API_BASE_URL}/percent/3`,
 };
 
-// Axios retry configuration
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
-// Socket.IO client initialization
-const socket = io(API_BASE_URL, {
-  auth: { token: localStorage.getItem("token") },
-  autoConnect: false,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  timeout: 30000,
-  transports: ["websocket", "polling"],
-});
-
-// Utility functions
 const playSound = () => {
   const audio = new Audio("/synthesize.mp3");
   audio.play().catch((error) => console.error("Audio playback error:", error));
 };
 
 const handleApiError = (error, defaultMessage) => {
+  if (error.name === "AbortError") {
+    return "Сўров вақти тугади. Илтимос, қайта уриниб кўринг.";
+  }
+  if (!error.response) {
+    return "Тarmoq хатоси. Интернет уланишингизни текширинг.";
+  }
   const statusMessages = {
     401: "Авторизация хатоси. Илтимос, қайта киринг.",
     403: "Рухсат йўқ. Администратор билан боғланинг.",
@@ -52,23 +44,39 @@ const handleApiError = (error, defaultMessage) => {
   );
 };
 
-// Debounce hook
 const useDebounce = (callback, delay) => {
   const timeoutRef = useRef(null);
 
-  return useCallback((...args) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      callback(...args);
-    }, delay);
-  }, [callback, delay]);
+  return useCallback(
+    (...args) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  );
 };
 
-// ModalBasket component
-const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setOrderDescriptions, orderToEdit = null, serviceFee, isConfirming }) => {
+const ModalBasket = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  cart,
+  setCart,
+  orderDescriptions,
+  setOrderDescriptions,
+  orderToEdit = null,
+  serviceFee,
+  isConfirming,
+  setTaomlar, 
+}) => {
   const [carrierNumber, setCarrierNumber] = useState("+998");
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [finishedItems, setFinishedItems] = useState([]);
+  const [latestProducts, setLatestProducts] = useState([]);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -99,22 +107,86 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setO
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (cart.length === 0) {
-      alert("Саватда маҳсулотлар йўқ!");
-      return;
+      onClose();
+      return onConfirm({ error: "Саватда маҳсулотлар йўқ!" });
     }
     if (carrierNumber !== "+998" && !/^\+998\d{9}$/.test(carrierNumber)) {
-      alert("Илтимос, тўлиқ телефон рақамини киритинг (+998123456789)");
+      onClose();
+      return onConfirm({ error: "Илтимос, тўлиқ телефон рақамини киритинг (+998123456789)" });
+    }
+
+    try {
+      const response = await axios.get(API_ENDPOINTS.PRODUCTS, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        params: { ids: cart.map((item) => item.id).join(",") },
+      });
+      const fetchedProducts = Array.isArray(response.data) ? response.data : [];
+      setLatestProducts(fetchedProducts);
+
+      const updatedCart = cart.map((item) => {
+        const product = fetchedProducts.find((p) => p.id === item.id);
+        return product?.isFinished
+          ? { ...item, count: 0, isFinished: true, description: orderDescriptions[item.id] || "" }
+          : { ...item, isFinished: false, description: orderDescriptions[item.id] || "" };
+      }).filter((item) => item.count > 0);
+
+      const finished = fetchedProducts
+        .filter((p) => p.isFinished)
+        .map((p) => cart.find((item) => item.id === p.id)?.name)
+        .filter(Boolean);
+
+      if (finished.length > 0) {
+        setFinishedItems(finished);
+        setShowWarningModal(true);
+        setCart(updatedCart);
+        return;
+      }
+
+      setCart(updatedCart);
+      onConfirm({
+        orderItems: updatedCart,
+        carrierNumber: carrierNumber,
+        orderId: orderToEdit?.id || null,
+        serviceFee,
+      });
+      setCarrierNumber("+998");
+      setOrderDescriptions({});
+      onClose();
+    } catch (error) {
+      onClose();
+      onConfirm({ error: `Маҳсулот маълумотларини олишда хатолик: ${handleApiError(error, "Номаълум хатолик.")}` });
+    }
+  };
+
+  const handleWarningConfirm = async () => {
+    setShowWarningModal(false);
+
+    try {
+      const response = await axios.get(API_ENDPOINTS.PRODUCTS, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const fetchedProducts = Array.isArray(response.data)
+        ? response.data.map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            categoryId: product.categoryId,
+            isFinished: product.isFinished || false,
+            color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`, 
+          }))
+        : [];
+      setTaomlar(fetchedProducts); 
+    } catch (error) {
+      console.error("Mahsulotlarni olishda xato:", handleApiError(error));
+      onConfirm({ error: `Маҳсулотларни қайта олишда хатолик: ${handleApiError(error)}` });
       return;
     }
-    const orderItemsWithDescriptions = cart.map((item) => ({
-      ...item,
-      description: orderDescriptions[item.id] || "",
-    }));
+
     onConfirm({
-      orderItems: orderItemsWithDescriptions,
+      orderItems: cart,
       carrierNumber: carrierNumber,
       orderId: orderToEdit?.id || null,
       serviceFee,
@@ -122,6 +194,30 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setO
     setCarrierNumber("+998");
     setOrderDescriptions({});
     onClose();
+  };
+
+  
+  const handleUpdateOrder = async () => {
+    try {
+      
+      const response = await axios.get(API_ENDPOINTS.PRODUCTS, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const fetchedProducts = Array.isArray(response.data)
+        ? response.data.map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            categoryId: product.categoryId,
+            isFinished: product.isFinished || false,
+            color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+          }))
+        : [];
+      setTaomlar(fetchedProducts); 
+    } catch (error) {
+      console.error("Mahsulotlarni olishda xato:", handleApiError(error));
+      onConfirm({ error: `Буюртмани янгилашда хатолик: ${handleApiError(error)}` });
+    }
   };
 
   if (!isOpen) return null;
@@ -164,13 +260,14 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setO
               <label>Маҳсулотлар тафсилотлари:</label>
               {cart.map((item) => (
                 <div key={item.id} className="cart-item-description">
-                  <span>{item.name} (x{item.count})</span>
+                  <span>{item.name} {item.isFinished ? "(Тугаган)" : `(x${item.count})`}</span>
                   <textarea
                     value={orderDescriptions[item.id] || ""}
                     onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
                     placeholder="Таъриф киритинг (масалан, қадоқлаш тури, махсус сўровлар)"
                     style={{ width: "100%", minHeight: "60px", padding: "8px", marginTop: "5px", borderRadius: "4px", border: "1px solid #ccc" }}
                     aria-label={`Таъриф учун ${item.name}`}
+                    disabled={item.isFinished}
                   />
                 </div>
               ))}
@@ -188,17 +285,48 @@ const ModalBasket = ({ isOpen, onClose, onConfirm, cart, orderDescriptions, setO
             >
               Бекор қилиш
             </button>
+            
             <button type="submit" className="submit-btn" disabled={isConfirming}>
               {isConfirming ? "Тасдиқланмоқда..." : orderToEdit ? "Таҳрирни тасдиқлаш" : "Буюртмани тасдиқлаш"}
             </button>
           </div>
         </form>
       </div>
+
+      {showWarningModal && (
+        <div className="modal-overlay warning-modal" role="dialog" aria-labelledby="warning-modal-title">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 id="warning-modal-title">Огоҳлантириш</h3>
+              <button
+                className="modal-close"
+                aria-label="Огоҳлантириш модалини ёпиш"
+                onClick={() => setShowWarningModal(false)}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Қуйидаги маҳсулотлар тугаган: {finishedItems.join(", ")}.
+              </p>
+            </div>
+            <div className="form-actions">
+              <button
+                className="submit-btn"
+                onClick={handleWarningConfirm}
+                aria-label="Тасдиқлаш"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// EditOrderModal component
 const EditOrderModal = ({
   isOpen,
   onClose,
@@ -282,14 +410,17 @@ const EditOrderModal = ({
       );
       setEditingOrder({ ...updatedOrder, totalPrice });
       setCart(
-        updatedOrder.orderItems.map((item) => ({
-          id: item.productId || item.product?.id,
-          name: item.product?.name || "Номаълум таом",
-          price: parseFloat(item.product?.price) || 0,
-          count: item.count || 0,
-          status: item.status || "PENDING",
-          description: item.description || "",
-        }))
+        updatedOrder.orderItems
+          .filter((item) => item.product)
+          .map((item) => ({
+            id: item.productId || item.product?.id,
+            name: item.product?.name || "Номаълум таом",
+            price: parseFloat(item.product?.price) || 0,
+            count: item.count || 0,
+            status: item.status || "PENDING",
+            description: item.description || "",
+            isFinished: item.product?.isFinished || false,
+          }))
       );
       setOrderDescriptions((prev) => {
         const newDescriptions = { ...prev };
@@ -318,7 +449,6 @@ const EditOrderModal = ({
       return;
     }
 
-    // Fetch the latest product data from the server to check isFinished
     try {
       const productResponse = await axios.get(`${API_ENDPOINTS.PRODUCTS}/${productId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -355,14 +485,17 @@ const EditOrderModal = ({
       );
       setEditingOrder({ ...updatedOrder, totalPrice });
       setCart(
-        updatedOrder.orderItems.map((item) => ({
-          id: item.productId || item.product?.id,
-          name: item.product?.name || "Номаълум таом",
-          price: parseFloat(item.product?.price) || 0,
-          count: item.count || 0,
-          status: item.status || "PENDING",
-          description: item.description || "",
-        }))
+        updatedOrder.orderItems
+          .filter((item) => item.product)
+          .map((item) => ({
+            id: item.productId || item.product?.id,
+            name: item.product?.name || "Номаълум таом",
+            price: parseFloat(item.product?.price) || 0,
+            count: item.count || 0,
+            status: item.status || "PENDING",
+            description: item.description || "",
+            isFinished: item.product?.isFinished || false,
+          }))
       );
       setOrderDescriptions((prev) => ({
         ...prev,
@@ -510,7 +643,6 @@ const EditOrderModal = ({
   );
 };
 
-// Main Dostavka component
 export default function Dostavka() {
   const [orders, setOrders] = useState([]);
   const [taomlar, setTaomlar] = useState([]);
@@ -532,6 +664,9 @@ export default function Dostavka() {
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
+
+
+  const [socket, setSocket] = useState(null);
 
   const determineOrderStatus = (orderItems) => {
     if (!orderItems || orderItems.length === 0) return "PENDING";
@@ -574,6 +709,12 @@ export default function Dostavka() {
     if (isConfirming) return;
     setIsConfirming(true);
 
+    if (orderData.error) {
+      setError(orderData.error);
+      setIsConfirming(false);
+      return;
+    }
+
     if (!orderData?.orderItems?.length) {
       setError("Буюртмада камida битта маҳсулот бўлиши керак.");
       setShowModal(false);
@@ -582,36 +723,8 @@ export default function Dostavka() {
     }
 
     try {
-      // Fetch the latest product data from the server to check isFinished
-      const productIds = orderData.orderItems.map((item) => item.id);
-      const productResponses = await Promise.all(
-        productIds.map((id) =>
-          axios.get(`${API_ENDPOINTS.PRODUCTS}/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-        )
-      );
-      const latestProducts = productResponses.map((res) => res.data);
-
-      // Check isFinished status for each item in the cart
-      const finishedItems = orderData.orderItems
-        .map((item) => {
-          const product = latestProducts.find((p) => p.id === item.id);
-          return product?.isFinished ? item.name : null;
-        })
-        .filter(Boolean);
-
-      if (finishedItems.length > 0) {
-        setError(
-          `Қуйидаги маҳсулотлар тугаган, буюртма бериб бўлмайди: ${finishedItems.join(", ")}`
-        );
-        setShowModal(false);
-        setIsConfirming(false);
-        return;
-      }
-
       const products = orderData.orderItems
-        .filter((item) => item?.id && item.count > 0)
+        .filter((item) => item?.id && item.count > 0 && !item.isFinished)
         .map((item) => ({
           productId: Number(item.id),
           count: Number(item.count),
@@ -619,16 +732,15 @@ export default function Dostavka() {
         }));
 
       if (!products.length) {
-        setError("Буюртмада маҳсулотлар йўқ.");
+        setError("Буюртмада маҳсулотлар йўқ ёки барчаси тугаган.");
         setShowModal(false);
         setIsConfirming(false);
         return;
       }
 
       const totalPrice = orderData.orderItems.reduce((acc, item) => {
-        const product = latestProducts.find((p) => p.id === item.id);
-        const price = Number(product?.price) || Number(item.price) || 0;
-        return acc + price * item.count;
+        const price = Number(item.price) || 0;
+        return item.isFinished ? acc : acc + price * item.count;
       }, 0);
 
       const currentUser = JSON.parse(localStorage.getItem("user")) || {};
@@ -641,12 +753,26 @@ export default function Dostavka() {
         return;
       }
 
+      const currentDateTime = new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Tashkent",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const [month, day, year, hour, minute, second] = currentDateTime.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/).slice(1);
+      const formattedDateTime = `${year}-${month}-${day}T${hour}:${minute}:${second}+05:00`;
+
       const body = {
         products,
         totalPrice: Number(totalPrice),
         userId,
         carrierNumber: orderData.carrierNumber,
         serviceFee: Number(orderData.serviceFee) || 0,
+        createdAt: formattedDateTime,
       };
 
       let updatedOrder;
@@ -654,13 +780,13 @@ export default function Dostavka() {
         const response = await axios.put(`${API_ENDPOINTS.ORDERS}/${orderData.orderId}`, body, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        updatedOrder = response.data;
+        updatedOrder = { ...response.data, createdAt: formattedDateTime };
         setSuccessMsg("Буюртма муваффақиятли таҳрирланди!");
       } else {
         const response = await axios.post(API_ENDPOINTS.ORDERS, body, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        updatedOrder = response.data;
+        updatedOrder = { ...response.data, createdAt: formattedDateTime };
         setSuccessMsg("Доставка буюртмаси муваффақиятли яратилди!");
       }
 
@@ -742,8 +868,17 @@ export default function Dostavka() {
     }
   };
 
-  const debouncedHandleOrderConfirm = useDebounce(handleOrderConfirm, 500);
-  const debouncedHandleCloseAndPrint = useDebounce(handleCloseAndPrint, 500);
+  const debouncedHandleOrderConfirm = useDebounce((orderData) => {
+    if (!isConfirming) {
+      handleOrderConfirm(orderData);
+    }
+  }, 500);
+
+  const debouncedHandleCloseAndPrint = useDebounce((order) => {
+    if (!isPrinting) {
+      handleCloseAndPrint(order);
+    }
+  }, 500);
 
   const handleDeleteOrder = async (orderId) => {
     const order = orders.find((o) => o.id === orderId);
@@ -751,7 +886,7 @@ export default function Dostavka() {
 
     const readyItems = order.orderItems?.filter((item) => item.status === "READY") || [];
     if (readyItems.length === 1) {
-      alert("Буюртмада фақат битта тайёр маҳсулот бор, унда буюртмани ўчириб бўлмайди.");
+      setError("Буюртмада фақат битта тайёр маҳсулот бор, унда буюртмани ўчириб бўлмайди.");
       return;
     }
 
@@ -814,33 +949,45 @@ export default function Dostavka() {
 
   useEffect(() => {
     if (!token) {
-      alert("Илтимос, тизимга киринг.");
+      setError("Илтимос, тизимга киринг.");
       navigate("/login");
       return;
     }
 
-    socket.connect();
-    socket.on("connect", () => {
-      console.log("Socket.IO ulandi:", socket.id);
+    const newSocket = io(API_BASE_URL, {
+      auth: { token: localStorage.getItem("token") },
+      autoConnect: false,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 30000,
+      transports: ["websocket", "polling"],
+    });
+
+    setSocket(newSocket);
+    newSocket.connect();
+
+    newSocket.on("connect", () => {
+      console.log("Socket.IO ulandi:", newSocket.id);
       setSuccessMsg("WiFi серверга уланди!");
     });
 
-    socket.on("reconnect", (attempt) => {
+    newSocket.on("reconnect", (attempt) => {
       console.log(`Socket.IO ${attempt} urinishdan so‘ng qayta ulandi`);
       setSuccessMsg("WiFi серверга қайта уланди!");
     });
 
-    socket.on("connect_error", (err) => {
+    newSocket.on("connect_error", (err) => {
       console.error("WiFi ulanishida xatolik:", err.message);
       setError(`WiFi ulanishida xatolik: ${err.message}`);
     });
 
-    socket.on("disconnect", (reason) => {
+    newSocket.on("disconnect", (reason) => {
       console.log("Socket uzildi:", reason);
       setError(`WiFi ulanishi uzildi: ${reason}`);
     });
 
-    socket.on("order_created", (newOrder) => {
+    newSocket.on("order_created", (newOrder) => {
       setOrders((prev) => {
         if (prev.some((o) => o.id === newOrder.id)) return prev;
         const totalPrice = newOrder.orderItems?.reduce((sum, item) => {
@@ -858,7 +1005,7 @@ export default function Dostavka() {
       setSuccessMsg(`Yangi buyurtma #${newOrder.id} yaratildi!`);
     });
 
-    socket.on("order_updated", (updatedOrder) => {
+    newSocket.on("order_updated", (updatedOrder) => {
       setOrders((prev) => {
         const existingOrder = prev.find((o) => o.id === updatedOrder.id);
         if (!existingOrder || updatedOrder.status === "ARCHIVE") return prev;
@@ -878,7 +1025,7 @@ export default function Dostavka() {
       setSuccessMsg(`Buyurtma #${updatedOrder.id} yangilandi!`);
     });
 
-    socket.on("orderItemStatusUpdated", (updatedOrderItem) => {
+    newSocket.on("orderItemStatusUpdated", (updatedOrderItem) => {
       setOrders((prev) =>
         prev.map((order) => {
           if (order.id === updatedOrderItem.orderId) {
@@ -909,7 +1056,7 @@ export default function Dostavka() {
       );
     });
 
-    socket.on("order_deleted", (orderId) => {
+    newSocket.on("order_deleted", (orderId) => {
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
       setSuccessMsg(`Buyurtma #${orderId} o‘chirildi!`);
     });
@@ -1028,15 +1175,15 @@ export default function Dostavka() {
       });
 
     return () => {
-      socket.off("connect");
-      socket.off("reconnect");
-      socket.off("connect_error");
-      socket.off("disconnect");
-      socket.off("order_created");
-      socket.off("order_updated");
-      socket.off("orderItemStatusUpdated");
-      socket.off("order_deleted");
-      socket.disconnect();
+      newSocket.off("connect");
+      newSocket.off("reconnect");
+      newSocket.off("connect_error");
+      newSocket.off("disconnect");
+      newSocket.off("order_created");
+      newSocket.off("order_updated");
+      newSocket.off("orderItemStatusUpdated");
+      newSocket.off("order_deleted");
+      newSocket.disconnect();
       controllers.forEach((controller) => controller.abort());
     };
   }, [token, navigate]);
@@ -1075,12 +1222,12 @@ export default function Dostavka() {
   const filteredTaomlar = React.useMemo(() => {
     return selectedCategory
       ? taomlar
-          .filter(
-            (taom) =>
-              taom.categoryId &&
-              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-          )
-          .sort((a, b) => a.id - b.id)
+        .filter(
+          (taom) =>
+            taom.categoryId &&
+            taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+        )
+        .sort((a, b) => a.id - b.id)
       : taomlar.sort((a, b) => a.id - b.id);
   }, [selectedCategory, taomlar, categories]);
 
@@ -1353,14 +1500,15 @@ export default function Dostavka() {
           }}
           onConfirm={debouncedHandleOrderConfirm}
           cart={cart}
+          setCart={setCart}
           orderDescriptions={orderDescriptions}
           setOrderDescriptions={setOrderDescriptions}
           orderToEdit={orderToEdit}
           serviceFee={serviceFee}
           isConfirming={isConfirming}
+          setTaomlar={setTaomlar} 
         />
       )}
-
       {editModal && orderToEdit && (
         <EditOrderModal
           isOpen={editModal}
@@ -1397,657 +1545,657 @@ export default function Dostavka() {
       )}
 
       <style jsx>{`
-        :root {
-          --primary-color: #007bff;
-          --success-color: #28a745;
-          --danger-color: #dc3545;
-          --neutral-light: #f8f9fa;
-          --neutral-gray: #6c757d;
-          --border-color: #ddd;
-          --background-light: #fff;
-          --text-dark: #333;
-          --text-light: #666;
-          --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          --border-radius: 8px;
-          --transition: all 0.3s ease;
-          --cooking-color: #fd7e14;
-          --pending-color: rgb(165, 112, 112);
-        }
+          :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --neutral-light: #f8f9fa;
+            --neutral-gray: #6c757d;
+            --border-color: #ddd;
+            --background-light: #fff;
+            --text-dark: #333;
+            --text-light: #666;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+            --cooking-color: #fd7e14;
+            --pending-color: rgb(165, 112, 112);
+          }
 
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
+          .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          }
 
-        .modal-content,
-        .modal1 {
-          background: var(--background-light);
-          padding: 20px;
-          border-radius: var(--border-radius);
-          max-width: min(90%, 500px);
-          max-height: 80vh;
-          overflow-y: auto;
-          box-shadow: var(--shadow);
-        }
+          .modal-content,
+          .modal1 {
+            background: var(--background-light);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            max-width: min(90%, 500px);
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+          }
 
-        .modal-header,
-        .modal__header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
+          .modal-header,
+          .modal__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          }
 
-        .modal__title {
-          font-size: 1.5rem;
-          font-weight: 500;
-        }
+          .modal__title {
+            font-size: 1.5rem;
+            font-weight: 500;
+          }
 
-        .modal-close,
-        .modal__close-btn,
-        .message-close {
-          background: none;
-          border: none;
-          font-size: 1.25rem;
-          color: var(--text-light);
-          cursor: pointer;
-          transition: var(--transition);
-        }
+          .modal-close,
+          .modal__close-btn,
+          .message-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+          }
 
-        .modal-close:hover,
-        .modal__close-btn:hover,
-        .message-close:hover {
-          color: var(--text-dark);
-        }
+          .modal-close:hover,
+          .modal__close-btn:hover,
+          .message-close:hover {
+            color: var(--text-dark);
+          }
 
-        .add-place-form {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-        }
+          .add-place-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+          }
 
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-        }
+          .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }
 
-        .form-group label {
-          font-weight: 500;
-        }
+          .form-group label {
+            font-weight: 500;
+          }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea,
-        .modal__select,
-        .modal__input {
-          padding: 8px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
-          font-size: 1rem;
-          transition: border-color var(--transition);
-        }
+          .form-group input,
+          .form-group select,
+          .form-group textarea,
+          .modal__select,
+          .modal__input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color var(--transition);
+          }
 
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus,
-        .modal__select:focus,
-        .modal__input:focus {
-          border-color: var(--primary-color);
-          outline: none;
-        }
+          .form-group input:focus,
+          .form-group select:focus,
+          .form-group textarea:focus,
+          .modal__select:focus,
+          .modal__input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+          }
 
-        .cart-item-description {
-          margin-top: 10px;
-          padding: 10px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
-        }
+          .cart-item-description {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+          }
 
-        .form-actions {
-          display: flex;
-          gap: 10px;
-          justify-content: flex-end;
-        }
+          .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+          }
 
-        .cancel-btn,
-        .submit-btn,
-        .modal__add-btn,
-        .modal__item-remove {
-          padding: 10px 20px;
-          border: none;
-          border-radius: var(--border-radius);
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: var(--transition);
-        }
+          .cancel-btn,
+          .submit-btn,
+          .modal__add-btn,
+          .modal__item-remove {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+          }
 
-        .cancel-btn {
-          background-color: var(--danger-color);
-          color: var(--background-light);
-        }
+          .cancel-btn {
+            background-color: var(--danger-color);
+            color: var(--background-light);
+          }
 
-        .cancel-btn:hover {
-          background-color: #c82333;
-        }
+          .cancel-btn:hover {
+            background-color: #c82333;
+          }
 
-        .submit-btn,
-        .modal__add-btn {
-          background-color: var(--primary-color);
-          color: var(--background-light);
-        }
+          .submit-btn,
+          .modal__add-btn {
+            background-color: var(--primary-color);
+            color: var(--background-light);
+          }
 
-        .submit-btn:hover,
-        .modal__add-btn:hover {
-          background-color: #0056b3;
-        }
+          .submit-btn:hover,
+          .modal__add-btn:hover {
+            background-color: #0056b3;
+          }
 
-        .submit-btn:disabled,
-        .modal__add-btn:disabled,
-        .print-pay-btn:disabled {
-          background-color: var(--neutral-gray);
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
+          .submit-btn:disabled,
+          .modal__add-btn:disabled,
+          .print-pay-btn:disabled {
+            background-color: var(--neutral-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+          }
 
-        .modal__item-remove {
-          background-color: var(--danger-color);
-          color: var(--background-light);
-        }
+          .modal__item-remove {
+            background-color: var(--danger-color);
+            color: var(--background-light);
+          }
 
-        .modal__item-remove:hover {
-          background-color: #c82333;
-        }
+          .modal__item-remove:hover {
+            background-color: #c82333;
+          }
 
-        .modal__content {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
+          .modal__content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+          }
 
-        .modal__items h3,
-        .modal__add-section h3 {
-          font-size: 1.2rem;
-          margin-bottom: 10px;
-        }
+          .modal__items h3,
+          .modal__add-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+          }
 
-        .modal__items-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
+          .modal__items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
 
-        .modal__item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px;
-          border: 1px solid var(--border-color);
-          border-radius: var(--border-radius);
-          transition: opacity 0.3s ease;
-        }
+          .modal__item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            transition: opacity 0.3s ease;
+          }
 
-        .modal__item-img {
-          width: 50px;
-          height: 50px;
-          object-fit: cover;
-          border-radius: 4px;
-        }
+          .modal__item-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+          }
 
-        .modal__item-info {
-          flex: 1;
-        }
+          .modal__item-info {
+            flex: 1;
+          }
 
-        .modal__item-name {
-          font-weight: 500;
-        }
+          .modal__item-name {
+            font-weight: 500;
+          }
 
-        .modal__item-details {
-          color: var(--text-light);
-          font-size: 0.875rem;
-        }
+          .modal__item-details {
+            color: var(--text-light);
+            font-size: 0.875rem;
+          }
 
-        .modal__empty {
-          color: var(--text-light);
-          text-align: center;
-        }
+          .modal__empty {
+            color: var(--text-light);
+            text-align: center;
+          }
 
-        .modal__add-form {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
+          .modal__add-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }
 
-        .error-message,
-        .success-message {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          padding: 10px 20px;
-          border-radius: var(--border-radius);
-          z-index: 1000;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          animation: fadeInOut 3s ease-in-out;
-        }
+          .error-message,
+          .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeInOut 3s ease-in-out;
+          }
 
-        .error-message {
-          background-color: var(--danger-color);
-          color: var(--background-light);
-        }
+          .error-message {
+            background-color: var(--danger-color);
+            color: var(--background-light);
+          }
 
-        .success-message {
-          background-color: var(--success-color);
-          color: var(--background-light);
-        }
+          .success-message {
+            background-color: var(--success-color);
+            color: var(--background-light);
+          }
 
-        .saving-message {
-          color: var(--primary-color);
-          text-align: center;
-        }
+          .saving-message {
+            color: var(--primary-color);
+            text-align: center;
+          }
 
-        .content-section {
-          padding: 20px;
-          margin-left: 30px;
-        }
+          .content-section {
+            padding: 20px;
+            margin-left: 30px;
+          }
 
-        .order-layout {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-        }
-
-        @media (max-width: 768px) {
           .order-layout {
-            grid-template-columns: 1fr;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
           }
-        }
 
-        .tables-column,
-        .cart-column,
-        .products-column {
-          padding: 20px;
-          background-color: var(--background-light);
-          border-radius: var(--border-radius);
-          box-shadow: var(--shadow);
-        }
+          @media (max-width: 768px) {
+            .order-layout {
+              grid-template-columns: 1fr;
+            }
+          }
 
-        .search-container {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 20px;
-        }
+          .tables-column,
+          .cart-column,
+          .products-column {
+            padding: 20px;
+            background-color: var(--background-light);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+          }
 
-        .search-container input {
-          flex: 1;
-          padding: 8px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
-          font-size: 1rem;
-          transition: border-color var(--transition);
-        }
+          .search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+          }
 
-        .search-container input:focus {
-          border-color: var(--primary-color);
-          outline: none;
-        }
+          .search-container input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color var(--transition);
+          }
 
-        .orders-list {
-          display: grid;
-          gap: 15px;
-        }
+          .search-container input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+          }
 
-        .order-item {
-          padding: 15px;
-          border: 1px solid var(--border-color);
-          border-radius: var(--border-radius);
-          background-color: var(--neutral-light);
-          transition: opacity 0.5s ease, transform 0.5s ease;
-        }
+          .orders-list {
+            display: grid;
+            gap: 15px;
+          }
 
-        .order-item.pending {
-          background-color: var(--pending-color);
-          color: var(--background-light);
-        }
+          .order-item {
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--neutral-light);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+          }
 
-        .order-item.cooking {
-          background-color: var(--cooking-color);
-          color: var(--background-light);
-        }
+          .order-item.pending {
+            background-color: var(--pending-color);
+            color: var(--background-light);
+          }
 
-        .order-item.ready {
-          background-color: var(--success-color);
-          color: var(--background-light);
-        }
+          .order-item.cooking {
+            background-color: var(--cooking-color);
+            color: var(--background-light);
+          }
 
-        .order-item.deleting {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
+          .order-item.ready {
+            background-color: var(--success-color);
+            color: var(--background-light);
+          }
 
-        .order-item-status.pending {
-          color: #856404;
-        }
-
-        .order-item-status.cooking {
-          color: var(--cooking-color);
-        }
-
-        .order-item-status.ready {
-          color: var(--success-color);
-        }
-
-        .order-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 5px;
-        }
-
-        .order-actions {
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .action-btn {
-          padding: 8px;
-          border-radius: 50%;
-          border: none;
-          cursor: pointer;
-          background-color: var(--neutral-light);
-          color: var(--text-dark);
-          transition: var(--transition);
-        }
-
-        .edit-btn:hover {
-          background-color: var(--primary-color);
-          color: var(--background-light);
-        }
-
-        .delete-btn {
-          background-color: var(--danger-color);
-          color: var(--background-light);
-        }
-
-        .delete-btn:hover {
-          background-color: #c82333;
-        }
-
-        .print-pay-btn {
-          padding: 8px 16px;
-          border-radius: var(--border-radius);
-          background-color: #00a000;
-          color: var(--background-light);
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          border: none;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .print-pay-btn:hover:not(:disabled) {
-          background-color: #008000;
-        }
-
-        .order-details {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .order-info {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .order-items {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          flex: 1;
-        }
-
-        .order-item {
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding: 5px 0;
-        }
-
-        .item-details {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 0.875rem;
-        }
-
-        .basket-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
-        }
-
-        .basket-table th,
-        .basket-table td {
-          padding: 10px;
-          text-align: left;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .basket-table th {
-          background-color: #f5f5f5;
-          font-weight: bold;
-        }
-
-        .cart-totals {
-          margin-bottom: 20px;
-          font-size: 1rem;
-        }
-
-        .cart-totals p {
-          margin: 5px 0;
-        }
-
-        .cart-actions {
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-          margin-top: 20px;
-        }
-
-        .clear-cart-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          width: 100%;
-          padding: 12px;
-          background-color: var(--danger-color);
-          color: var(--background-light);
-          border: none;
-          border-radius: var(--border-radius);
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .clear-cart-btn:disabled {
-          background-color: var(--neutral-gray);
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .clear-cart-btn:hover:not(:disabled) {
-          background-color: #c82333;
-        }
-
-        .confirm-order-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          width: 100%;
-          padding: 12px;
-          background-color: var(--success-color);
-          color: var(--background-light);
-          border: none;
-          border-radius: var(--border-radius);
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .confirm-order-btn:disabled {
-          background-color: var(--neutral-gray);
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .confirm-order-btn:hover:not(:disabled) {
-          background-color: #218838;
-        }
-
-        .category-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-bottom: 20px;
-        }
-
-        .category-btn {
-          padding: 8px 16px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
-          background-color: var(--neutral-light);
-          color: var(--text-dark);
-          cursor: pointer;
-          font-size: 0.875rem;
-          transition: var(--transition);
-        }
-
-        .category-btn.active,
-        .category-btn:hover {
-          background-color: var(--primary-color);
-          color: var(--background-light);
-        }
-
-        .products-list {
-          list-style: none;
-          padding: 0;
-          display: grid;
-          gap: 10px;
-        }
-
-        .product-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px;
-          border: 1px solid var(--border-color);
-          border-radius: var(--border-radius);
-        }
-
-        .product-info {
-          flex: 1;
-          cursor: pointer;
-        }
-
-        .product-name {
-          font-weight: 500;
-        }
-
-        .product-price {
-          color: var(--text-light);
-          margin-left: 5px;
-        }
-
-        .menu-card__controls {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .control-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background-color: var(--primary-color);
-          color: var(--background-light);
-          border: none;
-          font-size: 1rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: var(--transition);
-        }
-
-        .control-btn:hover {
-          background-color: #0056b3;
-        }
-
-        .control-btn:disabled {
-          background-color: var(--neutral-gray);
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .control-value {
-          min-width: 20px;
-          text-align: center;
-          font-size: 1rem;
-        }
-
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid var(--primary-color);
-          border-top-color: transparent;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto;
-        }
-
-        @keyframes fadeInOut {
-          0% {
+          .order-item.deleting {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(-10px);
           }
-          10% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          90% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-        }
 
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
+          .order-item-status.pending {
+            color: #856404;
           }
-        }
-      `}</style>
+
+          .order-item-status.cooking {
+            color: var(--cooking-color);
+          }
+
+          .order-item-status.ready {
+            color: var(--success-color);
+          }
+
+          .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+          }
+
+          .order-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .action-btn {
+            padding: 8px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background-color: var(--neutral-light);
+            color: var(--text-dark);
+            transition: var(--transition);
+          }
+
+          .edit-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-light);
+          }
+
+          .delete-btn {
+            background-color: var(--danger-color);
+            color: var(--background-light);
+          }
+
+          .delete-btn:hover {
+            background-color: #c82333;
+          }
+
+          .print-pay-btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            background-color: #00a000;
+            color: var(--background-light);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+          }
+
+          .print-pay-btn:hover:not(:disabled) {
+            background-color: #008000;
+          }
+
+          .order-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .order-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .order-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+          }
+
+          .order-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 5px 0;
+          }
+
+          .item-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.875rem;
+          }
+
+          .basket-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+
+          .basket-table th,
+          .basket-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+          }
+
+          .basket-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+          }
+
+          .cart-totals {
+            margin-bottom: 20px;
+            font-size: 1rem;
+          }
+
+          .cart-totals p {
+            margin: 5px 0;
+          }
+
+          .cart-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: 20px;
+          }
+
+          .clear-cart-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--danger-color);
+            color: var(--background-light);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+          }
+
+          .clear-cart-btn:disabled {
+            background-color: var(--neutral-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+          }
+
+          .clear-cart-btn:hover:not(:disabled) {
+            background-color: #c82333;
+          }
+
+          .confirm-order-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--success-color);
+            color: var(--background-light);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+          }
+
+          .confirm-order-btn:disabled {
+            background-color: var(--neutral-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+          }
+
+          .confirm-order-btn:hover:not(:disabled) {
+            background-color: #218838;
+          }
+
+          .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+          }
+
+          .category-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--neutral-light);
+            color: var(--text-dark);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: var(--transition);
+          }
+
+          .category-btn.active,
+          .category-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-light);
+          }
+
+          .products-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+          }
+
+          .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+          }
+
+          .product-info {
+            flex: 1;
+            cursor: pointer;
+          }
+
+          .product-name {
+            font-weight: 500;
+          }
+
+          .product-price {
+            color: var(--text-light);
+            margin-left: 5px;
+          }
+
+          .menu-card__controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .control-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: var(--background-light);
+            border: none;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+          }
+
+          .control-btn:hover {
+            background-color: #0056b3;
+          }
+
+          .control-btn:disabled {
+            background-color: var(--neutral-gray);
+            cursor: not-allowed;
+            opacity: 0.6;
+          }
+
+          .control-value {
+            min-width: 20px;
+            text-align: center;
+            font-size: 1rem;
+          }
+
+          .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--primary-color);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+          }
+
+          @keyframes fadeInOut {
+            0% {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            10% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+            90% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+          }
+
+          @keyframes spin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
     </section>
   );
 }

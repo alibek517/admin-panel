@@ -14,8 +14,7 @@ const swapIds = async (req, res) => {
     }
 
     await Product.sequelize.transaction(async (t) => {
-      // Use a temporary ID to avoid primary key conflicts
-      const tempId = -1; // Assuming negative IDs are not used
+      const tempId = -1; 
       await Product.update(
         { id: tempId },
         { where: { id: activeId }, transaction: t }

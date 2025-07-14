@@ -26,7 +26,6 @@ const Receipt = React.forwardRef(({ order }, ref) => {
     );
   };
 
-  // Determine if the order is for delivery based on tableNumber format
   const isDelivery = order.tableNumber?.startsWith("+") || order.tableNumber === "N/A";
 
   return (

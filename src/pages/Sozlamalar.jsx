@@ -139,7 +139,6 @@ export default function Sozlamalar() {
   };
 
   const handleStaffSave = async () => {
-    // Validate password length only if a new password is provided
     if (editingStaff.password && editingStaff.password.length < 8) {
       alert("Парол камида 8 та белгидан иборат бўлиши керак.");
       return;
@@ -186,7 +185,6 @@ export default function Sozlamalar() {
       return;
     }
 
-    // Validate password length
     if (newStaff.password.length < 8) {
       alert("Парол камида 8 та белгидан иборат бўлиши керак.");
       return;

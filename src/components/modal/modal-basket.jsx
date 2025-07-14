@@ -3,21 +3,26 @@ import { X } from "lucide-react";
 import "../styles/modalBasket.css";
 
 const ModalBasket = ({
-  cart,
-  tables,
-  userId,
+  isOpen,
   onClose,
   onConfirm,
-  selectedTableId,
+  cart,
+  setCart,
+  orderDescriptions,
+  setOrderDescriptions,
+  orderToEdit = null,
+  serviceFee,
+  isConfirming,
+  setTaomlar, 
 }) => {
-  const [isTableOrder, setIsTableOrder] = useState(true);
-  const [tableId, setTableId] = useState(selectedTableId || "");
-  const [carrierNumber, setCarrierNumber] = useState("");
-  const [orderDescriptions, setOrderDescriptions] = useState({});
+  const [carrierNumber, setCarrierNumber] = useState("+998");
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [finishedItems, setFinishedItems] = useState([]);
+  const [latestProducts, setLatestProducts] = useState([]);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setTableId(selectedTableId || "");
-    // Initialize descriptions for cart items
     const initialDescriptions = cart.reduce((acc, item) => ({
       ...acc,
       [item.id]: "",

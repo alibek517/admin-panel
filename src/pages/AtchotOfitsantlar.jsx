@@ -144,10 +144,8 @@ const styles = {
 
 
 const AtchotOfitsantlar = () => {
-  // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
 
-  // Initialize startDate and endDate with today's date
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [startDate, setStartDate] = useState(today);
@@ -156,7 +154,6 @@ const AtchotOfitsantlar = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Date formatting function to replace dayjs
   const formatDate = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -166,12 +163,11 @@ const AtchotOfitsantlar = () => {
     return `${day}-${month}-${year}`;
   };
 
-  // Date comparison functions
   const isDateInRange = (dateStr, startStr, endStr) => {
     const date = new Date(dateStr);
     const start = new Date(startStr);
     const end = new Date(endStr);
-    end.setHours(23, 59, 59, 999); // End of day
+    end.setHours(23, 59, 59, 999); 
     return date >= start && date <= end;
   };
 
@@ -185,7 +181,6 @@ const AtchotOfitsantlar = () => {
         const fetchedOrders = await response.json();
         
         setOrders(fetchedOrders);
-        // Filter orders for today by default
         const todayOrders = fetchedOrders.filter((order) =>
           isDateInRange(order.createdAt, today, today)
         );

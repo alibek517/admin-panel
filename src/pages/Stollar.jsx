@@ -8,8 +8,8 @@ export default function Stollar() {
   const [modal, setModal] = useState(false);
   const [orderModal, setOrderModal] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
-  const [filter, setFilter] = useState("Барча"); // Status filter
-  const [nameFilter, setNameFilter] = useState("Барча"); // Name filter
+  const [filter, setFilter] = useState("Барча"); 
+  const [nameFilter, setNameFilter] = useState("Барча");
   const [newStol, setNewStol] = useState({
     name: "",
     number: "",
@@ -30,10 +30,8 @@ export default function Stollar() {
     );
   };
 
-  // Clean up extra spaces in number field
   const cleanNumber = (number) => number.replace(/\s+/g, " ").trim();
 
-  // Extract unique table names for filtering
   const uniqueNames = ["Барча", ...new Set(stollar.map((stol) => stol.name))];
 
   useEffect(() => {
@@ -48,7 +46,7 @@ export default function Stollar() {
           const mappedData = result.data
             .map((stol) => ({
               ...stol,
-              number: cleanNumber(stol.number), // Clean up number field
+              number: cleanNumber(stol.number),
               status: statusMapToFrontend[stol.status] || stol.status,
               orders: Array.isArray(stol.orders)
                 ? stol.orders
@@ -220,7 +218,6 @@ export default function Stollar() {
 
   const categories = ["Барча", "Бўш", "Банд"];
 
-  // Group tables by name to handle duplicates
   const groupedTables = stollar.reduce((acc, stol) => {
     const existing = acc.find((item) => item.name === stol.name);
     if (existing) {
@@ -233,8 +230,8 @@ export default function Stollar() {
         tables: [stol],
         orders: stol.orders,
         status: stol.status,
-        id: stol.id, // Use the first table's ID for actions
-        number: stol.number, // Use the first table's number for display
+        id: stol.id, 
+        number: stol.number, 
       });
     }
     return acc;

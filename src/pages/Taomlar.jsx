@@ -58,7 +58,6 @@ const normalizeStatus = (status) => {
   return normalized === "busy" || normalized === "band" ? "busy" : "empty";
 };
 
-// Modified checkFinishedProducts to return the list of finished products
 const checkFinishedProducts = (products, taomlar) => {
   return products.filter((item) => {
     const product = taomlar.find((p) => p.id === item.productId);
@@ -83,7 +82,6 @@ const FinishedProductsModal = ({ isOpen, onClose, finishedProducts, onConfirm })
   );
 };
 
-// Existing Modal component (unchanged)
 const Modal = ({ isOpen, onClose, children, title }) => {
   if (!isOpen) return null;
   return (
@@ -101,7 +99,6 @@ const Modal = ({ isOpen, onClose, children, title }) => {
   );
 };
 
-// AddPlaceModal component (unchanged)
 const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   const [placeName, setPlaceName] = useState("");
   const handleSubmit = (e) => {
@@ -142,7 +139,6 @@ const AddPlaceModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-// AddTableModal component (unchanged)
 const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   const [selectedPlace, setSelectedPlace] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -236,7 +232,6 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   );
 };
 
-// EditOrderModal component (unchanged)
 const EditOrderModal = ({
   isOpen,
   onClose,
@@ -722,7 +717,6 @@ const ResetFinishedProductsModal = ({ isOpen, onClose, onConfirm, setCart }) => 
   );
 };
 
-// Main Taomlar component with updates
 const Taomlar = React.memo(() => {
   const [taomlar, setTaomlar] = useState([]);
   const [cart, setCart] = useState([]);

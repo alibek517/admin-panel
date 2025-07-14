@@ -7,7 +7,6 @@ import "./styles/AdminPanel.css";
 import Header from "../components/Header.jsx";
 
 export default function AdminPanel() {
-  // Helper function to get today's date in yyyy-mm-dd format
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();

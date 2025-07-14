@@ -26,7 +26,6 @@ ChartJS.register(
 );
 
 export default function Asboblar() {
-  // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split("T")[0];
 
   const [dailyStats, setDailyStats] = useState({
@@ -38,8 +37,8 @@ export default function Asboblar() {
   const [weeklyStats, setWeeklyStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
-  const [startDate, setStartDate] = useState(today); // Default to today
-  const [endDate, setEndDate] = useState(today); // Default to today
+  const [startDate, setStartDate] = useState(today); 
+  const [endDate, setEndDate] = useState(today); 
   const [summary, setSummary] = useState({
     ordersCount: 0,
     totalPrice: 0,
@@ -47,12 +46,10 @@ export default function Asboblar() {
     totalWithCommission: 0,
   });
 
-  // Format price helper function
   const formatPrice = (price) => {
     return new Intl.NumberFormat("uz-UZ").format(price) + " сўм";
   };
 
-  // Calculate total price of order items
   const calculateTotalPrice = (orderItems) => {
     if (!Array.isArray(orderItems)) return 0;
     return orderItems.reduce(
@@ -61,7 +58,6 @@ export default function Asboblar() {
     );
   };
 
-  // Calculate summary based on date range
   const calculateSummary = (orders, start, end) => {
     let filteredOrders = orders;
 
@@ -188,7 +184,6 @@ export default function Asboblar() {
 
       setWeeklyStats(weeklyData);
 
-      // Calculate initial summary with today's date
       const initialSummary = calculateSummary(orders, today, today);
       setSummary(initialSummary);
     } catch (error) {
@@ -202,7 +197,6 @@ export default function Asboblar() {
     fetchData();
   }, []);
 
-  // Update summary when dates change
   useEffect(() => {
     if (orders.length > 0) {
       const newSummary = calculateSummary(orders, startDate, endDate);

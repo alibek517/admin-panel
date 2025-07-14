@@ -25,7 +25,6 @@ export default function Login() {
           },
         });
         console.log("Fetched users:", response.data);
-        // Предполагаем, что response.data — это массив пользователей
         const customerUser = response.data.find(
           (user) => user.role === "CUSTOMER"
         );
@@ -61,31 +60,17 @@ export default function Login() {
     setIsAnimating(true);
 
     try {
-      // Проверяем логин и пароль
       if (username === customer.username && password === customer.password) {
-        // Сохраняем данные пользователя в localStorage
         const userData = {
           id: customer.id,
           username: customer.username,
           role: customer.role,
         };
         localStorage.setItem("user", JSON.stringify(userData));
-        // Сохраняем флаги для авторизации
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("admin", "true");
 
-        // Если токен задается вручную, сохраняем его
-        // Замените "your_manual_token" на реальный токен или получите его с сервера
         localStorage.setItem("token", "your_manual_token");
-
-        // Альтернатива: если сервер возвращает токен при логине, выполните запрос
-        /*
-        const loginResponse = await axios.post("https://alikafecrm.uz/login", {
-          username,
-          password,
-        });
-        localStorage.setItem("token", loginResponse.data.token);
-        */
 
         setError(false);
         setIsAnimating(false);

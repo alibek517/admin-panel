@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ProductSales = () => {
-  const today = new Date().toISOString().split('T')[0]; // Default to today
+  const today = new Date().toISOString().split('T')[0]; 
   const [salesData, setSalesData] = useState({});
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(''); // Will be set to first category
+  const [selectedCategory, setSelectedCategory] = useState(''); 
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [categories, setCategories] = useState([]);
@@ -17,7 +17,6 @@ const ProductSales = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories
         const categoriesResponse = await axios.get('https://alikafecrm.uz/category');
         const categoriesData = categoriesResponse.data;
         const formattedCategories = categoriesData.map(category => ({
@@ -26,17 +25,14 @@ const ProductSales = () => {
         }));
         setCategories(formattedCategories);
 
-        // Set default category to the first one if available
         if (formattedCategories.length > 0) {
           setSelectedCategory(formattedCategories[0].id);
         }
 
-        // Fetch orders
         const ordersResponse = await axios.get('https://alikafecrm.uz/order');
         const ordersData = ordersResponse.data;
         setOrders(ordersData);
 
-        // Process orders with default filters
         updateSalesData(
           ordersData,
           searchQuery,
@@ -71,7 +67,6 @@ const ProductSales = () => {
             const count = item.count;
             const productCategory = item.product.categoryId.toString();
 
-            // Apply search and category filter (only if category is selected)
             if (
               productName.toLowerCase().includes(query.toLowerCase()) &&
               productCategory === category
@@ -103,7 +98,6 @@ const ProductSales = () => {
     }
   }, [searchQuery, selectedCategory, startDate, endDate, orders]);
 
-  // Inline styles (unchanged)
   const styles = {
     container: {
       maxWidth: '800px',

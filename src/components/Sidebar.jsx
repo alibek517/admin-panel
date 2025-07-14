@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; // Add useEffect import
+import React, { useState, useEffect } from "react";
 import "./styles/sidebar.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -31,17 +31,15 @@ export default function Sidebar() {
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingRoute, setPendingRoute] = useState(null);
 
-  // Navigate to /Taomlar on component mount if no specific route is active
   useEffect(() => {
     if (location.pathname === "/" || location.pathname === "") {
       navigate("/Taomlar");
     }
   }, [navigate, location.pathname]);
 
-  // Rest of your existing code remains unchanged
-  const isAdminPanelActive = location.pathname.startsWith("/AdminPanel") || 
-                             location.pathname === "/ZakazlarTarixi" || 
-                             location.pathname === "/AtchotDastafka";
+  const isAdminPanelActive = location.pathname.startsWith("/AdminPanel") ||
+    location.pathname === "/ZakazlarTarixi" ||
+    location.pathname === "/AtchotDastafka";
 
   const checkAuth = async () => {
     setErrorMessage("");
@@ -145,14 +143,13 @@ export default function Sidebar() {
         </div>
         <div
           onClick={() => handleNavigation("/AdminPanel/ofitsant")}
-          className={`nav-item ${
-            location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
-          }`}
-          style={{ 
+          className={`nav-item ${location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
+            }`}
+          style={{
             display: isAdminPanelActive ? "flex" : "none",
             marginLeft: '15px',
             fontSize: '15px',
-            cursor: 'pointer' 
+            cursor: 'pointer'
           }}
         >
           <HandPlatter size={20} />
@@ -160,14 +157,13 @@ export default function Sidebar() {
         </div>
         <div
           onClick={() => handleNavigation("/AdminPanel/ovqat")}
-          className={`nav-item ${
-            location.pathname === "/AdminPanel/ovqat" ? "active" : ""
-          }`}
-          style={{ 
+          className={`nav-item ${location.pathname === "/AdminPanel/ovqat" ? "active" : ""
+            }`}
+          style={{
             display: isAdminPanelActive ? "flex" : "none",
             marginLeft: '15px',
             fontSize: '15px',
-            cursor: 'pointer' 
+            cursor: 'pointer'
           }}
         >
           <Pizza size={20} />
@@ -175,14 +171,13 @@ export default function Sidebar() {
         </div>
         <div
           onClick={() => handleNavigation("/ZakazlarTarixi")}
-          className={`nav-item ${
-            location.pathname === "/ZakazlarTarixi" ? "active" : ""
-          }`}
-          style={{ 
+          className={`nav-item ${location.pathname === "/ZakazlarTarixi" ? "active" : ""
+            }`}
+          style={{
             display: isAdminPanelActive ? "flex" : "none",
             marginLeft: '15px',
             fontSize: '15px',
-            cursor: 'pointer' 
+            cursor: 'pointer'
           }}
         >
           <FileText size={20} />
@@ -190,21 +185,20 @@ export default function Sidebar() {
         </div>
         <div
           onClick={() => handleNavigation("/AtchotDastafka")}
-          className={`nav-item ${
-            location.pathname === "/AtchotDastafka" ? "active" : ""
-          }`}
-          style={{ 
-            display: isAdminPanelActive ? "flex" : "none", 
+          className={`nav-item ${location.pathname === "/AtchotDastafka" ? "active" : ""
+            }`}
+          style={{
+            display: isAdminPanelActive ? "flex" : "none",
             marginLeft: '15px',
             fontSize: '15px',
-            cursor: 'pointer' 
+            cursor: 'pointer'
           }}
         >
           <Truck size={20} />
           <span>Отчет по доставка</span>
         </div>
         <div
-          style={{ cursor: 'pointer',display: 'none' }}
+          style={{ cursor: 'pointer', display: 'none' }}
           onClick={() => handleNavigation("/Asboblar")}
           className={`nav-item ${location.pathname === "/Asboblar" ? "active" : ""}`}
         >
@@ -246,9 +240,8 @@ export default function Sidebar() {
         <div
           style={{ cursor: 'pointer' }}
           onClick={() => handleNavigation("/Chiqish")}
-          className={`nav-item logout ${
-            location.pathname === "/Chiqish" ? "active" : ""
-          }`}
+          className={`nav-item logout ${location.pathname === "/Chiqish" ? "active" : ""
+            }`}
         >
           <LogOut size={20} />
           <span>Чиқиш</span>
