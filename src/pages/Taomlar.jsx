@@ -6,7 +6,7 @@ import {
   Clock, ShoppingCart, X, Plus, Trash, Pencil, Printer, ArrowLeftRight, Lock, RefreshCw
 } from "lucide-react";
 import ModalBasket from "../components/modal/modal-basket";
-import Receipt from "../components/Receipt.jsx";
+import Receipt from "../components/Receippt.jsx";
 
 const handleApiError = (error, defaultMessage) => {
   const statusMessages = {
@@ -779,7 +779,7 @@ const Taomlar = React.memo(() => {
       const value = e.target.value;
       setUslug(value);
       if (value.trim() === "") return;
-
+  
       try {
         await axios.put(
           API_ENDPOINTS.percent,
@@ -788,12 +788,20 @@ const Taomlar = React.memo(() => {
         );
         setCommissionPercent(parseFloat(value) || commissionPercent);
         setSuccessMsg("Хизмат нархи муваффақиятли ўзгартирилди!");
+        // selectedTableOrder ni yangilash
+        if (selectedTableOrder) {
+          setSelectedTableOrder({
+            ...selectedTableOrder,
+            totalWithCommission:
+              selectedTableOrder.totalPrice * (1 + (parseFloat(value) / 100 || 0)),
+          });
+        }
       } catch (error) {
         console.error("Uslug update error:", error);
         setError(handleApiError(error, "Хизмат нархини ўзгартиришда хатолик."));
       }
     },
-    [token, commissionPercent]
+    [token, commissionPercent, selectedTableOrder]
   );
 
   const handlePrint = useReactToPrint({
@@ -1001,12 +1009,15 @@ const Taomlar = React.memo(() => {
           })
         );
         setSelectedTableId(newTableId);
-        setSelectedTableOrder({
-          ...updatedOrder,
-          table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "Йўқ" },
-          totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-          uslug: parseFloat(uslug) || null,
-        });
+        // `selectedTableOrder` ni yangilashda
+setSelectedTableOrder({
+  ...updatedOrder,
+  table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "N/A" },
+  tableNumber: tables.find((t) => t.id === newTableId)?.number || updatedOrder.carrierNumber || "N/A",
+  totalPrice: calculateTotalPrice(updatedOrder.orderItems),
+  totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (parseFloat(uslug) / 100 || 0)),
+  uslug: parseFloat(uslug) || null,
+});
         setCart(
           updatedOrder.orderItems?.map((item) => ({
             id: item.productId || item.product?.id || 0,
@@ -1261,7 +1272,7 @@ const Taomlar = React.memo(() => {
       console.log("No table selected, resetting order and cart");
       return;
     }
-
+  
     const selectedTable = tables.find((t) => t?.id === selectedTableId);
     if (!selectedTable) {
       setSelectedTableOrder(null);
@@ -1270,7 +1281,7 @@ const Taomlar = React.memo(() => {
       console.error("Selected table not found", { selectedTableId });
       return;
     }
-
+  
     if (selectedTable.status === "busy" && selectedTable.orders?.length > 0) {
       const activeOrders = selectedTable.orders.filter(
         (order) => order.status !== "ARCHIVE"
@@ -1280,7 +1291,13 @@ const Taomlar = React.memo(() => {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         )[0];
         const totalPrice = calculateTotalPrice(latestOrder.orderItems);
-        setSelectedTableOrder({ ...latestOrder, totalPrice });
+        setSelectedTableOrder({
+          ...latestOrder,
+          table: selectedTable,
+          tableNumber: selectedTable.number || "N/A",
+          totalPrice,
+          totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
+        });
         setCart(
           latestOrder.orderItems?.map((item) => ({
             id: item.productId || item.product?.id || 0,
@@ -1308,7 +1325,7 @@ const Taomlar = React.memo(() => {
         tableId: selectedTableId,
       });
     }
-  }, [selectedTableId, tables, calculateTotalPrice]);
+  }, [selectedTableId, tables, calculateTotalPrice, uslug]);
 
   useEffect(() => {
     if (successMsg) {
@@ -1376,6 +1393,7 @@ const Taomlar = React.memo(() => {
 
   const totalPrice = calculateTotalPrice(cart);
   const totalWithCommission = totalPrice + totalPrice * (parseFloat(uslug) / 100 || 0);
+  const totalWithCommissionn = totalPrice + totalPrice / 2 ;
 
   // Updated handleOrderConfirm to use the modal
   const handleOrderConfirm = async (orderData) => {
@@ -1748,6 +1766,7 @@ const Taomlar = React.memo(() => {
                         </button>
                       </div>
                     </div>
+                    <h3 className="basket-table__total">{formatPrice(totalWithCommissionn)}</h3>
                     <h3 className="basket-table__total">{formatPrice(totalWithCommission)}</h3>
                     <div
                       style={{
@@ -2065,14 +2084,14 @@ const Taomlar = React.memo(() => {
         />
       )}
 
-      <div style={{ display: "none" }}>
-        <Receipt
-          ref={receiptRef}
-          order={selectedTableOrder}
-          commissionPercent={parseFloat(uslug) || commissionPercent}
-          formatPrice={formatPrice}
-        />
-      </div>
+<div style={{ display: "none" }}>
+  <Receipt
+    ref={receiptRef}
+    order={selectedTableOrder}
+    commissionPercent={parseFloat(uslug) || commissionPercent}
+    formatPrice={formatPrice}
+  />
+</div>
     </section>
   );
 });
