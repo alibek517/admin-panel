@@ -31,100 +31,50 @@ const Receipt = React.forwardRef(({ order }, ref) => {
   return (
     <div>
       <style>{`
-        /* Receipt.css */
-.receipt {
-  max-width: 200px;
-  margin: auto;
-  background: white;
-  padding: 8px;
-  border-radius: 4px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.receipt h2 {
-  text-align: center;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.receipt p {
-  margin: 4px 0;
-  font-size: 10px;
-  color: #333;
-}
-
-.items table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 9px;
-  border: 1px solid #333;
-}
-
-.items th,
-.items td {
-  border: 1px solid #333;
-  padding: 4px;
-  text-align: center;
-}
-
-.items tr:last-child td {
-  border-bottom: none;
-}
-
-.thank {
-  text-align: center;
-  margin-top: 8px;
-  margin-bottom: 16px;
-  font-weight: bold;
-  font-size: 10px;
-  color: #333;
-}
-  @media print {
-  .receipt {
-    max-width: 100%;
-    padding: 0;
-    margin: 0;
-    background: none;
-    color: #000;
-  }
-  .receipt h2,
-  .receipt p,
-  .thank {
-    color: #000 !important;
-  }
-  .items table,
-  .items th,
-  .items td {
-    border: 1px solid #000;
-  }
-}.items tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-  .items th:nth-child(1),
-.items td:nth-child(1) {
-  width: 10%;
-}
-.items th:nth-child(2),
-.items td:nth-child(2) {
-  width: 40%;
-}
-.items th:nth-child(3),
-.items td:nth-child(3) {
-  width: 20%;
-}
-.items th:nth-child(4),
-.items td:nth-child(4) {
-  width: 15%;
-}
-.items th:nth-child(5),
-.items td:nth-child(5) {
-  width: 15%;
-}
+        body {
+          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .receipt {
+          max-width: 200px; 
+          margin: auto;
+          background: white;
+          padding: 5px 6px;
+          border-radius: 4px;
+        }
+        .receipt h2 {
+          text-align: center;
+          margin-bottom: 3px;
+          color: #333;
+          font-size: 8px;
+        }
+        .receipt p {
+          margin: 2px 0;
+          font-size: 6px;
+        }
+        .items table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 6px;
+          border: 1px solid #000;
+        }
+        .items table td, .items table th {
+          border: 1px solid #000;
+          padding: 1px;
+          text-align: center;
+        }
+        .items table tr:last-child td {
+          border-bottom: none;
+        }
+        .thank {
+          text-align: center;
+          margin-top: 5px;
+          margin-bottom: 20px;
+          font-weight: bold;
+          font-size: 6px;
+        }
       `}</style>
       <div className="receipt" ref={ref}>
-        <h2 style={{ fontSize: "20px" }}>{restaurantName}</h2>
+        <h2 style={{ fontSize: "20px",textAlign:'center' }}>{restaurantName}</h2>
         <p style={{ fontSize: "12px" }}>
           <strong>Buyurtma raqami:</strong> {order.id}
         </p>
@@ -141,11 +91,11 @@ const Receipt = React.forwardRef(({ order }, ref) => {
           <table>
             <thead>
               <tr>
-                <th style={{ width: "10%", fontSize: "9px" }}>№</th>
-                <th style={{ width: "40%", fontSize: "9px" }}>Taom</th>
-                <th style={{ width: "30%", fontSize: "9px" }}>Jami</th>
-                <th style={{ width: "20%", fontSize: "9px" }}>Summasi</th>
-                <th style={{ width: "30%", fontSize: "9px" }}>Jami</th>
+                <th style={{ width: "10%", fontSize: "9px"}}>№</th>
+                <th style={{ width: "40%", fontSize: "9px"}}>Taom</th>
+                <th style={{ width: "30%", fontSize: "9px"}}>Jami</th>
+                <th style={{ width: "20%", fontSize: "9px"}}>Summasi</th>
+                <th style={{ width: "30%", fontSize: "9px"}}>Jami</th>
               </tr>
             </thead>
             <tbody>
@@ -164,13 +114,13 @@ const Receipt = React.forwardRef(({ order }, ref) => {
             </tbody>
           </table>
         </div>
-        <p style={{ fontSize: "10px" }}>
+        <p style={{ fontSize: "10px",marginTop:'5px' }}>
           Umumiy tolov:{" "}
           <strong style={{ fontSize: "10px", marginBottom: "3px" }}>
-            {formatPrice(order.totalWithCommission || 0)}
+            <b>{formatPrice(Math.floor(order.totalWithCommission) || 0)}</b>
           </strong>
         </p>
-        <p style={{ fontSize: "10px" }} className="thank">Rahmat, biz sizni yana kutamiz!</p>
+        <p style={{ fontSize: "10px",textAlign:'center' }} className="thank">Rahmat, biz sizni yana kutamiz!</p>
       </div>
     </div>
   );

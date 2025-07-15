@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
      Clock, ShoppingCart, X, Plus, Trash, Pencil, Printer, ArrowLeftRight, Lock, RefreshCw
    } from "lucide-react";
    import ModalBasket from "../components/modal/modal-basket";
-   import Receipt from "../components/Receippt.jsx";
+   import Receipt from "../components/Receipt.jsx";
    import { socket } from "../socket.js"; // Импорт сокета
 
    const handleApiError = (error, defaultMessage) => {

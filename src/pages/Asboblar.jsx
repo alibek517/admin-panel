@@ -328,7 +328,6 @@ export default function Asboblar() {
       </header>
 
       <section className="orders-section">
-        {/* Jami hisobot */}
         <div
           style={{
             marginBottom: "var(--space-4)",
