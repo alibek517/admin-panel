@@ -71,12 +71,12 @@ const FinishedProductsModal = ({ isOpen, onClose, finishedProducts, onConfirm })
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h3>Quyidagi taomlar tugagan yoki topilmadi:</h3>
-        <ul  style={{listStyle:'none'}}>
+        <ul style={{ listStyle: 'none' }}>
           {finishedProducts.map((item) => (
             <li key={item.id}>{item.name}</li>
           ))}
         </ul>
-        <button style={{backgroundColor:'orange'}} onClick={onConfirm}>OK</button>
+        <button style={{ backgroundColor: 'orange' }} onClick={onConfirm}>OK</button>
       </div>
     </div>
   );
@@ -305,10 +305,10 @@ const EditOrderModal = ({
         prev.map((table) =>
           table.id === updatedOrder.tableId
             ? {
-                ...table,
-                status: updatedOrder.orderItems?.length ? "busy" : "empty",
-                orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
-              }
+              ...table,
+              status: updatedOrder.orderItems?.length ? "busy" : "empty",
+              orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
+            }
             : table
         )
       );
@@ -728,7 +728,7 @@ const Taomlar = React.memo(() => {
   const [showChangeTableModal, setShowChangeTableModal] = useState(false);
   const [showDeleteTableModal, setShowDeleteTableModal] = useState(false);
   const [showResetProductsModal, setShowResetProductsModal] = useState(false);
-  const [showFinishedProductsModal, setShowFinishedProductsModal] = useState(false); 
+  const [showFinishedProductsModal, setShowFinishedProductsModal] = useState(false);
   const [finishedProducts, setFinishedProducts] = useState([]); // New state for finished products
   const [tableToDelete, setTableToDelete] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -748,6 +748,7 @@ const Taomlar = React.memo(() => {
   const [adminCode, setAdminCode] = useState("");
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
+  const [orderDescriptions, setOrderDescriptions] = useState({});
 
   useEffect(() => {
     console.log("taomlar updated:", taomlar, new Date().toISOString());
@@ -1037,7 +1038,7 @@ const Taomlar = React.memo(() => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const currentProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
-      
+
       const finishedProducts = currentProducts.filter((product) => product.isFinished);
       if (finishedProducts.length === 0) {
         setSuccessMsg("Тугаган таомлар йўқ.");
@@ -1176,8 +1177,8 @@ const Taomlar = React.memo(() => {
         const tablesData = Array.isArray(tablesRes.data?.data)
           ? tablesRes.data.data
           : Array.isArray(tablesRes.data)
-          ? tablesRes.data
-          : [];
+            ? tablesRes.data
+            : [];
         const normalizedTables = tablesData.map((table) => ({
           ...table,
           status: normalizeStatus(table.status),
@@ -1202,8 +1203,8 @@ const Taomlar = React.memo(() => {
         const categoriesData = Array.isArray(categoriesRes.data?.data)
           ? categoriesRes.data.data
           : Array.isArray(categoriesRes.data)
-          ? categoriesRes.data
-          : [];
+            ? categoriesRes.data
+            : [];
         setCategories(categoriesData);
         if (categoriesData.length > 0) {
           setSelectedCategory(categoriesData[0].name);
@@ -1497,12 +1498,12 @@ const Taomlar = React.memo(() => {
     return (
       selectedCategory && categories.length
         ? taomlar
-            .filter(
-              (taom) =>
-                taom.categoryId &&
-                taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-            )
-            .sort((a, b) => a.id - b.id)
+          .filter(
+            (taom) =>
+              taom.categoryId &&
+              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+          )
+          .sort((a, b) => a.id - b.id)
         : taomlar.sort((a, b) => a.id - b.id)
     );
   }, [selectedCategory, categories, taomlar]);
@@ -1616,9 +1617,8 @@ const Taomlar = React.memo(() => {
               {filteredTables.map((table) => (
                 <li
                   key={table.id}
-                  className={`table-item ${
-                    selectedTableId === table.id ? "selected" : ""
-                  } ${table.status === "busy" ? "band" : "bosh"}`}
+                  className={`table-item ${selectedTableId === table.id ? "selected" : ""
+                    } ${table.status === "busy" ? "band" : "bosh"}`}
                   onClick={() => setSelectedTableId(table.id)}
                 >
                   <div className="table-item-container">
@@ -1659,11 +1659,11 @@ const Taomlar = React.memo(() => {
                     <strong>Банд қилинган вақт:</strong>{" "}
                     {selectedTableOrder.createdAt
                       ? new Date(selectedTableOrder.createdAt).toLocaleString("uz-UZ", {
-                          timeZone: "Asia/Tashkent",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
+                        timeZone: "Asia/Tashkent",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })
                       : "Маълумот йўқ"}
                   </p>
                   <h5>Буюртма қилинган таомлар:</h5>
@@ -1777,12 +1777,15 @@ const Taomlar = React.memo(() => {
               )}
               {!selectedTableOrder && (
                 <button
-                  className="confirm-order-btn"
-                  disabled={cart.length === 0}
-                  onClick={() => setShowModal(true)}
-                >
-                  Буюртмани расмийлаштириш
-                </button>
+                className="confirm-order-btn"
+                disabled={cart.length === 0}
+                onClick={() => {
+                  console.log("Confirm button clicked, cart:", cart);
+                  setShowModal(true);
+                }}
+              >
+                Буюртмани расмийлаштириш
+              </button>
               )}
             </>
           )}
@@ -1795,9 +1798,8 @@ const Taomlar = React.memo(() => {
                 categories.map((category) => (
                   <button
                     key={category.id}
-                    className={`category-btn ${
-                      selectedCategory === category.name ? "active" : ""
-                    }`}
+                    className={`category-btn ${selectedCategory === category.name ? "active" : ""
+                      }`}
                     onClick={() => setSelectedCategory(category.name)}
                   >
                     {category.name}
@@ -1859,17 +1861,35 @@ const Taomlar = React.memo(() => {
         )}
       </div>
 
-      {showModal && (
-        <ModalBasket
-          cart={cart}
-          tables={tables}
-          userId={userId}
-          onClose={() => setShowModal(false)}
-          onConfirm={handleOrderConfirm}
-          selectedTableId={selectedTableId}
-          isEditing={!!selectedTableOrder}
-        />
-      )}
+{showModal && (
+  <>
+    {console.log("Rendering ModalBasket, props:", {
+      cart,
+      tables,
+      userId,
+      selectedTableId,
+      isEditing: !!selectedTableOrder,
+      orderDescriptions,
+    })}
+    <ModalBasket
+      cart={cart}
+      tables={tables}
+      userId={userId}
+      onClose={() => {
+        setShowModal(false);
+      }}
+      onConfirm={handleOrderConfirm}
+      selectedTableId={selectedTableId}
+      isEditing={!!selectedTableOrder}
+      orderDescriptions={orderDescriptions}
+      setOrderDescriptions={setOrderDescriptions}
+      setCart={setCart}
+      serviceFee={parseFloat(uslug) || commissionPercent}
+      isConfirming={isSaving}
+      setTaomlar={setTaomlar}
+    />
+  </>
+)}
 
       {showAddTableModal && (
         <AddTableModal
@@ -1886,8 +1906,8 @@ const Taomlar = React.memo(() => {
               const tablesData = Array.isArray(res.data?.data)
                 ? res.data.data
                 : Array.isArray(res.data)
-                ? res.data
-                : [];
+                  ? res.data
+                  : [];
               setTables(
                 tablesData.map((table) => ({
                   ...table,
@@ -1939,8 +1959,8 @@ const Taomlar = React.memo(() => {
               const tablesData = Array.isArray(res.data?.data)
                 ? res.data.data
                 : Array.isArray(res.data)
-                ? res.data
-                : [];
+                  ? res.data
+                  : [];
               setTables(
                 tablesData.map((table) => ({
                   ...table,

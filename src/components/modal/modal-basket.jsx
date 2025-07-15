@@ -1,32 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import "../styles/modalBasket.css";
 
 const ModalBasket = ({
-  isOpen,
+  cart,
+  tables,
+  userId,
   onClose,
   onConfirm,
-  cart,
-  setCart,
-  orderDescriptions,
-  setOrderDescriptions,
-  orderToEdit = null,
-  serviceFee,
-  isConfirming,
-  setTaomlar, 
+  selectedTableId,
+  isEditing,
 }) => {
   const [carrierNumber, setCarrierNumber] = useState("+998");
-  const [showWarningModal, setShowWarningModal] = useState(false);
-  const [finishedItems, setFinishedItems] = useState([]);
-  const [latestProducts, setLatestProducts] = useState([]);
+  const [isTableOrder, setIsTableOrder] = useState(!!selectedTableId);
+  const [tableId, setTableId] = useState(selectedTableId || "");
+  const [orderDescriptions, setOrderDescriptions] = useState({});
   const inputRef = useRef(null);
 
   useEffect(() => {
     setTableId(selectedTableId || "");
-    const initialDescriptions = cart.reduce((acc, item) => ({
-      ...acc,
-      [item.id]: "",
-    }), {});
+    const initialDescriptions = cart.reduce(
+      (acc, item) => ({
+        ...acc,
+        [item.id]: "",
+      }),
+      {}
+    );
     setOrderDescriptions(initialDescriptions);
   }, [selectedTableId, cart]);
 
@@ -89,7 +88,7 @@ const ModalBasket = ({
                   const isTable = e.target.value === "table";
                   setIsTableOrder(isTable);
                   if (!isTable) setTableId("");
-                  else setCarrierNumber("");
+                  else setCarrierNumber("+998");
                 }}
                 className="modal__select"
               >
@@ -110,7 +109,7 @@ const ModalBasket = ({
                 >
                   <option value="">Stol tanlang</option>
                   {tables
-                    .filter((table) => table.status === "empty")
+                    .filter((table) => table.status === "empty" || table.id === selectedTableId)
                     .map((table) => (
                       <option key={table.id} value={table.id}>
                         {table.number}
@@ -131,6 +130,7 @@ const ModalBasket = ({
                   onChange={(e) => setCarrierNumber(e.target.value)}
                   className="modal__input"
                   placeholder="+998901234567"
+                  ref={inputRef}
                 />
               </label>
             </div>
@@ -138,28 +138,32 @@ const ModalBasket = ({
 
           <div className="cart-items">
             <h3>Mahsulotlar tafsilotlari:</h3>
-            {cart.map((item) => (
-              <div key={item.id} className="cart-item-description">
-                <span>
-                  {item.name} (x{item.count})
-                </span>
-                <textarea
-                  value={orderDescriptions[item.id] || ""}
-                  onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
-                  placeholder="Ta'rif kiriting (masalan, qadoqlash turi, maxsus so'rovlar)"
-                  className="modal__input"
-                  style={{
-                    width: "100%",
-                    minHeight: "60px",
-                    padding: "8px",
-                    marginTop: "5px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                  }}
-                  aria-label={`Ta'rif uchun ${item.name}`}
-                />
-              </div>
-            ))}
+            {cart.length > 0 ? (
+              cart.map((item) => (
+                <div key={item.id} className="cart-item-description">
+                  <span>
+                    {item.name} (x{item.count})
+                  </span>
+                  <textarea
+                    value={orderDescriptions[item.id] || ""}
+                    onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
+                    placeholder="Ta'rif kiriting (masalan, qadoqlash turi, maxsus so'rovlar)"
+                    className="modal__input"
+                    style={{
+                      width: "100%",
+                      minHeight: "60px",
+                      padding: "8px",
+                      marginTop: "5px",
+                      borderRadius: "4px",
+                      border: "1px solid #ccc",
+                    }}
+                    aria-label={`Ta'rif uchun ${item.name}`}
+                  />
+                </div>
+              ))
+            ) : (
+              <p>Savatda mahsulotlar yo'q</p>
+            )}
           </div>
 
           <table className="basket-table">
@@ -202,7 +206,8 @@ const ModalBasket = ({
             onClick={handleConfirm}
             disabled={
               (isTableOrder && !tableId) ||
-              (!isTableOrder && !carrierNumber)
+              (!isTableOrder && !carrierNumber) ||
+              cart.length === 0
             }
           >
             Tasdiqlash
