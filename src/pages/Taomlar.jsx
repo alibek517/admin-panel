@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import "./styles/taomlar.css";
 import axios from "axios";
+import { io } from "socket.io-client";
 import {
   Clock, ShoppingCart, X, Plus, Trash, Pencil, Printer, ArrowLeftRight, Lock, RefreshCw
 } from "lucide-react";
@@ -563,7 +564,6 @@ const EditOrderModal = ({
   );
 };
 
-// ChangeTableModal component (unchanged)
 const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId, isSaving }) => {
   const [selectedTableId, setSelectedTableId] = useState("");
   const [selectedPlace, setSelectedPlace] = useState("");
@@ -648,7 +648,6 @@ const ChangeTableModal = ({ isOpen, onClose, onConfirm, tables, selectedOrderId,
   );
 };
 
-// DeleteConfirmModal component (unchanged)
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Буюртмани ўчириш">
@@ -670,7 +669,6 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, orderId }) => {
   );
 };
 
-// DeleteTableModal component (unchanged)
 const DeleteTableModal = ({ isOpen, onClose, onConfirm, table }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Столни ўчириш">
@@ -729,7 +727,7 @@ const Taomlar = React.memo(() => {
   const [showDeleteTableModal, setShowDeleteTableModal] = useState(false);
   const [showResetProductsModal, setShowResetProductsModal] = useState(false);
   const [showFinishedProductsModal, setShowFinishedProductsModal] = useState(false);
-  const [finishedProducts, setFinishedProducts] = useState([]); // New state for finished products
+  const [finishedProducts, setFinishedProducts] = useState([]);
   const [tableToDelete, setTableToDelete] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -750,9 +748,12 @@ const Taomlar = React.memo(() => {
   const token = localStorage.getItem("token");
   const [orderDescriptions, setOrderDescriptions] = useState({});
 
-  useEffect(() => {
-    console.log("taomlar updated:", taomlar, new Date().toISOString());
-  }, [taomlar]);
+  // WebSocket ulanishini sozlash
+  const socket = io(API_BASE, {
+    auth: { token },
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+  });
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -788,7 +789,6 @@ const Taomlar = React.memo(() => {
         );
         setCommissionPercent(parseFloat(value) || commissionPercent);
         setSuccessMsg("Хизмат нархи муваффақиятли ўзгартирилди!");
-        // selectedTableOrder ni yangilash
         if (selectedTableOrder) {
           setSelectedTableOrder({
             ...selectedTableOrder,
@@ -1009,15 +1009,14 @@ const Taomlar = React.memo(() => {
           })
         );
         setSelectedTableId(newTableId);
-        // `selectedTableOrder` ni yangilashda
-setSelectedTableOrder({
-  ...updatedOrder,
-  table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "N/A" },
-  tableNumber: tables.find((t) => t.id === newTableId)?.number || updatedOrder.carrierNumber || "N/A",
-  totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-  totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (parseFloat(uslug) / 100 || 0)),
-  uslug: parseFloat(uslug) || null,
-});
+        setSelectedTableOrder({
+          ...updatedOrder,
+          table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "N/A" },
+          tableNumber: tables.find((t) => t.id === newTableId)?.number || updatedOrder.carrierNumber || "N/A",
+          totalPrice: calculateTotalPrice(updatedOrder.orderItems),
+          totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (parseFloat(uslug) / 100 || 0)),
+          uslug: parseFloat(uslug) || null,
+        });
         setCart(
           updatedOrder.orderItems?.map((item) => ({
             id: item.productId || item.product?.id || 0,
@@ -1143,6 +1142,12 @@ setSelectedTableOrder({
     }
   };
 
+  // Stol click bo'lganda faqat bitta stolni yangilash
+  const handleTableClick = (tableId) => {
+    setSelectedTableId(tableId);
+    socket.emit("getTable", { tableId }); // Serverga faqat bitta stol ma'lumotini so'rash
+  };
+
   useEffect(() => {
     if (!token) {
       setError("Токен топилмади. Илтимос, тизимга қайта киринг.");
@@ -1157,7 +1162,7 @@ setSelectedTableOrder({
     const fetchData = async () => {
       setLoading(true);
       try {
-        console.log("Fetching data with token:", token);
+        console.log("Fetching initial data with token:", token);
         const [tablesRes, productsRes, categoriesRes, percentRes] = await Promise.all([
           axios.get(API_ENDPOINTS.tables, {
             headers: { Authorization: `Bearer ${token}` },
@@ -1229,7 +1234,6 @@ setSelectedTableOrder({
         });
       } catch (err) {
         if (err.name === "AbortError") return;
-        setError(handleApiError(err, "Маълумотларни юклашда хатолик."));
       } finally {
         setLoading(false);
       }
@@ -1237,32 +1241,75 @@ setSelectedTableOrder({
 
     fetchData();
 
-    const interval = setInterval(async () => {
-      try {
-        const productsRes = await axios.get(API_ENDPOINTS.products, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal,
-        });
-        setTaomlar((prev) => {
-          const newProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
-          if (JSON.stringify(prev) !== JSON.stringify(newProducts)) {
-            console.log("Polling: Updating taomlar with new data:", newProducts);
-            return newProducts;
-          }
-          console.log("Polling: No change in taomlar, skipping update");
-          return prev;
-        });
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        console.error("Polling error:", err);
+    // WebSocket hodisalarini tinglash
+    socket.on("connect", () => {
+      console.log("WebSocket ulandi!");
+      setError(null);
+    });
+
+    socket.on("tableUpdated", (updatedTable) => {
+      console.log("Bitta stol yangilandi:", updatedTable);
+      setTables((prev) =>
+        prev.map((table) =>
+          table.id === updatedTable.id
+            ? {
+                ...table,
+                ...updatedTable,
+                status: normalizeStatus(updatedTable.status),
+                orders: Array.isArray(updatedTable.orders) ? updatedTable.orders : [],
+              }
+            : table
+        )
+      );
+      // Agar yangilangan stol hozirgi tanlangan stol bo'lsa, uning buyurtmalarini yangilash
+      if (selectedTableId === updatedTable.id) {
+        const activeOrders = updatedTable.orders?.filter((order) => order.status !== "ARCHIVE") || [];
+        if (activeOrders.length > 0) {
+          const latestOrder = activeOrders.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          )[0];
+          const totalPrice = calculateTotalPrice(latestOrder.orderItems);
+          setSelectedTableOrder({
+            ...latestOrder,
+            table: updatedTable,
+            tableNumber: updatedTable.number || "N/A",
+            totalPrice,
+            totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
+          });
+          setCart(
+            latestOrder.orderItems?.map((item) => ({
+              id: item.productId || item.product?.id || 0,
+              name: item.product?.name || "Номаълум таом",
+              price: parseFloat(item.product?.price) || 0,
+              count: item.count || 0,
+              status: item.status || "PENDING",
+            })) || []
+          );
+        } else {
+          setSelectedTableOrder(null);
+          setCart([]);
+        }
       }
-    }, 30000);
+    });
+
+    socket.on("productsUpdated", (updatedProducts) => {
+      console.log("Mahsulotlar yangilandi:", updatedProducts);
+      setTaomlar(updatedProducts);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("WebSocket xatosi:", error);
+      setError("WebSocket ulanishida xato: Server bilan bog‘lanishni tekshiring.");
+    });
 
     return () => {
       controller.abort();
-      clearInterval(interval);
+      socket.off("tableUpdated");
+      socket.off("productsUpdated");
+      socket.off("connect_error");
+      socket.disconnect();
     };
-  }, [token]);
+  }, [token, socket, selectedTableId, uslug, calculateTotalPrice]);
 
   useEffect(() => {
     if (!selectedTableId) {
@@ -1393,9 +1440,8 @@ setSelectedTableOrder({
 
   const totalPrice = calculateTotalPrice(cart);
   const totalWithCommission = totalPrice + totalPrice * (parseFloat(uslug) / 100 || 0);
-  const totalWithCommissionn = totalPrice + totalPrice / 2 ;
+  const totalWithCommissionn = (totalPrice + totalPrice) / 2;
 
-  // Updated handleOrderConfirm to use the modal
   const handleOrderConfirm = async (orderData) => {
     console.log("Order confirmation started:", orderData);
     const products = orderData.orderItems
@@ -1637,7 +1683,7 @@ setSelectedTableOrder({
                   key={table.id}
                   className={`table-item ${selectedTableId === table.id ? "selected" : ""
                     } ${table.status === "busy" ? "band" : "bosh"}`}
-                  onClick={() => setSelectedTableId(table.id)}
+                  onClick={() => handleTableClick(table.id)}
                 >
                   <div className="table-item-container">
                     <div className="table-info">
@@ -1796,15 +1842,15 @@ setSelectedTableOrder({
               )}
               {!selectedTableOrder && (
                 <button
-                className="confirm-order-btn"
-                disabled={cart.length === 0}
-                onClick={() => {
-                  console.log("Confirm button clicked, cart:", cart);
-                  setShowModal(true);
-                }}
-              >
-                Буюртмани расмийлаштириш
-              </button>
+                  className="confirm-order-btn"
+                  disabled={cart.length === 0}
+                  onClick={() => {
+                    console.log("Confirm button clicked, cart:", cart);
+                    setShowModal(true);
+                  }}
+                >
+                  Буюртмани расмийлаштириш
+                </button>
               )}
             </>
           )}
