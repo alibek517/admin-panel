@@ -379,30 +379,27 @@ const EditOrderModal = ({
 
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
-
+  
     const currentItem = editingOrder.orderItems.find((item) => item.id === itemId);
     if (currentItem?.status === "READY") {
-      const readyItems = editingOrder.orderItems.filter((item) => item.status === "READY");
-      if (readyItems.length === 1) {
-        setLocalError("Буюртмада фақат битта тайёр маҳсулот бор, унда бу маҳсулотни ўчириб бўлмайди.");
-        return;
-      }
+      setLocalError("Тайёр буюртма элементларини ўчириб бўлмайди.");
+      return;
     }
-
+  
     try {
       setLocalIsSaving(true);
       setLocalError("");
       await axios.delete(`${API_ENDPOINTS.ORDERS}/orderItem/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+  
       const response = await axios.get(`${API_ENDPOINTS.ORDERS}/${order.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+  
       const updatedOrder = response.data;
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-
+  
       setOrders((prev) =>
         prev.map((o) =>
           o.id === updatedOrder.id ? { ...updatedOrder, totalPrice } : o
@@ -883,13 +880,13 @@ export default function Dostavka() {
   const handleDeleteOrder = async (orderId) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
-
-    const readyItems = order.orderItems?.filter((item) => item.status === "READY") || [];
-    if (readyItems.length === 1) {
-      setError("Буюртмада фақат битта тайёр маҳсулот бор, унда буюртмани ўчириб бўлмайди.");
+  
+    const hasReadyItems = order.orderItems?.some((item) => item.status === "READY");
+    if (hasReadyItems) {
+      setError("Тайёр маҳсулотлари бор буюртмани ўчириб бўлмайди.");
       return;
     }
-
+  
     if (!window.confirm("Буюртмани ўчирмоқчимисиз?")) return;
     try {
       setOrders((prev) =>
