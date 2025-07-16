@@ -1907,21 +1907,15 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
         </div>
 
         <div className="cart-column">
-          <h3>Буюртма савати</h3>
           {selectedTableId ? (
             <>
-              <p className="selected-table">
-                Танланган стол:{" "}
-                {tables.find((t) => t?.id === selectedTableId)?.name || "Номаълум"} -{" "}
-                {tables.find((t) => t?.id === selectedTableId)?.number || "N/A"}
-              </p>
+            
               {tables.find((t) => t?.id === selectedTableId)?.status === "empty" ? (
                 <p>Янги буюртма беринг</p>
               ) : selectedTableOrder ? (
                 <div className="order-details">
-                  <h4>Буюртма маълумотлари</h4>
                   <p>
-                    <strong>Банд қилинган вақт:</strong>{" "}
+                    <strong>Вақт:</strong>{" "}
                     {selectedTableOrder.createdAt
                       ? new Date(selectedTableOrder.createdAt).toLocaleString("uz-UZ", {
                         timeZone: "Asia/Tashkent",
@@ -1931,7 +1925,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
                       })
                       : "Маълумот йўқ"}
                   </p>
-                  <h5>Буюртма қилинган таомлар:</h5>
                 </div>
               ) : (
                 <p>{error || "Буюртма маълумотлари юкланмоқда..."}</p>
