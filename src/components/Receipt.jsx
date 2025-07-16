@@ -29,17 +29,17 @@ const Receipt = React.forwardRef(({ order }, ref) => {
   const isDelivery = order.tableNumber?.startsWith("+") || order.tableNumber === "N/A";
 
   return (
-    <div>
+    <div style={{display:'flex', justifyContent:'center'}}>
       <style>{`
         body {
           font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         }
         .receipt {
-          max-width: 200px; 
-          margin: auto;
+          width: 90%; 
           background: white;
-          padding: 5px 6px;
-          border-radius: 4px;
+          padding: 15px;
+          display:'flex';
+          justifyContent:'center';
         }
         .receipt h2 {
           text-align: center;
@@ -56,15 +56,14 @@ const Receipt = React.forwardRef(({ order }, ref) => {
           border-collapse: collapse;
           font-size: 6px;
           border: 1px solid #000;
+
         }
         .items table td, .items table th {
           border: 1px solid #000;
           padding: 1px;
           text-align: center;
         }
-        .items table tr:last-child td {
-          border-bottom: none;
-        }
+        
         .thank {
           text-align: center;
           margin-top: 5px;
@@ -73,56 +72,65 @@ const Receipt = React.forwardRef(({ order }, ref) => {
           font-size: 6px;
         }
       `}</style>
-      <div className="receipt" ref={ref}>
-        <h2 style={{ fontSize: "20px",textAlign:'center' }}>{restaurantName}</h2>
-        <p style={{ fontSize: "12px" }}>
-          <strong>Buyurtma raqami:</strong> {order.id}
-        </p>
-        <p style={{ fontSize: "12px" }}>
-          <strong>{isDelivery ? "Telefon" : "Stol"}:</strong> {order.tableNumber || "N/A"}
-        </p>
-        <p style={{ fontSize: "12px" }}>
-          <strong>Sana:</strong>{" "}
+      <div style={{padding:'1px 20px'}} className="receipt" ref={ref}>
+        <h2 style={{ fontSize: "20px",textAlign:'center',fontWeight:'bold',color:'#000' }}>{restaurantName}</h2>
+        <p style={{ fontSize: "12px",fontWeight:'bold',color:'#000' }}>
+          <strong>Число:</strong>{" "}
           {new Date(order.createdAt || Date.now()).toLocaleString("uz-UZ", {
             timeZone: "Asia/Tashkent",
           })}
         </p>
+        <div style={{display:'flex',gap:'10px'}}>
+        <p style={{ fontSize: "12px",fontWeight:'bold',color:'#000' }}>
+          <strong>{isDelivery ? "Телефон" : "Стол"}:</strong> {order.tableNumber || "Бу стол йук"}
+        </p>
+        <p style={{ fontSize: "12px",fontWeight:'bold',color:'#000' }}>
+          <strong>Официант:</strong> {order.user.name || "Бу Официант топилмади"}
+        </p>
+        </div>
         <div className="items">
-          <table>
+          <table border={1}>
             <thead>
               <tr>
-                <th style={{ width: "10%", fontSize: "9px"}}>№</th>
-                <th style={{ width: "40%", fontSize: "9px"}}>Taom</th>
-                <th style={{ width: "10%", fontSize: "9px"}}>Jami</th>
-                <th style={{ width: "20%", fontSize: "9px"}}>Summasi</th>
-                <th style={{ width: "30%", fontSize: "9px"}}>Jami</th>
+                <th style={{ width: "10%", fontSize: "9px",fontWeight:'bold',color:'#000'}}>№</th>
+                <th style={{ width: "40%", fontSize: "9px",fontWeight:'bold',color:'#000'}}>Наименование</th>
+                <th style={{ width: "10%", fontSize: "9px",fontWeight:'bold',color:'#000'}}>#</th>
+                <th style={{ width: "20%", fontSize: "9px",fontWeight:'bold',color:'#000'}}>Цена</th>
+                <th style={{ width: "30%", fontSize: "9px",fontWeight:'bold',color:'#000'}}>Сумма</th>
               </tr>
             </thead>
             <tbody>
               {order.orderItems?.map((item, index) => (
                 <tr key={index}>
-                  <td style={{ fontSize: "8px" }}>{index + 1}</td>
-                  <td style={{ fontSize: "8px" }}>{item.product?.name || "Noma'lum taom"}</td>
-                  <td style={{ fontSize: "8px" }}>
+                  <td style={{ fontSize: "8px",fontWeight:'bold' ,color:'#000' }}>{index + 1}</td>
+                  <td style={{ fontSize: "8px",fontWeight:'bold' ,color:'#000' }}>{item.product?.name || "Топилмади"}</td>
+                  <td style={{ fontSize: "8px",fontWeight:'bold' ,color:'#000' }}>
                     <X size={6} />
                     {item.count}
                   </td>
-                  <td style={{ fontSize: "8px" }}>{formatPricee((item.product?.price || 0))}</td>
-                  <td style={{ fontSize: "8px" }}>{formatPricee((item.product?.price || 0) * item.count)}</td>
+                  <td style={{ fontSize: "8px",fontWeight:'bold' ,color:'#000' }}>{formatPricee((item.product?.price || 0))}</td>
+                  <td style={{ fontSize: "8px",fontWeight:'bold' ,color:'#000' }}>{formatPricee((item.product?.price || 0) * item.count)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p style={{ fontSize: "10px",marginTop:'5px' }}>
-          Umumiy tolov:{" "}
-          <strong style={{ fontSize: "10px", marginBottom: "3px" }}>
+        <p style={{ fontSize: "12px",fontWeight:'bold',color:'#000' }}>
+          <strong>Услуга:</strong> {order.uslug || "Топилмади"}%
+        </p>
+        <p style={{ fontSize: "10px",marginTop:'5px',fontWeight:'bold' ,color:'#000' }}>
+          Итого к оплате:{" "}
+          <strong style={{ fontSize: "10px", marginBottom: "3px",fontWeight:'bold',color:'#000' }}>
             <b>{formatPrice(Math.floor(order.totalWithCommission) || 0)}</b>
           </strong>
         </p>
-        <p style={{ fontSize: "10px",textAlign:'center' }} className="thank">Rahmat, biz sizni yana kutamiz!</p>
+        <div style={{display:'flex',flexDirection:'column',justifyContent:'end'}}>
+        <p style={{ fontSize: "10px",fontWeight:'bold',color:'#000'}}>Тел: +998 99 737 17 10</p>
+        <p style={{ fontSize: "10px",fontWeight:'bold',color:'#000'}}>Тел: +998 99 758 17 10</p>
+        </div>
+        <p style={{ fontSize: "10px",textAlign:'center',fontWeight:'bold',color:'#000' }} className="thank">Раҳмат, биз сизни яна кутамиз!</p>
       </div>
-    </div>
+    </div> 
   );
 });
 
