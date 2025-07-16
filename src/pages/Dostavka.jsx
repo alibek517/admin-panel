@@ -966,22 +966,22 @@ export default function Dostavka() {
 
     newSocket.on("connect", () => {
       console.log("Socket.IO ulandi:", newSocket.id);
-      setSuccessMsg("WiFi серверга уланди!");
+      console.log("WiFi серверга уланди!");
     });
 
     newSocket.on("reconnect", (attempt) => {
       console.log(`Socket.IO ${attempt} urinishdan so‘ng qayta ulandi`);
-      setSuccessMsg("WiFi серверга қайта уланди!");
+      console.log("WiFi серверга қайта уланди!");
     });
 
     newSocket.on("connect_error", (err) => {
       console.error("WiFi ulanishida xatolik:", err.message);
-      setError(`WiFi ulanishida xatolik: ${err.message}`);
+      console.log(`WiFi ulanishida xatolik: ${err.message}`);
     });
 
     newSocket.on("disconnect", (reason) => {
       console.log("Socket uzildi:", reason);
-      setError(`WiFi ulanishi uzildi: ${reason}`);
+      console.log(`WiFi ulanishi uzildi: ${reason}`);
     });
 
     newSocket.on("order_created", (newOrder) => {
@@ -1019,7 +1019,7 @@ export default function Dostavka() {
             : o
         );
       });
-      setSuccessMsg(`Buyurtma #${updatedOrder.id} yangilandi!`);
+      console.log(`Buyurtma #${updatedOrder.id} yangilandi!`);
     });
 
     newSocket.on("orderItemStatusUpdated", (updatedOrderItem) => {
@@ -1349,8 +1349,6 @@ export default function Dostavka() {
                         <button
                           className="action-btn print-pay-btn"
                           onClick={() => debouncedHandleCloseAndPrint(order)}
-                          disabled={isPrinting}
-                          aria-label={`Буюртма ${order.id} ни тўлаш ва чоп этиш`}
                         >
                           <Printer size={16} /> {isPrinting ? "Чоп этилмоқда..." : "Тўлаш ва чоп этиш"}
                         </button>

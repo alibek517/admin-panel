@@ -93,7 +93,7 @@ const Receipt = React.forwardRef(({ order }, ref) => {
               <tr>
                 <th style={{ width: "10%", fontSize: "9px"}}>№</th>
                 <th style={{ width: "40%", fontSize: "9px"}}>Taom</th>
-                <th style={{ width: "30%", fontSize: "9px"}}>Jami</th>
+                <th style={{ width: "10%", fontSize: "9px"}}>Jami</th>
                 <th style={{ width: "20%", fontSize: "9px"}}>Summasi</th>
                 <th style={{ width: "30%", fontSize: "9px"}}>Jami</th>
               </tr>
