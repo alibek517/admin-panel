@@ -1859,13 +1859,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
             >
               <Plus size={20} /> Жой қўшиш
             </button>
-            <button
-              className="reset-products-btn"
-              onClick={() => setShowResetProductsModal(true)}
-              title="Тугаган таомларни тиклаш"
-            >
-              <RefreshCw size={20} /> Тугаган таомларни тиклаш
-            </button>
           </div>
         )}
       </div>
