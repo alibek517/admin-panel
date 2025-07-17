@@ -52,7 +52,7 @@ const Receipt = React.forwardRef(({ order }, ref) => {
 
         <div className="kjhgdrxs">
   <p className="ujhgfty">
-    <strong>Число:</strong> <strong>{formatDateTime(order.createdAt).date} <pre style={{display:"contents"}}>  </pre> От: {formatDateTime(order.createdAt).time} <pre style={{display:"contents"}}>  </pre> До: {formatDateTime(order.endTime || Date.now()).time}</strong>
+    Число: {formatDateTime(order.createdAt).date} <pre style={{display:"contents"}}>  </pre> От: {formatDateTime(order.createdAt).time} <pre style={{display:"contents"}}>  </pre> До: {formatDateTime(order.endTime || Date.now()).time}
   </p>
 </div>
 
@@ -63,29 +63,29 @@ const Receipt = React.forwardRef(({ order }, ref) => {
         </div>
 
         <div className="hytvrtfgyu">
-          <table border={1}>
-            <thead>
-              <tr>
-                <th style={{color:'#000'}} className="jkhg">№</th>
-                <th style={{color:'#000'}} className="jkhghhu">Наименование</th>
-                <th style={{color:'#000'}} className="jkiuygfy6tde">#</th>
-                <th style={{color:'#000'}} className="ufrd5dy">Цена</th>
-                <th style={{color:'#000'}} className="ihd56d7d">Сумма</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.orderItems?.filter(item => item.product).map((item, index) => (
-                <tr key={index} className="table-row">
-                  <td style={{color:'#000'}} className="jkhg">{index + 1}</td>
-                  <td style={{color:'#000'}} className="jkhghhu">{item.product.name || "Топилмади"}</td>
-                  <td style={{color:'#000'}} className="jkiuygfy6tde">{item.count}</td>
-                  <td style={{color:'#000'}} className="ufrd5dy">{formatPricee(item.product.price || 0)}</td>
-                  <td style={{color:'#000'}} className="ihd56d7d">{formatPricee((item.product.price || 0) * item.count)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+  <table>
+    <thead>
+      <tr>
+        <th className="jkhg">№</th>
+        <th className="jkhghhu">Наименование</th>
+        <th className="jkiuygfy6tde">#</th>
+        <th className="ufrd5dy">Цена</th>
+        <th className="ihd56d7d">Сумма</th>
+      </tr>
+    </thead>
+    <tbody>
+      {order.orderItems?.filter(item => item.product).map((item, index) => (
+        <tr key={index} className="table-row">
+          <td className="jkhg">{index + 1}</td>
+          <td className="jkhghhu">{item.product.name || "Топилмади"}</td>
+          <td className="jkiuygfy6tde">{item.count}</td>
+          <td className="ufrd5dy">{formatPricee(item.product.price || 0)}</td>
+          <td className="ihd56d7d">{formatPricee((item.product.price || 0) * item.count)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
         <div className="jykfdi5diy">
           <p className="gftiyctycty">
