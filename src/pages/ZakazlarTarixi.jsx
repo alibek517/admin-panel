@@ -173,7 +173,17 @@ export default function ZakazTarixi() {
   const toggleFoodItems = (orderId) => {
     setOpenFoodItems(openFoodItems === orderId ? null : orderId);
   };
-
+  const formatDate = (dateString) => {
+    if (!dateString) return "Заказ яакунланмагань";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+  };
   const filteredHistory = getFilteredOrders();
   const summary = calculateSummary();
 
@@ -362,84 +372,62 @@ export default function ZakazTarixi() {
                 <tr>
                   <th>ID</th>
                   <th>Стол/Телефон</th>
-                  <th>Нархи</th>
+                  <th>Бошланғич сана</th>
+                  <th>Якуний сана</th>
                   <th>Комиссия</th>
                   <th>Жами</th>
-                  <th>Вақти</th>
                   <th>Таомлар</th>
-                  <th>Ҳолати</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredHistory.map((order) => {
-                  const totalPrice = calculateTotalPrice(order);
-                  const commissionRate = getCommissionRate(order);
-                  const commission = totalPrice * (commissionRate / 100);
-                  const totalWithCommission = totalPrice + commission;
+
+<tbody>
+  {filteredHistory.map((order) => {
+    const totalPrice = calculateTotalPrice(order);
+    const commissionRate = getCommissionRate(order);
+    const commission = totalPrice * (commissionRate / 100);
+    const totalWithCommission = totalPrice + commission;
+    return (
+      <React.Fragment key={order.id}>
+        <tr>
+          <td>{order.id}</td>
+          <td>
+            {tableMap[order.tableId]
+              ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
+              : ""}
+          </td>
+          <td>{formatDate(order.createdAt)}</td>
+          <td>{formatDate(order.endTime)}</td>
+          <td>{formatPrice(commission)} ({commissionRate}%)</td>
+          <td>{formatPrice(totalWithCommission)}</td>
+          <td>
+            <Eye
+              className="food-icon"
+              onClick={() => toggleFoodItems(order.id)}
+              style={{ cursor: "pointer" }}
+            />
+          </td>
+        </tr>
+        {openFoodItems === order.id && (
+          <tr>
+            <td colSpan="8" className="food-itemss">
+              {order.orderItems.length > 0 ? (
+                order.orderItems.map((item) => {
                   return (
-                    <React.Fragment key={order.id}>
-                      <tr>
-                        <td>{order.id}</td>
-                        <td>
-                          {tableMap[order.tableId]
-                            ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
-                            : ""}
-                        </td>
-                        <td>{formatPrice(totalPrice)}</td>
-                        <td>{formatPrice(commission)} ({commissionRate}%)</td>
-                        <td>{formatPrice(totalWithCommission)}</td>
-                        <td>
-                          {order.createdAt
-                            ? new Date(order.createdAt).toLocaleString("uz-UZ")
-                            : "Номаълум"}
-                        </td>
-                        <td>
-                          <Eye
-                            className="food-icon"
-                            onClick={() => toggleFoodItems(order.id)}
-                            style={{ cursor: "pointer" }}
-                          />
-                        </td>
-                        <td className={getStatusClass(order.status)}>
-                          {order.status === "PENDING"
-                            ? "Навбатда"
-                            : order.status === "COOKING"
-                            ? "Тайёрланмоқда"
-                            : order.status === "READY"
-                            ? "Тайёр"
-                            : order.status === "COMPLETED"
-                            ? "Мижоз олдида"
-                            : order.status === "ARCHIVE"
-                            ? "Тугалланган"
-                            : "Номаълум"}
-                        </td>
-                      </tr>
-                      {openFoodItems === order.id && (
-                        <tr>
-                          <td colSpan="8" className="food-itemss">
-                            {order.orderItems.length > 0 ? (
-                              order.orderItems.map((item) => {
-                                const category = categoryList.find(
-                                  (cat) => cat.id === item.product?.categoryId
-                                );
-                                return (
-                                  <div key={item.id}>
-                                    {`${item.product?.name || "Номаълум"} (${
-                                      item.count || 0
-                                    }) - Категория: ${category?.name || "Номаълум"}`}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div>Таомлар йўқ</div>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
+                    <span style={{ width: "1000px" }} key={item.id}>
+                      {`${item.product?.name || "Номаълум"} - ${item.count || 0} Дона`}
+                    </span>
                   );
-                })}
-              </tbody>
+                })
+              ) : (
+                <div>Таомлар йўқ</div>
+              )}
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    );
+  })}
+</tbody>
             </table>
             {filteredHistory.length === 0 && (
               <div className="no-results">

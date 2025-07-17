@@ -68,8 +68,8 @@ export default function AdminPanel() {
       tableNumber: isDelivery
         ? order.carrierNumber || "Йўқ"
         : table
-        ? `${table.name} - ${table.number}`
-        : "Йўқ",
+          ? `${table.name} - ${table.number}`
+          : "Йўқ",
       totalPrice: totalPrice,
       commission: commission,
       totalWithCommission: totalPrice + commission,
@@ -97,15 +97,15 @@ export default function AdminPanel() {
           ...order,
           orderItems: Array.isArray(order.orderItems)
             ? order.orderItems.map((item) => ({
-                ...item,
-                product: item.product
-                  ? {
-                      ...item.product,
-                      price: parseFloat(item.product.price) || 0,
-                    }
-                  : { price: 0, name: "Номаълум таом" },
-                count: parseInt(item.count) || 0,
-              }))
+              ...item,
+              product: item.product
+                ? {
+                  ...item.product,
+                  price: parseFloat(item.product.price) || 0,
+                }
+                : { price: 0, name: "Номаълум таом" },
+              count: parseInt(item.count) || 0,
+            }))
             : [],
           uslug: parseFloat(order.uslug) || null,
         }))
@@ -238,7 +238,18 @@ export default function AdminPanel() {
     setSelectedOrder(order);
     setModalType("edit");
   };
-
+  const formatDate = (dateString) => {
+    if (!dateString) return "Заказ яакунланмагань";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Заказ яакунланмагань"; // Handle invalid dates
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+  };
   const handleDelete = async (orderId) => {
     const confirmDelete = window.confirm("Ростдан ҳам бу буюртмани ўчирмоқчимисиз?");
     if (!confirmDelete) return;
@@ -484,110 +495,83 @@ export default function AdminPanel() {
                       <th>Буюртма №</th>
                       <th>Стол/Телефон</th>
                       <th>Бошланғич сана</th>
+                      <th>Якуний сана</th>
                       <th>Жами сумма</th>
                       <th>Комиссия (%)</th>
-                      <th>Ҳолати</th>
                       <th>Амаллар</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.map((order, index) => {
-                      const isDelivery = !order.tableId;
-                      const totalPrice = calculateTotalPrice(order);
-                      const commissionRate = getCommissionRate(order);
-                      const commission = totalPrice * (commissionRate / 100);
-                      const totalWithCommission = totalPrice + commission;
-                      const table = tableMap[order.tableId];
-                      return (
-                        <tr key={`${order.id}-${index}`}>
-                          <td>№ {order.id}</td>
-                          <td>
-                            {isDelivery
-                              ? order.carrierNumber || "Йўқ"
-                              : table
-                              ? `${table.name} - ${table.number}`
-                              : "Йўқ"}
-                          </td>
-                          <td>
-                            {new Date(order.createdAt).toLocaleString("uz-UZ", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              second: "2-digit",
-                            })}
-                          </td>
-                          <td>{formatPrice(totalWithCommission)}</td>
-                          <td>{commissionRate}%</td>
-                          <td>
-                            <span
-                              className={`status-badge ${
-                                order.status === "PENDING"
-                                  ? "status-pending"
-                                  : order.status === "COOKING"
-                                  ? "status-cooking"
-                                  : order.status === "READY"
-                                  ? "status-ready"
-                                  : order.status === "COMPLETED"
-                                  ? "status-completed"
-                                  : order.status === "ARCHIVE"
-                                  ? "status-archive"
-                                  : "status-default"
-                              }`}
-                            >
-                              {getStatusText(order.status)}
-                            </span>
-                          </td>
-                          <td className="actions-column">
-                            {order.status !== "ARCHIVE" && (
-                              <>
-                                <button
-                                  className="action-button edit"
-                                  onClick={() => handleEdit(order)}
-                                  title="Таҳрирлаш"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  className="action-button delete"
-                                  onClick={() => handleDelete(order.id)}
-                                  title="Ўчириш"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </>
-                            )}
-                            <button
-                              className="action-button view"
-                              onClick={() => handleView(order)}
-                              title="Кўриш"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            {order.status === "ARCHIVE" && (
-                              <>
-                                <button
-                                  className="action-button delete"
-                                  onClick={() => handleDelete(order.id)}
-                                  title="Ўчириш"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                                <button
-                                  className="action-button order-card__print-btn"
-                                  onClick={() => handlePrintOrder(order)}
-                                  title="Чоп этиш"
-                                >
-                                  <Printer size={16} />
-                                </button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+  {filteredOrders.map((order, index) => {
+    const isDelivery = !order.tableId;
+    const totalPrice = calculateTotalPrice(order);
+    const commissionRate = getCommissionRate(order);
+    const commission = totalPrice * (commissionRate / 100);
+    const totalWithCommission = totalPrice + commission;
+    const table = tableMap[order.tableId];
+    return (
+      <tr key={`${order.id}-${index}`}>
+        <td>№ {order.id}</td>
+        <td>
+          {isDelivery
+            ? order.carrierNumber || "Йўқ"
+            : table
+            ? `${table.name} - ${table.number}`
+            : "Йўқ"}
+        </td>
+        <td>{formatDate(order.createdAt)}</td>
+        <td>{formatDate(order.endTime)}</td>
+        <td>{formatPrice(totalWithCommission)}</td>
+        <td>{commissionRate}%</td>
+        <td className="actions-column">
+          {order.status !== "ARCHIVE" && (
+            <>
+              <button
+                className="action-button edit"
+                onClick={() => handleEdit(order)}
+                title="Таҳрирлаш"
+              >
+                <Edit size={16} />
+              </button>
+              <button
+                className="action-button delete"
+                onClick={() => handleDelete(order.id)}
+                title="Ўчириш"
+              >
+                <Trash2 size={16} />
+              </button>
+            </>
+          )}
+          <button
+            className="action-button view"
+            onClick={() => handleView(order)}
+            title="Кўриш"
+          >
+            <Eye size={16} />
+          </button>
+          {order.status === "ARCHIVE" && (
+            <>
+              <button
+                className="action-button delete"
+                onClick={() => handleDelete(order.id)}
+                title="Ўчириш"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button
+                className="action-button order-card__print-btn"
+                onClick={() => handlePrintOrder(order)}
+                title="Чоп этиш"
+              >
+                <Printer size={16} />
+              </button>
+            </>
+          )}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>  
                 </table>
               </div>
             </>
@@ -609,8 +593,8 @@ export default function AdminPanel() {
                   {!selectedOrder.tableId
                     ? selectedOrder.carrierNumber || "Йўқ"
                     : tableMap[selectedOrder.tableId]
-                    ? `${tableMap[selectedOrder.tableId].name} - ${tableMap[selectedOrder.tableId].number}`
-                    : "Йўқ"}
+                      ? `${tableMap[selectedOrder.tableId].name} - ${tableMap[selectedOrder.tableId].number}`
+                      : "Йўқ"}
                 </p>
                 <div>
                   <b>Таомлар:</b>
@@ -651,14 +635,14 @@ export default function AdminPanel() {
                   <b>Комиссия ({getCommissionRate(selectedOrder)}%):</b>{" "}
                   {formatPrice(
                     calculateTotalPrice(selectedOrder) *
-                      (getCommissionRate(selectedOrder) / 100)
+                    (getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
                 <p>
                   <b>Жами (комиссия билан):</b>{" "}
                   {formatPrice(
                     calculateTotalPrice(selectedOrder) *
-                      (1 + getCommissionRate(selectedOrder) / 100)
+                    (1 + getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
 

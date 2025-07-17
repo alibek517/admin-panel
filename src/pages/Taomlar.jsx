@@ -446,7 +446,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
              </button>
            </div>
            <div className="modal__content">
-             {localError && <p className="error-message">{localError}</p>}
              {localIsSaving && <p className="saving-message">Сақланмоқда...</p>}
              <div className="modal__items">
                <h3>Жорий таомлар:</h3>
@@ -768,7 +767,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
      const handleDisconnect = () => {
        console.log("Socket disconnected");
        setIsConnected(false);
-       setError("Сервер билан уланиш узилди. Офлайн режими.");
+       console.log("Сервер билан уланиш узилди. Офлайн режими.");
      };
 
      const handleOrderCreated = (newOrder) => {
@@ -1089,58 +1088,60 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
      );
 
      const handlePrintAndPay = useCallback(
-       async (order) => {
-         if (!order?.id) {
-           setError("Буюртма маълумотлари топилмади.");
-           return;
-         }
-         try {
-           setIsSaving(true);
-           const commissionToSend = parseFloat(uslug) || commissionPercent;
-           const response = await axios.put(
-             `${API_ENDPOINTS.orders}/${order.id}`,
-             { status: "ARCHIVE", uslug: commissionToSend },
-             { headers: { Authorization: `Bearer ${token}` } }
-           );
-           const updatedOrder = response.data;
-           socket.emit("orderUpdated", updatedOrder); // Отправка события orderUpdated
-           if (order.tableId) {
-             await axios.patch(
-               `${API_ENDPOINTS.tables}/${order.tableId}`,
-               { status: "empty" },
-               { headers: { Authorization: `Bearer ${token}` } }
-             );
-             setTables((prev) =>
-               prev.map((table) =>
-                 table.id === order.tableId ? { ...table, status: "empty", orders: [] } : table
-               )
-             );
-           }
-           setSelectedTableOrder({
-             ...updatedOrder,
-             uslug: commissionToSend,
-             commissionPercent: commissionToSend,
-           });
-           await new Promise((resolve) => setTimeout(resolve, 100));
-           if (!receiptRef.current) {
-             console.log("Чоп этиш учун маълумотлар тайёр эмас.");
-             return;
-           }
-           handlePrint();
-           setCart([]);
-           setSelectedTableId(null);
-           setSelectedTableOrder(null);
-           setUslug(commissionPercent.toString());
-           setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
-         } catch (error) {
-           console.error("Print and pay error:", error);
-           setError(handleApiError(error, "Чоп этиш ва тўлашда хатолик."));
-         } finally {
-           setIsSaving(false);
-         }
-       },
-       [token, handlePrint, uslug, commissionPercent]
-     );
+      async (order) => {
+        if (!order?.id) {
+          setError("Буюртма маълумотлари топилмади.");
+          return;
+        }
+        try {
+          setIsSaving(true);
+          const commissionToSend = parseFloat(uslug) || commissionPercent;
+          const currentTime = new Date().toISOString(); 
+          const response = await axios.put(
+            `${API_ENDPOINTS.orders}/${order.id}`,
+            { status: "ARCHIVE", uslug: commissionToSend, endTime: currentTime }, 
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const updatedOrder = response.data;
+          socket.emit("orderUpdated", { ...updatedOrder, endTime: currentTime }); 
+          if (order.tableId) {
+            await axios.patch(
+              `${API_ENDPOINTS.tables}/${order.tableId}`,
+              { status: "empty" },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setTables((prev) =>
+              prev.map((table) =>
+                table.id === order.tableId ? { ...table, status: "empty", orders: [] } : table
+              )
+            );
+          }
+          setSelectedTableOrder({
+            ...updatedOrder,
+            uslug: commissionToSend,
+            commissionPercent: commissionToSend,
+            endTime: currentTime, 
+          });
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          if (!receiptRef.current) {
+            console.log("Чоп этиш учун маълумотлар тайёр эмас.");
+            return;
+          }
+          handlePrint();
+          setCart([]);
+          setSelectedTableId(null);
+          setSelectedTableOrder(null);
+          setUslug(commissionPercent.toString());
+          setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
+        } catch (error) {
+          console.error("Print and pay error:", error);
+          setError(handleApiError(error, "Чоп этиш ва тўлашда хатолик."));
+        } finally {
+          setIsSaving(false);
+        }
+      },
+      [token, handlePrint, uslug, commissionPercent]
+    );
 
      const handleDeleteOrder = useCallback(async () => {
        if (!selectedTableOrder?.id) {
@@ -1776,7 +1777,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 
      return (
        <section className="content-section">
-         {error && <div className="error-message">{error}</div>}
          {successMsg && <div className="success-message">{successMsg}</div>}
          <div className="connection-status" style={{ marginBottom: "10px" }}>
            {isConnected ? "Реал вақтда уланиш фаол" : "Офлайн режими"}

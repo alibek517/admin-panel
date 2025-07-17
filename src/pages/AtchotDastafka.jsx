@@ -194,17 +194,20 @@ const DeliveryReport = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString || dateString === 'null') {
+      return 'Заказ яакунланмаган';
+    }
     try {
       return new Date(dateString).toLocaleString('uz-Cyrl-UZ', {
-        year: 'numeric',
-        month: '2-digit',
         day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
       }).replace(/\//g, '.');
     } catch {
-      return dateString || 'Номаълум';
+      return 'Номаълум';
     }
   };
 
@@ -385,7 +388,8 @@ const DeliveryReport = () => {
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Яратилган сана</th>
+                  <th>Бошланғич сана</th>
+                  <th>Якуний сана</th>
                   <th>Телефон рақами</th>
                   <th>Буюртма элементлари</th>
                   <th>Умумий нарх</th>
@@ -405,6 +409,7 @@ const DeliveryReport = () => {
                       <tr>
                         <td>{order.id || 'Номаълум'}</td>
                         <td>{formatDate(order.createdAt)}</td>
+                        <td>{formatDate(order.endTime)}</td>
                         <td>{order.carrierNumber || 'Номаълум'}</td>
                         <td>
                           <Eye

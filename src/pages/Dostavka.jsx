@@ -821,13 +821,13 @@ export default function Dostavka() {
   const handleCloseAndPrint = async (order) => {
     if (isPrinting) return;
     setIsPrinting(true);
-
+  
     if (!order?.id) {
       setError("Буюртма маълумотлари топилмади.");
       setIsPrinting(false);
       return;
     }
-
+  
     try {
       setCurrentOrder({
         id: order.id,
@@ -838,22 +838,39 @@ export default function Dostavka() {
         totalWithCommission: (order.totalPrice || 0) + (order.serviceFee || 0),
         createdAt: order.createdAt || new Date().toISOString(),
       });
-
+  
+      // Get current time in Asia/Tashkent timezone
+      const currentDateTime = new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Tashkent",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const [month, day, year, hour, minute, second] = currentDateTime.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/).slice(1);
+      const formattedEndTime = `${year}-${month}-${day}T${hour}:${minute}:${second}+05:00`;
+  
       await axios.put(
         `${API_ENDPOINTS.ORDERS}/${order.id}`,
-        { status: "ARCHIVE" },
+        { 
+          status: "ARCHIVE",
+          endTime: formattedEndTime 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
+  
       setOrders((prev) => prev.filter((o) => o.id !== order.id));
-
+  
       await new Promise((resolve) => setTimeout(resolve, 100));
       if (!receiptRef.current) {
         setError("Чоп этиш учун маълумотлар тайёр эмас.");
         setIsPrinting(false);
         return;
       }
-
+  
       handlePrint();
       setSuccessMsg(`Буюртма #${order.id} тўланди ва чоп этилди!`);
       setCurrentOrder(null);
@@ -1049,7 +1066,7 @@ export default function Dostavka() {
         })
       );
       setSuccessMsg(
-        `Buyurtma mahsuloti #${updatedOrderItem.id} statusi ${updatedOrderItem.status} ga o‘zgardi!`
+        `Buyurtma mahsuloti holati o‘zgardi!`
       );
     });
 
