@@ -8,13 +8,12 @@
     font-family: 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.2;
-    width: 80mm;
     max-width: 302px; 
     margin: 0 auto;
     padding: 0;
     color: #000;
     background: #fff;
-    border: 1px solid #000000;
+    
   }
   
   .ashrt {
@@ -105,7 +104,10 @@
     width: 8%;
     text-align: center;
   }
-  
+  .asdfg, .ashrt {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
   .hytvrtfgyu .jkhghhu {
     width: 37%;
     text-align: left;
@@ -178,15 +180,20 @@
     font-size: 13px;
     font-weight: bold;
   }
-  
+ 
   @media print {
     @page{
       margin: 0;
       padding: 0;
     }
-    body{
+    html, body{
       margin: 0;
       padding: 0;
+    }
+
+    .asdfg, .ashrt {
+      margin-top: 0;
+      padding-top: 0;
     }
   }
   
