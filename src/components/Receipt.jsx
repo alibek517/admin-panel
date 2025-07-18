@@ -37,7 +37,7 @@ const Receipt = React.forwardRef(({ order }, ref) => {
     const pad = (num) => String(num).padStart(2, '0');
     return {
       date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`,
-      time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
     };
   };
 
@@ -67,7 +67,7 @@ const Receipt = React.forwardRef(({ order }, ref) => {
     <thead>
       <tr>
         <th className="jkhg">№</th>
-        <th className="jkhghhu">Наименование</th>
+        <th className="jkhghhuu">Наименование</th>
         <th className="jkiuygfy6tde">#</th>
         <th className="ufrd5dy">Цена</th>
         <th className="ihd56d7d">Сумма</th>

@@ -2023,6 +2023,7 @@ const Taomlar = React.memo(() => {
                         gap: "5px",
                       }}
                     >
+                      <div style={{display:'flex', flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'20px'}}>
                       <button
                         className="action-btn print-btn"
                         onClick={() => handlePrintOnly(selectedTableOrder)}
@@ -2037,6 +2038,7 @@ const Taomlar = React.memo(() => {
                       >
                         Закрыть
                       </button>
+                      </div>
                     </div>
                   </div>
                 </div>

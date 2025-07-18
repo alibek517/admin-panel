@@ -190,7 +190,7 @@ const ModalBasket = ({
                 <td colSpan="3" className="basket-table__total-label">
                   Jami:
                 </td>
-                <td className="basket-table__total">
+                <td className="basket-table__totall">
                   {formatPrice(totalPrice)}
                 </td>
               </tr>

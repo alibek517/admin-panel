@@ -447,7 +447,7 @@ body {
   text-align: right;
 }
 
-.basket-table__total {
+.basket-table__totall {
   font-weight: 600;
   color: var(--color-primary);
 }
@@ -787,7 +787,7 @@ body {
   text-align: right;
 }
 
-.basket-table__total {
+.basket-table__totall {
   font-weight: bold;
   color: #007bff;
 }

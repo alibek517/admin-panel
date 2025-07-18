@@ -1364,7 +1364,7 @@ export default function Dostavka() {
                       </div>
                       {order.status === "READY" && (
                         <button
-                          className="action-btn print-pay-btn"
+                          className="action-btn print-pay-btnn"
                           onClick={() => debouncedHandleCloseAndPrint(order)}
                         >
                           <Printer size={16} /> {isPrinting ? "Чоп этилмоқда..." : "Тўлаш ва чоп этиш"}
@@ -1710,7 +1710,7 @@ export default function Dostavka() {
 
           .submit-btn:disabled,
           .modal__add-btn:disabled,
-          .print-pay-btn:disabled {
+          .print-pay-btnn:disabled {
             background-color: var(--neutral-gray);
             cursor: not-allowed;
             opacity: 0.6;
@@ -1943,7 +1943,7 @@ export default function Dostavka() {
             background-color: #c82333;
           }
 
-          .print-pay-btn {
+          .print-pay-btnn {
             padding: 8px 16px;
             border-radius: var(--border-radius);
             background-color: #00a000;
@@ -1956,7 +1956,7 @@ export default function Dostavka() {
             transition: var(--transition);
           }
 
-          .print-pay-btn:hover:not(:disabled) {
+          .print-pay-btnn:hover:not(:disabled) {
             background-color: #008000;
           }
 
