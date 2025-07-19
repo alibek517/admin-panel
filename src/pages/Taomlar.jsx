@@ -2137,7 +2137,7 @@ const Taomlar = React.memo(() => {
         )}
 
       </div>
-      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '80%' }}>
+      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <div className="admin-mode-control" style={{ marginBottom: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <input
