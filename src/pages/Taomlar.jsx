@@ -743,14 +743,15 @@ const Taomlar = React.memo(() => {
   const [filterPlace, setFilterPlace] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [commissionPercent, setCommissionPercent] = useState(0);
-  const [uslug, setUslug] = useState("");
+  const [uslug, setUslug] = useState("0"); // Added uslug state
+  const [tableUslugs, setTableUslugs] = useState({});
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminCode, setAdminCode] = useState("");
-  const [isConnected, setIsConnected] = useState(socket.connected); // Состояние подключения сокета
+  const [isConnected, setIsConnected] = useState(socket.connected);
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const [orderDescriptions, setOrderDescriptions] = useState({});
-  const processedEvents = useRef(new Set()); // Для предотвращения дублирования событий
+  const processedEvents = useRef(new Set());
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -795,6 +796,7 @@ const Taomlar = React.memo(() => {
           orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
           table: newOrder.table || { name: "Йўқ", number: "Йўқ" },
           createdAt: newOrder.createdAt || new Date().toISOString(),
+          user: newOrder.user || { name: "Номаълум", surname: "" }, // Ensure user
         });
         return prev.map((table) =>
           table.id === newOrder.tableId
@@ -811,7 +813,6 @@ const Taomlar = React.memo(() => {
       setError(handleApiError(error, "Буюртма қабул қилишда хатолик."));
     }
   };
-
   const handleOrderUpdated = (updatedOrder) => {
     try {
       console.log("Received orderUpdated event:", updatedOrder);
@@ -826,7 +827,7 @@ const Taomlar = React.memo(() => {
         return;
       }
       processedEvents.current.add(eventKey);
-
+  
       setTables((prev) => {
         const orderExists = prev.some((table) =>
           table.orders?.some((order) => order.id === updatedOrder.id)
@@ -835,30 +836,38 @@ const Taomlar = React.memo(() => {
           console.warn(`Order ${updatedOrder.id} not found in local state, ignoring update`);
           return prev;
         }
-
+  
         let oldTableId = null;
         prev.forEach((table) => {
           if (table.orders?.some((order) => order.id === updatedOrder.id)) {
             oldTableId = table.id;
           }
         });
-
+  
         const updatedTables = prev.map((table) => {
           if (table.id === updatedOrder.tableId) {
             const updatedOrders = table.orders?.some((order) => order.id === updatedOrder.id)
               ? table.orders.map((order) =>
-                order.id === updatedOrder.id
-                  ? {
-                    ...order,
+                  order.id === updatedOrder.id
+                    ? {
+                        ...order,
+                        ...updatedOrder,
+                        orderItems: Array.isArray(updatedOrder.orderItems)
+                          ? [...updatedOrder.orderItems]
+                          : order.orderItems,
+                        table: updatedOrder.table || order.table,
+                        user: updatedOrder.user || order.user || { name: "Номаълум", surname: "" },
+                      }
+                    : order
+                )
+              : [
+                  ...(table.orders || []),
+                  {
                     ...updatedOrder,
-                    orderItems: Array.isArray(updatedOrder.orderItems)
-                      ? [...updatedOrder.orderItems]
-                      : order.orderItems,
-                    table: updatedOrder.table || order.table,
-                  }
-                  : order
-              )
-              : [...(table.orders || []), { ...updatedOrder, table: table }];
+                    table: table,
+                    user: updatedOrder.user || { name: "Номаълум", surname: "" },
+                  },
+                ];
             const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
             return {
               ...table,
@@ -877,17 +886,26 @@ const Taomlar = React.memo(() => {
           }
           return table;
         });
-
+  
         return updatedTables;
       });
-
+  
       if (selectedTableOrder?.id === updatedOrder.id) {
         const clonedOrder = deepClone({
           ...updatedOrder,
           totalPrice: calculateTotalPrice(updatedOrder.orderItems),
+          totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (parseFloat(updatedOrder.uslug || uslug) / 100)),
+          table: updatedOrder.table || selectedTableOrder.table,
+          tableNumber: updatedOrder.table?.number || selectedTableOrder.tableNumber || "N/A",
+          user: updatedOrder.user || selectedTableOrder.user || { name: "Номаълум", surname: "" },
+          uslug: updatedOrder.uslug || tableUslugs[selectedTableId] || commissionPercent,
         });
         setSelectedTableOrder(clonedOrder);
-        setSelectedTableId(updatedOrder.tableId);
+        setTableUslugs((prev) => ({
+          ...prev,
+          [updatedOrder.tableId]: updatedOrder.uslug || prev[updatedOrder.tableId] || commissionPercent,
+        }));
+        setUslug((updatedOrder.uslug || tableUslugs[selectedTableId] || commissionPercent).toString());
         setCart(
           updatedOrder.orderItems?.map((item) => ({
             id: item.productId || item.product?.id || 0,
@@ -896,8 +914,10 @@ const Taomlar = React.memo(() => {
             count: item.count || 0,
             status: item.status || "PENDING",
             description: item.description || "",
+            createdAt: item.createdAt || null,
           })) || []
         );
+        console.log("Updated selectedTableOrder with user:", clonedOrder.user);
       }
     } catch (error) {
       console.error("Error in handleOrderUpdated:", error);
@@ -1023,7 +1043,7 @@ const Taomlar = React.memo(() => {
       const value = e.target.value;
       setUslug(value);
       if (value.trim() === "") return;
-
+  
       try {
         await axios.put(
           API_ENDPOINTS.percent,
@@ -1032,11 +1052,18 @@ const Taomlar = React.memo(() => {
         );
         setCommissionPercent(parseFloat(value) || commissionPercent);
         setSuccessMsg("Хизмат нархи муваффақиятли ўзгартирилди!");
+        if (selectedTableId) {
+          setTableUslugs((prev) => ({
+            ...prev,
+            [selectedTableId]: parseFloat(value) || commissionPercent,
+          }));
+        }
         if (selectedTableOrder) {
           setSelectedTableOrder({
             ...selectedTableOrder,
             totalWithCommission:
               selectedTableOrder.totalPrice * (1 + (parseFloat(value) / 100 || 0)),
+            uslug: parseFloat(value) || commissionPercent,
           });
         }
       } catch (error) {
@@ -1044,7 +1071,7 @@ const Taomlar = React.memo(() => {
         setError(handleApiError(error, "Хизмат нархини ўзгартиришда хатолик."));
       }
     },
-    [token, commissionPercent, selectedTableOrder]
+    [token, commissionPercent, selectedTableOrder, selectedTableId]
   );
 
   const handlePrint = useReactToPrint({
@@ -1096,7 +1123,7 @@ const Taomlar = React.memo(() => {
       }
       try {
         setIsSaving(true);
-        const commissionToSend = parseFloat(uslug) || commissionPercent;
+        const commissionToSend = parseFloat(uslug) || commissionPercent; // Fixed typo
         const currentTime = new Date().toISOString();
         const response = await axios.put(
           `${API_ENDPOINTS.orders}/${order.id}`,
@@ -1133,6 +1160,11 @@ const Taomlar = React.memo(() => {
         setSelectedTableId(null);
         setSelectedTableOrder(null);
         setUslug(commissionPercent.toString());
+        setTableUslugs((prev) => {
+          const newUslugs = { ...prev };
+          delete newUslugs[order.tableId];
+          return newUslugs;
+        });
         setSuccessMsg("Буюртма архиви буюртма қилинди ва чоп этди!");
       } catch (error) {
         console.error("Print and pay error:", error);
@@ -1212,11 +1244,12 @@ const Taomlar = React.memo(() => {
       try {
         setIsSaving(true);
         const oldTableId = selectedTableOrder.tableId;
+        const currentUslug = parseFloat(uslug) || commissionPercent;
         const payload = {
           tableId: newTableId,
           status: selectedTableOrder.status,
           userId: selectedTableOrder.userId,
-          uslug: parseFloat(uslug) || null,
+          uslug: currentUslug,
         };
         const response = await axios.put(
           `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
@@ -1224,7 +1257,7 @@ const Taomlar = React.memo(() => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const updatedOrder = response.data || {};
-        socket.emit("orderUpdated", updatedOrder); // Отправка события orderUpdated
+        socket.emit("orderUpdated", updatedOrder);
         await axios.patch(
           `${API_ENDPOINTS.tables}/${newTableId}`,
           { status: "busy" },
@@ -1260,13 +1293,20 @@ const Taomlar = React.memo(() => {
           })
         );
         setSelectedTableId(newTableId);
+        setTableUslugs((prev) => {
+          const newUslugs = { ...prev };
+          newUslugs[newTableId] = currentUslug; // Transfer uslug to new table
+          delete newUslugs[oldTableId]; // Remove uslug from old table if no other orders
+          return newUslugs;
+        });
+        setUslug((tableUslugs[newTableId] || commissionPercent).toString()); // Set uslug for new table
         setSelectedTableOrder({
           ...updatedOrder,
           table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "N/A" },
           tableNumber: tables.find((t) => t.id === newTableId)?.number || updatedOrder.carrierNumber || "N/A",
           totalPrice: calculateTotalPrice(updatedOrder.orderItems),
-          totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (parseFloat(uslug) / 100 || 0)),
-          uslug: parseFloat(uslug) || null,
+          totalWithCommission: calculateTotalPrice(updatedOrder.orderItems) * (1 + (currentUslug / 100)),
+          uslug: currentUslug,
         });
         setCart(
           updatedOrder.orderItems?.map((item) => ({
@@ -1289,7 +1329,7 @@ const Taomlar = React.memo(() => {
         setShowChangeTableModal(false);
       }
     },
-    [selectedTableOrder, token, tables, uslug, calculateTotalPrice]
+    [selectedTableOrder, token, tables, uslug, calculateTotalPrice, tableUslugs, commissionPercent]
   );
 
   const handleResetFinishedProducts = useCallback(async () => {
@@ -1514,20 +1554,22 @@ const Taomlar = React.memo(() => {
     if (!selectedTableId) {
       setSelectedTableOrder(null);
       setCart([]);
+      setUslug(commissionPercent.toString()); // Reset to global commissionPercent
       setError(null);
       console.log("No table selected, resetting order and cart");
       return;
     }
-
+  
     const selectedTable = tables.find((t) => t?.id === selectedTableId);
     if (!selectedTable) {
       setSelectedTableOrder(null);
       setCart([]);
+      setUslug(commissionPercent.toString()); // Reset to global commissionPercent
       setError("Стол топилмади.");
       console.error("Selected table not found", { selectedTableId });
       return;
     }
-
+  
     if (selectedTable.status === "busy" && selectedTable.orders?.length > 0) {
       const activeOrders = selectedTable.orders.filter(
         (order) => order.status !== "ARCHIVE"
@@ -1537,12 +1579,15 @@ const Taomlar = React.memo(() => {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         )[0];
         const totalPrice = calculateTotalPrice(latestOrder.orderItems);
+        const tableUslug = tableUslugs[selectedTableId] || latestOrder.uslug || commissionPercent;
+        setUslug(tableUslug.toString());
         setSelectedTableOrder({
           ...latestOrder,
           table: selectedTable,
           tableNumber: selectedTable.number || "N/A",
           totalPrice,
-          totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
+          totalWithCommission: totalPrice * (1 + (tableUslug / 100)),
+          uslug: tableUslug,
         });
         setCart(
           latestOrder.orderItems?.map((item) => ({
@@ -1551,27 +1596,31 @@ const Taomlar = React.memo(() => {
             price: parseFloat(item.product?.price) || 0,
             count: item.count || 0,
             status: item.status || "PENDING",
+            createdAt: item.createdAt || null,
           })) || []
         );
         console.log("Selected table order updated", {
           orderId: latestOrder.id,
           items: latestOrder.orderItems.length,
+          uslug: tableUslug,
         });
       } else {
         setSelectedTableOrder(null);
         setCart([]);
+        setUslug(commissionPercent.toString()); // Reset to global commissionPercent
         setError("Актив буюртма топилмади.");
         console.log("No active orders for selected table", { tableId: selectedTableId });
       }
     } else {
       setSelectedTableOrder(null);
       setCart([]);
+      setUslug((tableUslugs[selectedTableId] || commissionPercent).toString()); // Use table-specific uslug or global
       setError(null);
       console.log("Selected table is empty or has no orders", {
         tableId: selectedTableId,
       });
     }
-  }, [selectedTableId, tables, calculateTotalPrice, uslug]);
+  }, [selectedTableId, tables, calculateTotalPrice, commissionPercent, tableUslugs]);
 
   useEffect(() => {
     if (successMsg) {
@@ -1783,29 +1832,7 @@ const Taomlar = React.memo(() => {
         {isConnected ? "Реал вақтда уланиш фаол" : "Офлайн режими"}
       </div>
 
-      <div className="admin-mode-control" style={{ marginBottom: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <input
-            type="text"
-            value={adminCode}
-            onChange={handleAdminCodeChange}
-            placeholder="4 хонали код"
-            maxLength={4}
-            style={{ padding: "8px", width: "120px" }}
-          />
-          <button
-            onClick={toggleAdminMode}
-            className="admin-mode-btn"
-            style={{
-              padding: "8px 16px",
-              backgroundColor: isAdminMode ? "#dc3545" : "#28a745",
-              color: "#fff",
-            }}
-          >
-            <Lock size={20} /> {isAdminMode ? "Админни ўчириш" : "Админ режими"}
-          </button>
-        </div>
-      </div>
+
 
       <div className="table-controls">
         <div className="place-filter">
@@ -1813,6 +1840,7 @@ const Taomlar = React.memo(() => {
             {places.length ? (
               places.map((place, index) => (
                 <button
+
                   key={index}
                   className={`place-filter-btn ${filterPlace === place ? "active" : ""}`}
                   onClick={() => setFilterPlace(place)}
@@ -1825,54 +1853,17 @@ const Taomlar = React.memo(() => {
             )}
           </div>
         </div>
-        {isAdminMode && (
-          <div className="table-actions">
-            <button
-              className="delete-table-btn"
-              onClick={() => {
-                if (selectedTableId) {
-                  const table = tables.find((t) => t.id === selectedTableId);
-                  if (table && table.status === "empty") {
-                    setTableToDelete(table);
-                    setShowDeleteTableModal(true);
-                  } else {
-                    setError("Фақат бўш столларни ўчириш мумкин.");
-                  }
-                } else {
-                  setError("Илтимос, стол танланг.");
-                }
-              }}
-              title="Танланган столни ўчириш"
-            >
-              <Trash size={20} /> Столни ўчириш
-            </button>
-            <button
-              className="add-table-btn"
-              onClick={() => setShowAddTableModal(true)}
-              title="Янги стол қўшиш"
-            >
-              <Plus size={20} /> Стол қўшиш
-            </button>
-            <button
-              className="add-place-btn"
-              onClick={() => setShowAddPlaceModal(true)}
-              title="Янги жой қўшиш"
-            >
-              <Plus size={20} /> Жой қўшиш
-            </button>
-          </div>
-        )}
+
       </div>
 
-      <div style={{ marginRight: "-30px" }} className="order-layout">
-        <div style={{ maxWidth: "300px" }} className="tables-column">
-          <h3>Столлар</h3>
+      <div className="order-layout">
+        <div className="tables-column">
           {loading ? (
             <div className="spinner"></div>
           ) : filteredTables.length === 0 ? (
             <p>Столлар топилмади</p>
           ) : (
-            <ul style={{ maxHeight: "700px" }} className="tables-list">
+            <ul className="tables-list">
               {filteredTables.map((table) => (
                 <li
                   key={table.id}
@@ -1882,8 +1873,7 @@ const Taomlar = React.memo(() => {
                 >
                   <div className="table-item-container">
                     <div className="table-info">
-                      <span>{table.name || "Номаълум"}</span>
-                      <span>{table.number || "N/A"}</span>
+                      <span>{table.number || "Номаълум"}</span>
                       <span className="table-status">
                         {statusMapToFrontend[table.status] || "Номаълум"}
                       </span>
@@ -1906,7 +1896,7 @@ const Taomlar = React.memo(() => {
               {tables.find((t) => t?.id === selectedTableId)?.status === "empty" ? (
                 <div className="order-details">
                   <p>
-                     <strong>Стол:</strong>{" "}
+                    <strong>Стол:</strong>{" "}
                     {tables.find((t) => t?.id === selectedTableId)
                       ? `${tables.find((t) => t?.id === selectedTableId).name || "Номаълум"} - ${tables.find((t) => t?.id === selectedTableId).number || "N/A"
                       }`
@@ -1930,7 +1920,14 @@ const Taomlar = React.memo(() => {
                     {selectedTableOrder.table
                       ? `${selectedTableOrder.table.name || "Номаълум"} - ${selectedTableOrder.table.number || "N/A"
                       }`
-                      : "Стол маълумотлари йўқ"}
+                      : "Стол маълумотлари йўқ"}{" "}
+                    | <strong>Официант:</strong>{" "}
+                    {selectedTableOrder.user
+                      ? `${selectedTableOrder.user.name || "Номаълум"} ${selectedTableOrder.user.surname && selectedTableOrder.user.surname !== "."
+                        ? selectedTableOrder.user.surname
+                        : ""
+                        }`.trim()
+                      : "Номаълум"}
                   </p>
                 </div>
               ) : (
@@ -1949,6 +1946,7 @@ const Taomlar = React.memo(() => {
                     <th>Миқдор</th>
                     <th>Нархи</th>
                     <th>Суммаси</th>
+                    <th>Вақт</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1959,6 +1957,15 @@ const Taomlar = React.memo(() => {
                         <td>{item.count || 0}</td>
                         <td>{formatPrice(item.price)}</td>
                         <td>{formatPrice(item.price * item.count)}</td>
+                        <td>
+                          {item.createdAt
+                            ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Asia/Tashkent",
+                            })
+                            : "Маълумот йўқ"}
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -2023,21 +2030,21 @@ const Taomlar = React.memo(() => {
                         gap: "5px",
                       }}
                     >
-                      <div style={{display:'flex', flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'20px'}}>
-                      <button
-                        className="action-btn print-btn"
-                        onClick={() => handlePrintOnly(selectedTableOrder)}
-                        disabled={isSaving}
-                      >
-                        <Printer size={20} /> Причек
-                      </button>
-                      <button
-                        className="action-btn print-pay-btn"
-                        onClick={() => handlePrintAndPay(selectedTableOrder)}
-                        disabled={isSaving}
-                      >
-                        Закрыть
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                        <button
+                          className="action-btn print-btn"
+                          onClick={() => handlePrintOnly(selectedTableOrder)}
+                          disabled={isSaving}
+                        >
+                          <Printer size={20} /> Причек
+                        </button>
+                        <button
+                          className="action-btn print-pay-btn"
+                          onClick={() => handlePrintAndPay(selectedTableOrder)}
+                          disabled={isSaving}
+                        >
+                          Закрыть
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2083,7 +2090,7 @@ const Taomlar = React.memo(() => {
             ) : filteredTaomlar.length === 0 ? (
               <p>Таомлар топилмади</p>
             ) : (
-              <ul style={{ maxHeight: "600px" }} className="products-list">
+              <ul className="products-list">
                 {filteredTaomlar.map((taom) => (
                   <li
                     key={taom.id}
@@ -2125,6 +2132,70 @@ const Taomlar = React.memo(() => {
                 ))}
               </ul>
             )}
+
+          </div>
+        )}
+
+      </div>
+      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '80%' }}>
+        <div className="admin-mode-control" style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <input
+              type="text"
+              value={adminCode}
+              onChange={handleAdminCodeChange}
+              placeholder="4 хонали код"
+              maxLength={4}
+              style={{ padding: "8px", width: "120px" }}
+            />
+            <button
+              onClick={toggleAdminMode}
+              className="admin-mode-btn"
+              style={{
+                padding: "8px 16px",
+                backgroundColor: isAdminMode ? "#dc3545" : "#28a745",
+                color: "#fff",
+              }}
+            >
+              <Lock size={20} /> {isAdminMode ? "Админни ўчириш" : "Админ режими"}
+            </button>
+          </div>
+        </div>
+        {isAdminMode && (
+          <div className="table-actions">
+            <button
+              className="delete-table-btn"
+              onClick={() => {
+                if (selectedTableId) {
+                  const table = tables.find((t) => t.id === selectedTableId);
+                  if (table && table.status === "empty") {
+                    setTableToDelete(table);
+                    setShowDeleteTableModal(true);
+                  } else {
+                    setError("Фақат бўш столларни ўчириш мумкин.");
+                  }
+                } else {
+                  setError("Илтимос, стол танланг.");
+                }
+              }}
+              title="Танланган столни ўчириш"
+            >
+              <Trash size={20} /> Столни ўчириш
+            </button>
+            <button
+              className="add-table-btn"
+              onClick={() => setShowAddTableModal(true)}
+              title="Янги стол қўшиш"
+            >
+              <Plus size={20} /> Стол қўшиш
+            </button>
+            <button
+              className="add-place-btn"
+              onClick={() => setShowAddPlaceModal(true)}
+              title="Янги жой қўшиш"
+            >
+              <Plus size={20} /> Жой қўшиш
+            </button>
           </div>
         )}
       </div>

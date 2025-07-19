@@ -134,12 +134,19 @@ body {
   gap: 20px;
   flex-wrap: wrap;
 }
-
+.tables-column{
+  max-width: 300px;
+}
+.modal__item-time {
+  font-size: 14px;
+  color: #555;
+  margin-top: 4px;
+  display: block;
+}
 .tables-column,
 .cart-column,
 .products-column {
   flex: 1;
-  min-width: 300px;
   background-color: var(--background-light);
   padding: 20px;
   border-radius: var(--border-radius);
@@ -156,8 +163,6 @@ body {
 /* Tables List */
 .tables-list {
   list-style: none;
-  max-height: 700px;
-  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--primary-color) #f1f1f1;
 }
@@ -608,8 +613,6 @@ body {
 
 .products-list {
   list-style: none;
-  max-height: 600px;
-  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--primary-color) #f1f1f1;
 }

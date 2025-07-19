@@ -13,6 +13,7 @@ const ProductSales = () => {
   const [endDate, setEndDate] = useState(today);
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +67,7 @@ const ProductSales = () => {
             const productPrice = item.product.price || 0;
             const count = item.count;
             const productCategory = item.product.categoryId.toString();
+            const isDelivery = order.carrierNumber !== null && order.table === null;
 
             if (
               productName.toLowerCase().includes(query.toLowerCase()) &&
@@ -74,11 +76,18 @@ const ProductSales = () => {
               if (!productCounts[productName]) {
                 productCounts[productName] = {
                   count: 0,
-                  price: productPrice
+                  price: productPrice,
+                  deliveryCount: 0,
+                  tableCount: 0
                 };
               }
               productCounts[productName].count += count;
               totalCount += count;
+              if (isDelivery) {
+                productCounts[productName].deliveryCount += count;
+              } else {
+                productCounts[productName].tableCount += count;
+              }
             }
           });
         }
@@ -97,6 +106,10 @@ const ProductSales = () => {
       updateSalesData(orders, searchQuery, selectedCategory, startDate, endDate);
     }
   }, [searchQuery, selectedCategory, startDate, endDate, orders]);
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(selectedProduct === product ? null : product);
+  };
 
   const styles = {
     container: {
@@ -171,6 +184,7 @@ const ProductSales = () => {
       borderRadius: '6px',
       boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
       transition: 'background 0.2s',
+      cursor: 'pointer',
     },
     productItemHover: {
       backgroundColor: '#f3f4f6',
@@ -184,6 +198,14 @@ const ProductSales = () => {
       fontSize: '1.125rem',
       fontWeight: '600',
       color: '#16a34a',
+    },
+    detailsContainer: {
+      marginTop: '0.5rem',
+      padding: '0.5rem 1rem',
+      backgroundColor: '#f1f5f9',
+      borderRadius: '4px',
+      fontSize: '1rem',
+      color: '#1f2937',
     },
     loading: {
       display: 'flex',
@@ -257,16 +279,24 @@ const ProductSales = () => {
       <h3 style={styles.subtitle}>Махсулотлар бўйича кўрсаткичлар:</h3>
       <div style={styles.productList}>
         {Object.entries(salesData).map(([product, data]) => (
-          <div
-            key={product}
-            style={styles.productItem}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = styles.productItemHover.backgroundColor)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = styles.productItem.backgroundColor)}
-          >
-            <span style={styles.productName}>
-              {product} - ({data.price ? `${data.price.toLocaleString()} сўм` : 'Нарх кўрсатилмаган'})
-            </span>
-            <span style={styles.productCount}>{data.count}</span>
+          <div key={product}>
+            <div
+              style={styles.productItem}
+              onClick={() => handleProductClick(product)}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = styles.productItemHover.backgroundColor)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = styles.productItem.backgroundColor)}
+            >
+              <span style={styles.productName}>
+                {product} - ({data.price ? `${data.price.toLocaleString()} сўм` : 'Нарх кўрсатилмаган'})
+              </span>
+              <span style={styles.productCount}>{data.count}</span>
+            </div>
+            {selectedProduct === product && (
+              <div style={styles.detailsContainer}>
+                <div>Доставка: {data.deliveryCount}</div>
+                <div>Стол: {data.tableCount}</div>
+              </div>
+            )}
           </div>
         ))}
       </div>
