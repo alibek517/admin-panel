@@ -1880,7 +1880,7 @@ const Taomlar = React.memo(() => {
                     </div>
                     <div className="table-actions-container">
                       {table.status === "busy" && table.orders?.length > 0 && (
-                        <span className="band-button">BAND</span>
+                        <span className="band-button">БАНД</span>
                       )}
                     </div>
                   </div>
