@@ -18,6 +18,7 @@ export default function TaomlarSoz() {
     assignedToId: null,
     createdAt: null,
     category: null,
+    isCompleted: false, // Add isCompleted to the initial state
   });
   const [categoryList, setCategoryList] = useState([]);
   const [kitchenStaff, setKitchenStaff] = useState([]);
@@ -95,6 +96,7 @@ export default function TaomlarSoz() {
           id: Number(item.id) || 0,
           categoryId: item.categoryId ? Number(item.categoryId) : null,
           index: item.index || "0",
+          isCompleted: item.isCompleted || false, // Ensure isCompleted is included
         }))
         .sort((a, b) => Number(a.index) - Number(b.index));
 
@@ -166,6 +168,7 @@ export default function TaomlarSoz() {
       assignedToId: null,
       createdAt: null,
       category: null,
+      isCompleted: false, // Reset isCompleted
     });
   };
 
@@ -203,17 +206,17 @@ export default function TaomlarSoz() {
     try {
       const request = editing
         ? axios.put(`https://alikafecrm.uz/product/${Number(dishes.id)}`, formData, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-              "Content-Type": "multipart/form-data",
-            },
-          })
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        })
         : axios.post("https://alikafecrm.uz/product", formData, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-              "Content-Type": "multipart/form-data",
-            },
-          });
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
 
       await request;
       await fetchMenu();
@@ -267,6 +270,7 @@ export default function TaomlarSoz() {
       assignedToId: Number(dish.assignedToId) ?? null,
       createdAt: dish.createdAt ?? null,
       category: dish.category ?? null,
+      isCompleted: dish.isCompleted ?? false, // Include isCompleted
     });
     setEditing(true);
     setShowModal(true);
@@ -310,6 +314,36 @@ export default function TaomlarSoz() {
     }
   };
 
+  const handleCompleteDish = async (dishId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("JWT token not found in localStorage");
+      }
+
+      // Toggle isCompleted based on current state
+      const newIsCompleted = !dishes.isCompleted;
+      await axios.put(
+        `https://alikafecrm.uz/product/${Number(dishId)}`,
+        { isCompleted: newIsCompleted },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Update local state to reflect the change
+      setDishes((prev) => ({ ...prev, isCompleted: newIsCompleted }));
+      await fetchMenu();
+    } catch (err) {
+      console.error("Таомни тайёр/ўтириш деб белгилашда хатолик:", err);
+    }
+    setShowModal(false);
+    setEditing(false);
+  };
+
   const FoodCard = ({ item }) => {
     return (
       <article
@@ -329,6 +363,19 @@ export default function TaomlarSoz() {
               <Clock size={16} className="food-card-time-icon" />
               <span>{item.cookingTime ? `${item.cookingTime} мин` : "Вақти йўқ"}</span>
             </div>
+            <div
+            style={{
+              background: item.isCompleted ? 'green' : 'red',
+              color: '#fff',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              marginLeft: '200px',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+          >
+            <span>{item.isCompleted ? "Тайёр" : "Ўтириш"}</span>
+          </div>
           </div>
         </div>
         <div style={{ marginRight: '350px' }} className="food-card-price">{formatPrice(item.price)}</div>
@@ -426,9 +473,7 @@ export default function TaomlarSoz() {
             {categoryList.map((cat) => (
               <div key={cat.id} style={{ display: "flex", alignItems: "center" }}>
                 <button
-                  className={`category-tab ${
-                    newCategory === cat.name ? "active" : ""
-                  }`}
+                  className={`category-tab ${newCategory === cat.name ? "active" : ""}`}
                   onClick={() => setNewCategory(cat.name)}
                 >
                   {cat.name}
@@ -441,6 +486,55 @@ export default function TaomlarSoz() {
                 </button>
               </div>
             ))}
+            <div
+              className="form-group"
+              style={{
+                display: "flex",
+                gap: "var(--spacing-3)",
+                alignItems: "flex-end",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <label className="form-label">Янги категория номи</label>
+                <input
+                  type="text"
+                  placeholder="Янги категория номи"
+                  className="form-control"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn btn-success"
+                onClick={async () => {
+                  if (!newCategory.trim()) {
+                    alert("Категория номини киритинг.");
+                    return;
+                  }
+                  try {
+                    const res = await axios.post(
+                      "https://alikafecrm.uz/category",
+                      { name: newCategory.trim() },
+                      {
+                        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                      }
+                    );
+                    const newCat = { ...res.data, id: Number(res.data.id) };
+                    setCategoryList((prev) => [...prev, newCat]);
+                    setDishes((prev) => ({
+                      ...prev,
+                      categoryId: newCat.id,
+                    }));
+                    setNewCategory(newCat.name);
+                  } catch (err) {
+                    console.error("Категория қўшишда хатолик:", err);
+                    alert("Категория қўшилмади.");
+                  }
+                }}
+              >
+                Қўшиш
+              </button>
+            </div>
           </nav>
           <button
             style={{ marginBottom: "20px", marginLeft: "10px" }}
@@ -575,9 +669,6 @@ export default function TaomlarSoz() {
                       }
                     }}
                   />
-                  <small style={{ color: "#666", fontSize: "12px" }}>
-                    Har qanday rasm formati JPG ga aylantiriladi va o'lchami optimallashtiriladi
-                  </small>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Категория</label>
@@ -626,60 +717,20 @@ export default function TaomlarSoz() {
                       ))}
                   </select>
                 </div>
-                <div
-                  className="form-group"
-                  style={{
-                    display: "flex",
-                    gap: "var(--spacing-3)",
-                    alignItems: "flex-end",
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label">Янги категория номи</label>
-                    <input
-                      type="text"
-                      placeholder="Янги категория номи"
-                      className="form-control"
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    className="btn btn-success"
-                    onClick={async () => {
-                      if (!newCategory.trim()) {
-                        alert("Категория номини киритинг.");
-                        return;
-                      }
-                      try {
-                        const res = await axios.post(
-                          "https://alikafecrm.uz/category",
-                          { name: newCategory.trim() },
-                          {
-                            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                          }
-                        );
-                        const newCat = { ...res.data, id: Number(res.data.id) };
-                        setCategoryList((prev) => [...prev, newCat]);
-                        setDishes((prev) => ({
-                          ...prev,
-                          categoryId: newCat.id,
-                        }));
-                        setNewCategory(newCat.name);
-                      } catch (err) {
-                        console.error("Категория қўшишда хатолик:", err);
-                        alert("Категория қўшилмади.");
-                      }
-                    }}
-                  >
-                    Қўшиш
-                  </button>
-                </div>
               </div>
-              <div>
+              <div style={{ marginTop: '-10%', padding: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '30px' }}>
                 <button className="btn btn-success" onClick={handleAddDish}>
                   {editing ? "Сақлаш" : "Қўшиш"}
                 </button>
+                {editing && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleCompleteDish(dishes.id)}
+                  >
+                    {dishes.isCompleted ? "Пишириб отказиш" : "Тезда Тайёр"}
+                  </button>
+                )}
+
                 <button
                   className="btn btn-danger"
                   onClick={() => {

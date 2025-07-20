@@ -730,7 +730,6 @@ const Taomlar = React.memo(() => {
   const [showResetProductsModal, setShowResetProductsModal] = useState(false);
   const [showFinishedProductsModal, setShowFinishedProductsModal] = useState(false);
   const [finishedProducts, setFinishedProducts] = useState([]);
-  const [tableToDelete, setTableToDelete] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tables, setTables] = useState([]);
@@ -743,11 +742,12 @@ const Taomlar = React.memo(() => {
   const [filterPlace, setFilterPlace] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [commissionPercent, setCommissionPercent] = useState(0);
-  const [uslug, setUslug] = useState("0"); // Added uslug state
+  const [uslug, setUslug] = useState("0");
   const [tableUslugs, setTableUslugs] = useState({});
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isConnected, setIsConnected] = useState(socket.connected);
+  const [users, setUsers] = useState([]); // New state for users
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const [orderDescriptions, setOrderDescriptions] = useState({});
@@ -1123,7 +1123,7 @@ const Taomlar = React.memo(() => {
       }
       try {
         setIsSaving(true);
-        const commissionToSend = parseFloat(uslug) || commissionPercent; // Fixed typo
+        const commissionToSend = parseFloat(uslug) || commissionPercent; // Исправлено commissionPercent
         const currentTime = new Date().toISOString();
         const response = await axios.put(
           `${API_ENDPOINTS.orders}/${order.id}`,
@@ -1174,13 +1174,13 @@ const Taomlar = React.memo(() => {
       }
     },
     [token, handlePrint, uslug, commissionPercent]
-  );
+  );  
 
   const handleDeleteOrder = useCallback(async () => {
     if (!selectedTableOrder?.id) {
       setError("Буюртма танланмаган.");
       console.error("No order selected for deletion");
-      return;
+      return;  
     }
 
     const hasReadyItems = selectedTableOrder.orderItems?.some(
@@ -1437,7 +1437,7 @@ const Taomlar = React.memo(() => {
     setSelectedTableId(tableId);
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (!token) {
       setError("Токен топилмади. Илтимос, тизимга қайта киринг.");
       console.error("No token found, redirecting to login");
@@ -1452,7 +1452,7 @@ const Taomlar = React.memo(() => {
       setLoading(true);
       try {
         console.log("Fetching initial data with token:", token);
-        const [tablesRes, productsRes, categoriesRes, percentRes] = await Promise.all([
+        const [tablesRes, productsRes, categoriesRes, percentRes, usersRes] = await Promise.all([
           axios.get(API_ENDPOINTS.tables, {
             headers: { Authorization: `Bearer ${token}` },
             signal,
@@ -1476,6 +1476,12 @@ const Taomlar = React.memo(() => {
             signal,
           }).catch((err) => {
             throw new Error(`Хизмат нархини юклашда хатолик: ${err.message}`);
+          }),
+          axios.get(`${API_BASE}/user`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal,
+          }).catch((err) => {
+            throw new Error(`Фойдаланувчиларни юклашда хатолик: ${err.message}`);
           }),
         ]);
 
@@ -1516,13 +1522,22 @@ const Taomlar = React.memo(() => {
         }
         setCommissionPercent(parseFloat(percentRes.data?.percent) || 0);
         setUslug(percentRes.data?.percent?.toString() || "0");
+        // Set user data
+        const usersData = Array.isArray(usersRes.data?.data)
+          ? usersRes.data.data
+          : Array.isArray(usersRes.data)
+            ? usersRes.data
+            : [];
+        setUsers(usersData);
         console.log("Data fetched successfully", {
           tables: tablesData.length,
           products: productsRes.data.length,
           categories: categoriesData.length,
+          users: usersData.length,
         });
       } catch (err) {
         if (err.name === "AbortError") return;
+        setError(handleApiError(err, "Маълумотларни юклашда хатолик."));
       } finally {
         setLoading(false);
       }
@@ -1530,7 +1545,6 @@ const Taomlar = React.memo(() => {
 
     fetchData();
 
-    // Подключение обработчиков событий сокета
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("orderCreated", handleOrderCreated);
@@ -1628,7 +1642,11 @@ const Taomlar = React.memo(() => {
       return () => clearTimeout(timer);
     }
   }, [successMsg]);
-
+const getUserNameById = (userId) => {
+    const user = users.find((u) => u.id === userId);
+    if (!user) return "Номаълум";
+    return `${user.name || ""} ${user.surname && user.surname !== "." ? user.surname : ""}`.trim();
+  };
   const addToCart = (taom) => {
     const product = taomlar.find((p) => p.id === taom.id);
     if (!product) {
@@ -1811,13 +1829,13 @@ const Taomlar = React.memo(() => {
     return (
       selectedCategory && categories.length
         ? taomlar
-          .filter(
-            (taom) =>
-              taom.categoryId &&
-              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-          )
-          .sort((a, b) => a.id - b.id)
-        : taomlar.sort((a, b) => a.id - b.id)
+            .filter(
+              (taom) =>
+                taom.categoryId &&
+                taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+            )
+            .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
     );
   }, [selectedCategory, categories, taomlar]);
 
@@ -1825,14 +1843,13 @@ const Taomlar = React.memo(() => {
     ? tables.filter((table) => table.name === filterPlace)
     : tables;
 
-  return (
+ return (
     <section className="content-section">
       {successMsg && <div className="success-message">{successMsg}</div>}
+      {error && <div className="error-message">{error}</div>}
       <div className="connection-status" style={{ marginBottom: "10px" }}>
         {isConnected ? "Реал вақтда уланиш фаол" : "Офлайн режими"}
       </div>
-
-
 
       <div className="table-controls">
         <div className="place-filter">
@@ -1840,7 +1857,6 @@ const Taomlar = React.memo(() => {
             {places.length ? (
               places.map((place, index) => (
                 <button
-
                   key={index}
                   className={`place-filter-btn ${filterPlace === place ? "active" : ""}`}
                   onClick={() => setFilterPlace(place)}
@@ -1853,7 +1869,6 @@ const Taomlar = React.memo(() => {
             )}
           </div>
         </div>
-
       </div>
 
       <div className="order-layout">
@@ -1867,8 +1882,9 @@ const Taomlar = React.memo(() => {
               {filteredTables.map((table) => (
                 <li
                   key={table.id}
-                  className={`table-item ${selectedTableId === table.id ? "selected" : ""
-                    } ${table.status === "busy" ? "band" : "bosh"}`}
+                  className={`table-item ${selectedTableId === table.id ? "selected" : ""} ${
+                    table.status === "busy" ? "band" : "bosh"
+                  }`}
                   onClick={() => handleTableClick(table.id)}
                 >
                   <div className="table-item-container">
@@ -1898,8 +1914,9 @@ const Taomlar = React.memo(() => {
                   <p>
                     <strong>Стол:</strong>{" "}
                     {tables.find((t) => t?.id === selectedTableId)
-                      ? `${tables.find((t) => t?.id === selectedTableId).name || "Номаълум"} - ${tables.find((t) => t?.id === selectedTableId).number || "N/A"
-                      }`
+                      ? `${tables.find((t) => t?.id === selectedTableId).name || "Номаълум"} - ${
+                          tables.find((t) => t?.id === selectedTableId).number || "N/A"
+                        }`
                       : "Стол маълумотлари йўқ"}
                   </p>
                   <p>Янги буюртма беринг</p>
@@ -1910,24 +1927,20 @@ const Taomlar = React.memo(() => {
                     <strong>Вақт:</strong>{" "}
                     {selectedTableOrder.createdAt
                       ? new Date(selectedTableOrder.createdAt).toLocaleString("uz-UZ", {
-                        timeZone: "Asia/Tashkent",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })
+                          timeZone: "Asia/Tashkent",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
                       : "Маълумот йўқ"}{" "}
                     | <strong>Стол:</strong>{" "}
                     {selectedTableOrder.table
-                      ? `${selectedTableOrder.table.name || "Номаълум"} - ${selectedTableOrder.table.number || "N/A"
-                      }`
+                      ? `${selectedTableOrder.table.name || "Номаълум"} - ${
+                          selectedTableOrder.table.number || "N/A"
+                        }`
                       : "Стол маълумотлари йўқ"}{" "}
                     | <strong>Официант:</strong>{" "}
-                    {selectedTableOrder.user
-                      ? `${selectedTableOrder.user.name || "Номаълум"} ${selectedTableOrder.user.surname && selectedTableOrder.user.surname !== "."
-                        ? selectedTableOrder.user.surname
-                        : ""
-                        }`.trim()
-                      : "Номаълум"}
+                    {getUserNameById(selectedTableOrder.userId) || "Номаълум"}
                   </p>
                 </div>
               ) : (
@@ -1960,10 +1973,10 @@ const Taomlar = React.memo(() => {
                         <td>
                           {item.createdAt
                             ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "Asia/Tashkent",
-                            })
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "Asia/Tashkent",
+                              })
                             : "Маълумот йўқ"}
                         </td>
                       </tr>

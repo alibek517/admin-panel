@@ -17,6 +17,7 @@ export default function AdminPanel() {
 
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
+  const [users, setUsers] = useState([]); // New state for users
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalType, setModalType] = useState("");
   const [currentOrder, setCurrentOrder] = useState(null);
@@ -87,9 +88,10 @@ export default function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, tablesRes] = await Promise.all([
+      const [ordersRes, tablesRes, usersRes] = await Promise.all([
         axios.get("https://alikafecrm.uz/order", createApiRequest(token)),
         axios.get("https://alikafecrm.uz/tables", createApiRequest(token)),
+        axios.get("https://alikafecrm.uz/user", createApiRequest(token)), // Fetch users
       ]);
 
       const sanitizedOrders = ordersRes.data
@@ -97,22 +99,24 @@ export default function AdminPanel() {
           ...order,
           orderItems: Array.isArray(order.orderItems)
             ? order.orderItems.map((item) => ({
-              ...item,
-              product: item.product
-                ? {
-                  ...item.product,
-                  price: parseFloat(item.product.price) || 0,
-                }
-                : { price: 0, name: "Номаълум таом" },
-              count: parseInt(item.count) || 0,
-            }))
+                ...item,
+                product: item.product
+                  ? {
+                      ...item.product,
+                      price: parseFloat(item.product.price) || 0,
+                    }
+                  : { price: 0, name: "Номаълум таом" },
+                count: parseInt(item.count) || 0,
+              }))
             : [],
           uslug: parseFloat(order.uslug) || null,
         }))
         .sort((a, b) => {
-          if (a.status === "ARCHIVE" && b.status !== "ARCHIVE") return 1;
-          if (a.status !== "ARCHIVE" && b.status === "ARCHIVE") return -1;
-          return new Date(b.createdAt) - new Date(a.createdAt);
+          // Sort by endTime: null/undefined (incomplete) first, then by endTime descending
+          if (!a.endTime && !b.endTime) return new Date(b.createdAt) - new Date(a.createdAt);
+          if (!a.endTime) return -1;
+          if (!b.endTime) return 1;
+          return new Date(b.endTime) - new Date(a.endTime);
         });
 
       setOrders((prevOrders) => {
@@ -122,6 +126,7 @@ export default function AdminPanel() {
         return prevOrders;
       });
       setTables(tablesRes.data.data || []);
+      setUsers(usersRes.data || []); // Store user data
     } catch (error) {
       console.error("Маълумотларни олишда хатолик:", error);
       alert("Маълумотларни олишда хатолик юз берди.");
@@ -229,6 +234,11 @@ export default function AdminPanel() {
     return map;
   }, {});
 
+  const userMap = users.reduce((map, user) => {
+    map[user.id] = { name: user.name, surname: user.surname };
+    return map;
+  }, {}); // Map userId to name and surname
+
   const handleView = (order) => {
     setSelectedOrder(order);
     setModalType("view");
@@ -238,10 +248,11 @@ export default function AdminPanel() {
     setSelectedOrder(order);
     setModalType("edit");
   };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Заказ яакунланмагань";
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Заказ яакунланмагань"; // Handle invalid dates
+    if (isNaN(date.getTime())) return "Заказ яакунланмагань";
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
@@ -250,13 +261,13 @@ export default function AdminPanel() {
     const seconds = String(date.getSeconds()).padStart(2, "0");
     return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
   };
+
   const handleDelete = async (orderId) => {
     const confirmDelete = window.confirm("Ростдан ҳам бу буюртмани ўчирмоқчимисиз?");
     if (!confirmDelete) return;
 
     try {
       await axios.delete(`https://alikafecrm.uz/order/${orderId}`, createApiRequest(token));
-      alert("Буюртма ўчирилди");
       await fetchData();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(null);
@@ -330,7 +341,7 @@ export default function AdminPanel() {
                     color: "#6c757d",
                   }}
                 >
-                  ( {startDate} 00:00 дан {endDate} 23:59 гача )
+                  ( {startDate} д а н {endDate} г а ч а )
                 </span>
               )}
             </h3>
@@ -435,7 +446,7 @@ export default function AdminPanel() {
             <div
               style={{
                 display: "flex",
-                sucked: "var(--space-3)",
+                gap: "var(--space-3)",
                 alignItems: "center",
               }}
             >
@@ -502,76 +513,76 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody>
-  {filteredOrders.map((order, index) => {
-    const isDelivery = !order.tableId;
-    const totalPrice = calculateTotalPrice(order);
-    const commissionRate = getCommissionRate(order);
-    const commission = totalPrice * (commissionRate / 100);
-    const totalWithCommission = totalPrice + commission;
-    const table = tableMap[order.tableId];
-    return (
-      <tr key={`${order.id}-${index}`}>
-        <td>№ {order.id}</td>
-        <td>
-          {isDelivery
-            ? order.carrierNumber || "Йўқ"
-            : table
-            ? `${table.name} - ${table.number}`
-            : "Йўқ"}
-        </td>
-        <td>{formatDate(order.createdAt)}</td>
-        <td>{formatDate(order.endTime)}</td>
-        <td>{formatPrice(totalWithCommission)}</td>
-        <td>{commissionRate}%</td>
-        <td className="actions-column">
-          {order.status !== "ARCHIVE" && (
-            <>
-              <button
-                className="action-button edit"
-                onClick={() => handleEdit(order)}
-                title="Таҳрирлаш"
-              >
-                <Edit size={16} />
-              </button>
-              <button
-                className="action-button delete"
-                onClick={() => handleDelete(order.id)}
-                title="Ўчириш"
-              >
-                <Trash2 size={16} />
-              </button>
-            </>
-          )}
-          <button
-            className="action-button view"
-            onClick={() => handleView(order)}
-            title="Кўриш"
-          >
-            <Eye size={16} />
-          </button>
-          {order.status === "ARCHIVE" && (
-            <>
-              <button
-                className="action-button delete"
-                onClick={() => handleDelete(order.id)}
-                title="Ўчириш"
-              >
-                <Trash2 size={16} />
-              </button>
-              <button
-                className="action-button order-card__print-btn"
-                onClick={() => handlePrintOrder(order)}
-                title="Чоп этиш"
-              >
-                <Printer size={16} />
-              </button>
-            </>
-          )}
-        </td>
-      </tr>
-    );
-  })}
-</tbody>  
+                    {filteredOrders.map((order, index) => {
+                      const isDelivery = !order.tableId;
+                      const totalPrice = calculateTotalPrice(order);
+                      const commissionRate = getCommissionRate(order);
+                      const commission = totalPrice * (commissionRate / 100);
+                      const totalWithCommission = totalPrice + commission;
+                      const table = tableMap[order.tableId];
+                      return (
+                        <tr key={`${order.id}-${index}`}>
+                          <td>№ {order.id}</td>
+                          <td>
+                            {isDelivery
+                              ? order.carrierNumber || "Йўқ"
+                              : table
+                                ? `${table.name} - ${table.number}`
+                                : "Йўқ"}
+                          </td>
+                          <td>{formatDate(order.createdAt)}</td>
+                          <td>{formatDate(order.endTime)}</td>
+                          <td>{formatPrice(totalWithCommission)}</td>
+                          <td>{commissionRate}%</td>
+                          <td className="actions-column">
+                            {order.status !== "ARCHIVE" && (
+                              <>
+                                <button
+                                  className="action-button edit"
+                                  onClick={() => handleEdit(order)}
+                                  title="Таҳрирлаш"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  className="action-button delete"
+                                  onClick={() => handleDelete(order.id)}
+                                  title="Ўчириш"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              className="action-button view"
+                              onClick={() => handleView(order)}
+                              title="Кўриш"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            {order.status === "ARCHIVE" && (
+                              <>
+                                <button
+                                  className="action-button delete"
+                                  onClick={() => handleDelete(order.id)}
+                                  title="Ўчириш"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                                <button
+                                  className="action-button order-card__print-btn"
+                                  onClick={() => handlePrintOrder(order)}
+                                  title="Чоп этиш"
+                                >
+                                  <Printer size={16} />
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
                 </table>
               </div>
             </>
@@ -585,9 +596,7 @@ export default function AdminPanel() {
                 <h3>
                   {modalType === "view" ? "Буюртма ҳақида" : "Буюртмани таҳрирлаш"}
                 </h3>
-                <p>
-                  <b>Буюртма №</b> {selectedOrder.id}
-                </p>
+               
                 <p>
                   <b>Стол/Телефон:</b>{" "}
                   {!selectedOrder.tableId
@@ -595,6 +604,12 @@ export default function AdminPanel() {
                     : tableMap[selectedOrder.tableId]
                       ? `${tableMap[selectedOrder.tableId].name} - ${tableMap[selectedOrder.tableId].number}`
                       : "Йўқ"}
+                </p>
+                <p>
+                  <b>Официант:</b>{" "}
+                  {userMap[selectedOrder.userId]
+                    ? `${userMap[selectedOrder.userId].name} ${userMap[selectedOrder.userId].surname}`
+                    : "Номаълум"}
                 </p>
                 <div>
                   <b>Таомлар:</b>
@@ -635,14 +650,14 @@ export default function AdminPanel() {
                   <b>Комиссия ({getCommissionRate(selectedOrder)}%):</b>{" "}
                   {formatPrice(
                     calculateTotalPrice(selectedOrder) *
-                    (getCommissionRate(selectedOrder) / 100)
+                      (getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
                 <p>
                   <b>Жами (комиссия билан):</b>{" "}
                   {formatPrice(
                     calculateTotalPrice(selectedOrder) *
-                    (1 + getCommissionRate(selectedOrder) / 100)
+                      (1 + getCommissionRate(selectedOrder) / 100)
                   )}
                 </p>
 
@@ -726,6 +741,7 @@ export default function AdminPanel() {
                 createdAt: null,
                 uslug: 0,
               }
+              
             }
           />
         </div>

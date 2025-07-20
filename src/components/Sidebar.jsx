@@ -124,6 +124,14 @@ export default function Sidebar() {
           <Coffee size={20} />
           <span>Столлар</span>
         </div>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => handleNavigation("/Dostavka")}
+          className={`nav-item ${location.pathname === "/Dostavka" ? "active" : ""}`}
+        >
+          <Truck size={20} />
+          <span>Доставка</span>
+        </div>
         {/* Rest of the nav items remain unchanged */}
         <div
           style={{ cursor: 'pointer', display: 'none' }}
@@ -140,34 +148,6 @@ export default function Sidebar() {
         >
           <Home size={20} />
           <span>Администратор панели</span>
-        </div>
-        <div
-          onClick={() => handleNavigation("/AdminPanel/ofitsant")}
-          className={`nav-item ${location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
-            }`}
-          style={{
-            display: isAdminPanelActive ? "flex" : "none",
-            marginLeft: '15px',
-            fontSize: '15px',
-            cursor: 'pointer'
-          }}
-        >
-          <HandPlatter size={20} />
-          <span>Отчет по Официантам</span>
-        </div>
-        <div
-          onClick={() => handleNavigation("/AdminPanel/ovqat")}
-          className={`nav-item ${location.pathname === "/AdminPanel/ovqat" ? "active" : ""
-            }`}
-          style={{
-            display: isAdminPanelActive ? "flex" : "none",
-            marginLeft: '15px',
-            fontSize: '15px',
-            cursor: 'pointer'
-          }}
-        >
-          <Pizza size={20} />
-          <span>Отчет по блюдам</span>
         </div>
         <div
           onClick={() => handleNavigation("/ZakazlarTarixi")}
@@ -197,6 +177,36 @@ export default function Sidebar() {
           <Truck size={20} />
           <span>Отчет по доставка</span>
         </div>
+            <div
+              onClick={() => handleNavigation("/AdminPanel/ofitsant")}
+              className={`nav-item ${location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
+                }`}
+              style={{
+                display: isAdminPanelActive ? "flex" : "none",
+                marginLeft: '15px',
+                fontSize: '15px',
+                cursor: 'pointer'
+              }}
+            >
+              <HandPlatter size={20} />
+              <span>Отчет по Официантам</span>
+            </div>
+        <div
+          onClick={() => handleNavigation("/AdminPanel/ovqat")}
+          className={`nav-item ${location.pathname === "/AdminPanel/ovqat" ? "active" : ""
+            }`}
+          style={{
+            display: isAdminPanelActive ? "flex" : "none",
+            marginLeft: '15px',
+            fontSize: '15px',
+            cursor: 'pointer'
+          }}
+        >
+          <Pizza size={20} />
+          <span>Отчет по блюдам</span>
+        </div>
+        
+        
         <div
           style={{ cursor: 'pointer', display: 'none' }}
           onClick={() => handleNavigation("/Asboblar")}
@@ -205,14 +215,7 @@ export default function Sidebar() {
           <LineChart size={20} />
           <span>Статистикалар</span>
         </div>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => handleNavigation("/Dostavka")}
-          className={`nav-item ${location.pathname === "/Dostavka" ? "active" : ""}`}
-        >
-          <Truck size={20} />
-          <span>Доставка</span>
-        </div>
+
         <div
           style={{ cursor: 'pointer' }}
           onClick={() => handleNavigation("/ishniBoshlash")}

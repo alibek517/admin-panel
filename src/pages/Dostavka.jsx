@@ -71,7 +71,7 @@ const ModalBasket = ({
   orderToEdit = null,
   serviceFee,
   isConfirming,
-  setTaomlar, 
+  setTaomlar,
 }) => {
   const [carrierNumber, setCarrierNumber] = useState("+998");
   const [showWarningModal, setShowWarningModal] = useState(false);
@@ -170,15 +170,15 @@ const ModalBasket = ({
       });
       const fetchedProducts = Array.isArray(response.data)
         ? response.data.map((product) => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            categoryId: product.categoryId,
-            isFinished: product.isFinished || false,
-            color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`, 
-          }))
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          categoryId: product.categoryId,
+          isFinished: product.isFinished || false,
+          color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+        }))
         : [];
-      setTaomlar(fetchedProducts); 
+      setTaomlar(fetchedProducts);
     } catch (error) {
       console.error("Mahsulotlarni olishda xato:", handleApiError(error));
       onConfirm({ error: `Маҳсулотларни қайта олишда хатолик: ${handleApiError(error)}` });
@@ -196,24 +196,24 @@ const ModalBasket = ({
     onClose();
   };
 
-  
+
   const handleUpdateOrder = async () => {
     try {
-      
+
       const response = await axios.get(API_ENDPOINTS.PRODUCTS, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const fetchedProducts = Array.isArray(response.data)
         ? response.data.map((product) => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            categoryId: product.categoryId,
-            isFinished: product.isFinished || false,
-            color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-          }))
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          categoryId: product.categoryId,
+          isFinished: product.isFinished || false,
+          color: product.isFinished ? '#999999' : `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+        }))
         : [];
-      setTaomlar(fetchedProducts); 
+      setTaomlar(fetchedProducts);
     } catch (error) {
       console.error("Mahsulotlarni olishda xato:", handleApiError(error));
       onConfirm({ error: `Буюртмани янгилашда хатолик: ${handleApiError(error)}` });
@@ -285,7 +285,7 @@ const ModalBasket = ({
             >
               Бекор қилиш
             </button>
-            
+
             <button type="submit" className="submit-btn" disabled={isConfirming}>
               {isConfirming ? "Тасдиқланмоқда..." : orderToEdit ? "Таҳрирни тасдиқлаш" : "Буюртмани тасдиқлаш"}
             </button>
@@ -379,27 +379,27 @@ const EditOrderModal = ({
 
   const handleRemoveItem = async (itemId) => {
     if (localIsSaving || !itemId) return;
-  
+
     const currentItem = editingOrder.orderItems.find((item) => item.id === itemId);
     if (currentItem?.status === "READY") {
       setLocalError("Тайёр буюртма элементларини ўчириб бўлмайди.");
       return;
     }
-  
+
     try {
       setLocalIsSaving(true);
       setLocalError("");
       await axios.delete(`${API_ENDPOINTS.ORDERS}/orderItem/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
+
       const response = await axios.get(`${API_ENDPOINTS.ORDERS}/${order.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
+
       const updatedOrder = response.data;
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-  
+
       setOrders((prev) =>
         prev.map((o) =>
           o.id === updatedOrder.id ? { ...updatedOrder, totalPrice } : o
@@ -701,7 +701,38 @@ export default function Dostavka() {
       setError("Чоп этишда хатолик юз берди.");
     },
   });
-
+  const getStatusStyles = (status) => {
+    switch (status) {
+      case 'READY':
+        return {
+          backgroundColor: 'rgb(84, 195, 84)',
+          color: 'rgb(255, 255, 255)',
+          padding: '16px',
+          borderRadius: '8px'
+        };
+      case 'PENDING':
+        return {
+          backgroundColor: 'rgb(185, 132, 132)',
+          color: 'rgb(255, 255, 255)',
+          padding: '16px',
+          borderRadius: '8px'
+        };
+      case 'COOKING':
+        return {
+          backgroundColor: 'rgb(239, 141, 61)',
+          color: 'rgb(255, 255, 255)',
+          padding: '16px',
+          borderRadius: '8px'
+        };
+      default:
+        return {
+          backgroundColor: 'rgb(229, 231, 235)',
+          color: 'rgb(255, 255, 255)',
+          padding: '16px',
+          borderRadius: '8px'
+        };
+    }
+  };
   const handleOrderConfirm = async (orderData) => {
     if (isConfirming) return;
     setIsConfirming(true);
@@ -821,13 +852,13 @@ export default function Dostavka() {
   const handleCloseAndPrint = async (order) => {
     if (isPrinting) return;
     setIsPrinting(true);
-  
+
     if (!order?.id) {
       setError("Буюртма маълумотлари топилмади.");
       setIsPrinting(false);
       return;
     }
-  
+
     try {
       setCurrentOrder({
         id: order.id,
@@ -838,7 +869,7 @@ export default function Dostavka() {
         totalWithCommission: (order.totalPrice || 0) + (order.serviceFee || 0),
         createdAt: order.createdAt || new Date().toISOString(),
       });
-  
+
       // Get current time in Asia/Tashkent timezone
       const currentDateTime = new Date().toLocaleString("en-US", {
         timeZone: "Asia/Tashkent",
@@ -852,25 +883,25 @@ export default function Dostavka() {
       });
       const [month, day, year, hour, minute, second] = currentDateTime.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/).slice(1);
       const formattedEndTime = `${year}-${month}-${day}T${hour}:${minute}:${second}+05:00`;
-  
+
       await axios.put(
         `${API_ENDPOINTS.ORDERS}/${order.id}`,
-        { 
+        {
           status: "ARCHIVE",
-          endTime: formattedEndTime 
+          endTime: formattedEndTime
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-  
+
       setOrders((prev) => prev.filter((o) => o.id !== order.id));
-  
+
       await new Promise((resolve) => setTimeout(resolve, 100));
       if (!receiptRef.current) {
         setError("Чоп этиш учун маълумотлар тайёр эмас.");
         setIsPrinting(false);
         return;
       }
-  
+
       handlePrint();
       setSuccessMsg(`Буюртма #${order.id} тўланди ва чоп этилди!`);
       setCurrentOrder(null);
@@ -897,13 +928,13 @@ export default function Dostavka() {
   const handleDeleteOrder = async (orderId) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
-  
+
     const hasReadyItems = order.orderItems?.some((item) => item.status === "READY");
     if (hasReadyItems) {
       setError("Тайёр маҳсулотлари бор буюртмани ўчириб бўлмайди.");
       return;
     }
-  
+
     if (!window.confirm("Буюртмани ўчирмоқчимисиз?")) return;
     try {
       setOrders((prev) =>
@@ -1234,16 +1265,18 @@ export default function Dostavka() {
   }, [orders, searchQuery]);
 
   const filteredTaomlar = React.useMemo(() => {
-    return selectedCategory
-      ? taomlar
-        .filter(
-          (taom) =>
-            taom.categoryId &&
-            taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-        )
-        .sort((a, b) => a.id - b.id)
-      : taomlar.sort((a, b) => a.id - b.id);
-  }, [selectedCategory, taomlar, categories]);
+    return (
+      selectedCategory && categories.length
+        ? taomlar
+            .filter(
+              (taom) =>
+                taom.categoryId &&
+                taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+            )
+            .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+    );
+  }, [selectedCategory, categories, taomlar]);
 
   const clearCart = () => {
     setCart([]);
@@ -1346,8 +1379,11 @@ export default function Dostavka() {
                             const itemTotal = itemPrice * itemCount;
                             return (
                               <li style={{ listStyle: "none" }} key={item.product.id} className={`order-item-status ${item.status.toLowerCase()}`}>
-                                <div style={{ color: "#fff" }} className="item-details">
-                                  {item.product.name} x {itemCount} ({formatPrice(itemTotal)})
+                                <div
+                                  style={getStatusStyles(item.status)}
+                                  className="item-details p-4 rounded-lg"
+                                >
+                                  {item.product.name} x {itemCount} {item.status}
                                 </div>
                               </li>
                             );
@@ -1518,7 +1554,7 @@ export default function Dostavka() {
           orderToEdit={orderToEdit}
           serviceFee={serviceFee}
           isConfirming={isConfirming}
-          setTaomlar={setTaomlar} 
+          setTaomlar={setTaomlar}
         />
       )}
       {editModal && orderToEdit && (

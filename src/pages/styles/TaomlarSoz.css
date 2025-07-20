@@ -9,7 +9,8 @@
   --color-text: #0f172a;
   --color-text-light: #64748b;
   --color-border: #e2e8f0;
-  
+  --color-danger: #dc3545;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -680,4 +681,21 @@ img {
 
 .food-card-actions button {
   pointer-events: auto; /* Re-enable when not in swap mode */
+}
+.food-card-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1); /* Matches spacing used in .food-card-time */
+  font-size: 14px; /* Consistent with typical card text size */
+  color: #333; /* Use your app's text color variable */
+  margin-top: var(--spacing-1); /* Small margin to separate from cooking time */
+}
+
+/* Optional: Different colors for completed vs not completed */
+.food-card-status.completed {
+  color: var(--color-success); /* Green for "Тайёр" */
+}
+
+.food-card-status.not-completed {
+  color: var(--color-danger); /* Red for "Ўтириш" */
 }
