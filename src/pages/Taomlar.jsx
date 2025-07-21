@@ -2029,76 +2029,78 @@ const Taomlar = React.memo(() => {
           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Тахрирлаш</th>
           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}></th>
         </tr>
-        {group.items.map((item, itemIndex) => (
-          <tr
-            id={`hidden-row-${groupIndex}-${itemIndex}`}
-            className="hidden"
-            key={`hidden-${groupIndex}-${itemIndex}`}
-          >
-            <td></td>
-            <td>{item.name || "Номаълум"}</td>
-            <td>{item.count || 0}</td>
-            <td>
-              {item.createdAt
-                ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    timeZone: "Asia/Tashkent",
-                  })
-                : "Маълумот йўқ"}
-            </td>
-            <td style={{ display: "flex", gap: "30px", alignItems: "center" }}>
-              <button
-                style={{ background: "none", border: "none", cursor: "pointer" }}
-                onClick={() => {
-                  const newCount = prompt("Янги миқдорни киритинг:", item.count);
-                  if (newCount !== null) {
-                    const parsedCount = parseInt(newCount);
-                    if (isNaN(parsedCount) || parsedCount < 0) {
-                      setError("Илтимос, тўғри миқдор киритинг.");
-                      return;
+        {group.items
+          .sort((a, b) =>  new Date(a.createdAt) - new Date(b.createdAt)) // Sort by createdAt, newest first
+          .map((item, itemIndex) => (
+            <tr
+              id={`hidden-row-${groupIndex}-${itemIndex}`}
+              className="hidden"
+              key={`hidden-${groupIndex}-${itemIndex}`}
+            >
+              <td></td>
+              <td>{item.name || "Номаълум"}</td>
+              <td>{item.count || 0}</td>
+              <td>
+                {item.createdAt
+                  ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Asia/Tashkent",
+                    })
+                  : "Маълумот йўқ"}
+              </td>
+              <td style={{ display: "flex", gap: "30px", alignItems: "center" }}>
+                <button
+                  style={{ background: "none", border: "none", cursor: "pointer" }}
+                  onClick={() => {
+                    const newCount = prompt("Янги миқдорни киритинг:", item.count);
+                    if (newCount !== null) {
+                      const parsedCount = parseInt(newCount);
+                      if (isNaN(parsedCount) || parsedCount < 0) {
+                        setError("Илтимос, тўғри миқдор киритинг.");
+                        return;
+                      }
+                      setCart((prev) =>
+                        parsedCount === 0
+                          ? prev.filter(
+                              (cartItem) =>
+                                cartItem.id !== item.id ||
+                                cartItem.createdAt !== item.createdAt
+                            )
+                          : prev.map((cartItem) =>
+                              cartItem.id === item.id &&
+                              cartItem.createdAt === item.createdAt
+                                ? { ...cartItem, count: parsedCount }
+                                : cartItem
+                            )
+                      );
+                      setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
                     }
+                  }}
+                  disabled={isSaving}
+                >
+                  <Pencil size={20} />
+                </button>
+                <button
+                  style={{ background: "none", border: "none", cursor: "pointer" }}
+                  onClick={() => {
                     setCart((prev) =>
-                      parsedCount === 0
-                        ? prev.filter(
-                            (cartItem) =>
-                              cartItem.id !== item.id ||
-                              cartItem.createdAt !== item.createdAt
-                          )
-                        : prev.map((cartItem) =>
-                            cartItem.id === item.id &&
-                            cartItem.createdAt === item.createdAt
-                              ? { ...cartItem, count: parsedCount }
-                              : cartItem
-                          )
+                      prev.filter(
+                        (cartItem) =>
+                          cartItem.id !== item.id ||
+                          cartItem.createdAt !== item.createdAt
+                      )
                     );
-                    setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
-                  }
-                }}
-                disabled={isSaving}
-              >
-                <Pencil size={20} />
-              </button>
-              <button
-                style={{ background: "none", border: "none", cursor: "pointer" }}
-                onClick={() => {
-                  setCart((prev) =>
-                    prev.filter(
-                      (cartItem) =>
-                        cartItem.id !== item.id ||
-                        cartItem.createdAt !== item.createdAt
-                    )
-                  );
-                  setSuccessMsg("Таом саватдан ўчирилди!");
-                }}
-                disabled={isSaving}
-              >
-                <Trash size={20} />
-              </button>
-            </td>
-            <td></td>
-          </tr>
-        ))}
+                    setSuccessMsg("Таом саватдан ўчирилди!");
+                  }}
+                  disabled={isSaving}
+                >
+                  <Trash size={20} />
+                </button>
+              </td>
+              <td></td>
+            </tr>
+          ))}
       </React.Fragment>
     ))
   ) : (
@@ -2106,7 +2108,7 @@ const Taomlar = React.memo(() => {
       <td colSpan="7">Саватда таомлар йўқ</td>
     </tr>
   )}
-</tbody> 
+</tbody>
               </table>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '35px' }}>
                 <input
