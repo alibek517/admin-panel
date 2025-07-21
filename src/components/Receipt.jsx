@@ -40,7 +40,6 @@ const Receipt = React.forwardRef(({ order }, ref) => {
     };
   };
 
-  // Group orderItems by product name and sum their counts
   const groupedItems = order.orderItems?.filter(item => item.product).reduce((acc, item) => {
     const productName = item.product.name || "Топилмади";
     const existingItem = acc.find(grouped => grouped.productName === productName);
