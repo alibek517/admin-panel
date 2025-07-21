@@ -759,7 +759,6 @@ const Taomlar = React.memo(() => {
     }
   }, [categories, selectedCategory]);
 
-  // Обработчики событий сокета
   const handleConnect = () => {
     console.log("Socket connected:", socket.id);
     setIsConnected(true);
@@ -827,7 +826,7 @@ const Taomlar = React.memo(() => {
         return;
       }
       processedEvents.current.add(eventKey);
-  
+
       setTables((prev) => {
         const orderExists = prev.some((table) =>
           table.orders?.some((order) => order.id === updatedOrder.id)
@@ -836,38 +835,38 @@ const Taomlar = React.memo(() => {
           console.warn(`Order ${updatedOrder.id} not found in local state, ignoring update`);
           return prev;
         }
-  
+
         let oldTableId = null;
         prev.forEach((table) => {
           if (table.orders?.some((order) => order.id === updatedOrder.id)) {
             oldTableId = table.id;
           }
         });
-  
+
         const updatedTables = prev.map((table) => {
           if (table.id === updatedOrder.tableId) {
             const updatedOrders = table.orders?.some((order) => order.id === updatedOrder.id)
               ? table.orders.map((order) =>
-                  order.id === updatedOrder.id
-                    ? {
-                        ...order,
-                        ...updatedOrder,
-                        orderItems: Array.isArray(updatedOrder.orderItems)
-                          ? [...updatedOrder.orderItems]
-                          : order.orderItems,
-                        table: updatedOrder.table || order.table,
-                        user: updatedOrder.user || order.user || { name: "Номаълум", surname: "" },
-                      }
-                    : order
-                )
-              : [
-                  ...(table.orders || []),
-                  {
+                order.id === updatedOrder.id
+                  ? {
+                    ...order,
                     ...updatedOrder,
-                    table: table,
-                    user: updatedOrder.user || { name: "Номаълум", surname: "" },
-                  },
-                ];
+                    orderItems: Array.isArray(updatedOrder.orderItems)
+                      ? [...updatedOrder.orderItems]
+                      : order.orderItems,
+                    table: updatedOrder.table || order.table,
+                    user: updatedOrder.user || order.user || { name: "Номаълум", surname: "" },
+                  }
+                  : order
+              )
+              : [
+                ...(table.orders || []),
+                {
+                  ...updatedOrder,
+                  table: table,
+                  user: updatedOrder.user || { name: "Номаълум", surname: "" },
+                },
+              ];
             const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
             return {
               ...table,
@@ -886,10 +885,10 @@ const Taomlar = React.memo(() => {
           }
           return table;
         });
-  
+
         return updatedTables;
       });
-  
+
       if (selectedTableOrder?.id === updatedOrder.id) {
         const clonedOrder = deepClone({
           ...updatedOrder,
@@ -1043,7 +1042,7 @@ const Taomlar = React.memo(() => {
       const value = e.target.value;
       setUslug(value);
       if (value.trim() === "") return;
-  
+
       try {
         await axios.put(
           API_ENDPOINTS.percent,
@@ -1174,13 +1173,13 @@ const Taomlar = React.memo(() => {
       }
     },
     [token, handlePrint, uslug, commissionPercent]
-  );  
+  );
 
   const handleDeleteOrder = useCallback(async () => {
     if (!selectedTableOrder?.id) {
       setError("Буюртма танланмаган.");
       console.error("No order selected for deletion");
-      return;  
+      return;
     }
 
     const hasReadyItems = selectedTableOrder.orderItems?.some(
@@ -1395,7 +1394,9 @@ const Taomlar = React.memo(() => {
       setAdminCode("");
     }
   };
-
+  const deleteFromCart = (taomId) => {
+    setCart((prev) => prev.filter((item) => item.id !== taomId));
+  };
   const handleDeleteTable = async () => {
     if (!tableToDelete?.id) {
       setError("Стол танланмаган.");
@@ -1437,7 +1438,7 @@ const Taomlar = React.memo(() => {
     setSelectedTableId(tableId);
   };
 
-useEffect(() => {
+  useEffect(() => {
     if (!token) {
       setError("Токен топилмади. Илтимос, тизимга қайта киринг.");
       console.error("No token found, redirecting to login");
@@ -1522,7 +1523,7 @@ useEffect(() => {
         }
         setCommissionPercent(parseFloat(percentRes.data?.percent) || 0);
         setUslug(percentRes.data?.percent?.toString() || "0");
-        // Set user data
+
         const usersData = Array.isArray(usersRes.data?.data)
           ? usersRes.data.data
           : Array.isArray(usersRes.data)
@@ -1573,7 +1574,7 @@ useEffect(() => {
       console.log("No table selected, resetting order and cart");
       return;
     }
-  
+
     const selectedTable = tables.find((t) => t?.id === selectedTableId);
     if (!selectedTable) {
       setSelectedTableOrder(null);
@@ -1583,7 +1584,7 @@ useEffect(() => {
       console.error("Selected table not found", { selectedTableId });
       return;
     }
-  
+
     if (selectedTable.status === "busy" && selectedTable.orders?.length > 0) {
       const activeOrders = selectedTable.orders.filter(
         (order) => order.status !== "ARCHIVE"
@@ -1642,7 +1643,7 @@ useEffect(() => {
       return () => clearTimeout(timer);
     }
   }, [successMsg]);
-const getUserNameById = (userId) => {
+  const getUserNameById = (userId) => {
     const user = users.find((u) => u.id === userId);
     if (!user) return "Номаълум";
     return `${user.name || ""} ${user.surname && user.surname !== "." ? user.surname : ""}`.trim();
@@ -1663,10 +1664,20 @@ const getUserNameById = (userId) => {
       const foundTaom = prev.find((item) => item.id === taom.id);
       if (foundTaom) {
         return prev.map((item) =>
-          item.id === taom.id ? { ...item, count: item.count + 1 } : item
+          item.id === taom.id
+            ? { ...item, count: item.count + 1, createdAt: item.createdAt || new Date().toISOString() }
+            : item
         );
       }
-      return [...prev, { ...taom, count: 1, status: "PENDING" }];
+      return [
+        ...prev,
+        {
+          ...taom,
+          count: 1,
+          status: "PENDING",
+          createdAt: new Date().toISOString(), // Set creation time for new item
+        },
+      ];
     });
     console.log("Added to cart", { taomId: taom.id, name: taom.name });
   };
@@ -1696,7 +1707,6 @@ const getUserNameById = (userId) => {
   const currentUser = JSON.parse(localStorage.getItem("user")) || {};
   const userId = currentUser.id;
 
-  const statusMapToFrontend = { empty: "Бўш", busy: "Банд", unknown: "Номаълум" };
   const dishStatusMap = {
     PENDING: "Кутилмоқда",
     COOKING: "Пишмоқда",
@@ -1829,12 +1839,12 @@ const getUserNameById = (userId) => {
     return (
       selectedCategory && categories.length
         ? taomlar
-            .filter(
-              (taom) =>
-                taom.categoryId &&
-                taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
-            )
-            .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+          .filter(
+            (taom) =>
+              taom.categoryId &&
+              taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
+          )
+          .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
         : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
     );
   }, [selectedCategory, categories, taomlar]);
@@ -1843,14 +1853,10 @@ const getUserNameById = (userId) => {
     ? tables.filter((table) => table.name === filterPlace)
     : tables;
 
- return (
+  return (
     <section className="content-section">
       {successMsg && <div className="success-message">{successMsg}</div>}
       {error && <div className="error-message">{error}</div>}
-      <div className="connection-status" style={{ marginBottom: "10px" }}>
-        {isConnected ? "Реал вақтда уланиш фаол" : "Офлайн режими"}
-      </div>
-
       <div className="table-controls">
         <div className="place-filter">
           <div className="place-filter-buttons">
@@ -1882,17 +1888,12 @@ const getUserNameById = (userId) => {
               {filteredTables.map((table) => (
                 <li
                   key={table.id}
-                  className={`table-item ${selectedTableId === table.id ? "selected" : ""} ${
-                    table.status === "busy" ? "band" : "bosh"
-                  }`}
+                  className={`table-item ${selectedTableId === table.id ? "selected" : ""} `}
                   onClick={() => handleTableClick(table.id)}
                 >
                   <div className="table-item-container">
                     <div className="table-info">
                       <span>{table.number || "Номаълум"}</span>
-                      <span className="table-status">
-                        {statusMapToFrontend[table.status] || "Номаълум"}
-                      </span>
                     </div>
                     <div className="table-actions-container">
                       {table.status === "busy" && table.orders?.length > 0 && (
@@ -1914,9 +1915,8 @@ const getUserNameById = (userId) => {
                   <p>
                     <strong>Стол:</strong>{" "}
                     {tables.find((t) => t?.id === selectedTableId)
-                      ? `${tables.find((t) => t?.id === selectedTableId).name || "Номаълум"} - ${
-                          tables.find((t) => t?.id === selectedTableId).number || "N/A"
-                        }`
+                      ? `${tables.find((t) => t?.id === selectedTableId).name || "Номаълум"} - ${tables.find((t) => t?.id === selectedTableId).number || "N/A"
+                      }`
                       : "Стол маълумотлари йўқ"}
                   </p>
                   <p>Янги буюртма беринг</p>
@@ -1927,17 +1927,16 @@ const getUserNameById = (userId) => {
                     <strong>Вақт:</strong>{" "}
                     {selectedTableOrder.createdAt
                       ? new Date(selectedTableOrder.createdAt).toLocaleString("uz-UZ", {
-                          timeZone: "Asia/Tashkent",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
+                        timeZone: "Asia/Tashkent",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })
                       : "Маълумот йўқ"}{" "}
                     | <strong>Стол:</strong>{" "}
                     {selectedTableOrder.table
-                      ? `${selectedTableOrder.table.name || "Номаълум"} - ${
-                          selectedTableOrder.table.number || "N/A"
-                        }`
+                      ? `${selectedTableOrder.table.name || "Номаълум"} - ${selectedTableOrder.table.number || "N/A"
+                      }`
                       : "Стол маълумотлари йўқ"}{" "}
                     | <strong>Официант:</strong>{" "}
                     {getUserNameById(selectedTableOrder.userId) || "Номаълум"}
@@ -1955,6 +1954,7 @@ const getUserNameById = (userId) => {
               <table style={{ marginLeft: "-5px" }} className="basket-table">
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Номи</th>
                     <th>Миқдор</th>
                     <th>Нархи</th>
@@ -1963,31 +1963,165 @@ const getUserNameById = (userId) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {cart.length > 0 ? (
-                    cart.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.name || "Номаълум"}</td>
-                        <td>{item.count || 0}</td>
-                        <td>{formatPrice(item.price)}</td>
-                        <td>{formatPrice(item.price * item.count)}</td>
-                        <td>
-                          {item.createdAt
-                            ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                timeZone: "Asia/Tashkent",
-                              })
-                            : "Маълумот йўқ"}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5">Саватда таомлар йўқ</td>
-                    </tr>
-                  )}
-                </tbody>
+  {cart.length > 0 ? (
+    Object.values(
+      cart.reduce((acc, item, idx) => {
+        const key = item.id;
+        if (!acc[key]) {
+          acc[key] = {
+            items: [],
+            totalCount: 0,
+            name: item.name,
+            price: item.price,
+          };
+        }
+        acc[key].items.push({ ...item, originalIndex: idx });
+        acc[key].totalCount += item.count || 0;
+        return acc;
+      }, {})
+    ).map((group, groupIndex) => (
+      <React.Fragment key={`group-${groupIndex}`}>
+        <tr>
+          <td
+            onClick={() => {
+              const rows = document.querySelectorAll(`[id^="hidden-row-${groupIndex}-"]`);
+              const headerRow = document.getElementById(`hidden-header-${groupIndex}`);
+              const button = event.currentTarget.querySelector("b");
+              const isHidden = button.textContent === "+";
+              headerRow.classList.toggle("hidden", !isHidden);
+              rows.forEach((row) => {
+                row.classList.toggle("hidden", !isHidden);
+              });
+              button.textContent = isHidden ? "−" : "+";
+            }}
+            style={{
+              background: "#e8e8e8",
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <b style={{ background: "none", border: "none", fontSize: "30px" }}>+</b>
+          </td>
+          <td>{group.name || "Номаълум"}</td>
+          <td>{group.totalCount || 0}</td>
+          <td>{formatPrice(group.price)}</td>
+          <td>{formatPrice(group.price * group.totalCount)}</td>
+          <td>
+            {group.items[0]?.createdAt
+              ? new Date(
+                  Math.min(...group.items.map((item) => new Date(item.createdAt)))
+                ).toLocaleTimeString("uz-UZ", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "Asia/Tashkent",
+                })
+              : "Маълумот йўқ"}
+          </td>
+        </tr>
+        <tr id={`hidden-header-${groupIndex}`} className="hidden">
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}></th>
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Номи</th>
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Миқдор</th>
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Вақт</th>
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Тахрирлаш</th>
+          <th style={{ background: "#f0f0f0", fontWeight: "bold" }}></th>
+        </tr>
+        {group.items.map((item, itemIndex) => (
+          <tr
+            id={`hidden-row-${groupIndex}-${itemIndex}`}
+            className="hidden"
+            key={`hidden-${groupIndex}-${itemIndex}`}
+          >
+            <td></td>
+            <td>{item.name || "Номаълум"}</td>
+            <td>{item.count || 0}</td>
+            <td>
+              {item.createdAt
+                ? new Date(item.createdAt).toLocaleTimeString("uz-UZ", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Asia/Tashkent",
+                  })
+                : "Маълумот йўқ"}
+            </td>
+            <td style={{ display: "flex", gap: "30px", alignItems: "center" }}>
+              <button
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+                onClick={() => {
+                  const newCount = prompt("Янги миқдорни киритинг:", item.count);
+                  if (newCount !== null) {
+                    const parsedCount = parseInt(newCount);
+                    if (isNaN(parsedCount) || parsedCount < 0) {
+                      setError("Илтимос, тўғри миқдор киритинг.");
+                      return;
+                    }
+                    setCart((prev) =>
+                      parsedCount === 0
+                        ? prev.filter(
+                            (cartItem) =>
+                              cartItem.id !== item.id ||
+                              cartItem.createdAt !== item.createdAt
+                          )
+                        : prev.map((cartItem) =>
+                            cartItem.id === item.id &&
+                            cartItem.createdAt === item.createdAt
+                              ? { ...cartItem, count: parsedCount }
+                              : cartItem
+                          )
+                    );
+                    setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
+                  }
+                }}
+                disabled={isSaving}
+              >
+                <Pencil size={20} />
+              </button>
+              <button
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+                onClick={() => {
+                  setCart((prev) =>
+                    prev.filter(
+                      (cartItem) =>
+                        cartItem.id !== item.id ||
+                        cartItem.createdAt !== item.createdAt
+                    )
+                  );
+                  setSuccessMsg("Таом саватдан ўчирилди!");
+                }}
+                disabled={isSaving}
+              >
+                <Trash size={20} />
+              </button>
+            </td>
+            <td></td>
+          </tr>
+        ))}
+      </React.Fragment>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="7">Саватда таомлар йўқ</td>
+    </tr>
+  )}
+</tbody> 
               </table>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '35px' }}>
+                <input
+                  placeholder="Хизмат нархи (%)"
+                  type="number"
+                  value={uslug}
+                  onChange={handleUslugChange}
+                  style={{ padding: "8px", width: "150px" }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '105px' }}>
+
+                  <h3 className="basket-table__total">Сумма:{formatPrice(totalWithCommissionn)}</h3>
+                  <h3 className="basket-table__total">Итого:{formatPrice(totalWithCommission)}</h3>
+                </div>
+              </div>
               {selectedTableOrder && (
                 <div>
                   <div
@@ -1995,13 +2129,7 @@ const getUserNameById = (userId) => {
                     className="cart-actions"
                   >
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "start", gap: "5px" }}>
-                      <input
-                        placeholder="Хизмат нархи (%)"
-                        type="number"
-                        value={uslug}
-                        onChange={handleUslugChange}
-                        style={{ padding: "8px", width: "150px" }}
-                      />
+
                       <div
                         style={{
                           display: "flex",
@@ -2011,20 +2139,17 @@ const getUserNameById = (userId) => {
                         }}
                       >
                         <button
+                          style={{ width: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px' }}
                           className="action-btn delete-btn"
                           onClick={() => setShowDeleteModal(true)}
                           disabled={isSaving || selectedTableOrder.orderItems?.some((item) => item.status === "READY")}
                         >
                           <Trash size={20} />
                         </button>
+
+
                         <button
-                          className="action-btn edit-btn"
-                          onClick={() => setShowEditModal(true)}
-                          disabled={isSaving}
-                        >
-                          <Pencil size={20} />
-                        </button>
-                        <button
+                          style={{ width: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px' }}
                           className="action-btn change-table-btn"
                           onClick={() => setShowChangeTableModal(true)}
                           disabled={isSaving}
@@ -2033,33 +2158,23 @@ const getUserNameById = (userId) => {
                         </button>
                       </div>
                     </div>
-                    <h3 className="basket-table__total">{formatPrice(totalWithCommissionn)}</h3>
-                    <h3 className="basket-table__total">{formatPrice(totalWithCommission)}</h3>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "start",
-                        gap: "5px",
-                      }}
+
+                    <button
+                      style={{ padding: '10px', width: '250px', color: '#fff', fontSize: '20px' }}
+                      className="action-btn print-btn"
+                      onClick={() => handlePrintOnly(selectedTableOrder)}
+                      disabled={isSaving}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                        <button
-                          className="action-btn print-btn"
-                          onClick={() => handlePrintOnly(selectedTableOrder)}
-                          disabled={isSaving}
-                        >
-                          <Printer size={20} /> Причек
-                        </button>
-                        <button
-                          className="action-btn print-pay-btn"
-                          onClick={() => handlePrintAndPay(selectedTableOrder)}
-                          disabled={isSaving}
-                        >
-                          Закрыть
-                        </button>
-                      </div>
-                    </div>
+                      <Printer size={20} /> Причек
+                    </button>
+                    <button
+                      style={{ padding: '10px', width: '250px', color: '#fff', fontSize: '20px', background: '#d32f2f' }}
+                      className="action-btn print-pay-btn"
+                      onClick={() => handlePrintAndPay(selectedTableOrder)}
+                      disabled={isSaving}
+                    >
+                      Закрыть
+                    </button>
                   </div>
                 </div>
               )}
@@ -2150,7 +2265,7 @@ const getUserNameById = (userId) => {
         )}
 
       </div>
-      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="admin-mode-control" style={{ marginBottom: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <input
@@ -2424,9 +2539,13 @@ const getUserNameById = (userId) => {
           commissionPercent={parseFloat(uslug) || commissionPercent}
           formatPrice={formatPrice}
         />
+
       </div>
+
     </section>
+
   );
+  
 });
 
 export default Taomlar;

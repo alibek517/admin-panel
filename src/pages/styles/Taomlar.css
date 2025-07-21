@@ -66,7 +66,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-top: -20px;
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -443,21 +443,13 @@ body {
 
 .basket-table__total {
   font-size: 1.5rem;
-  /* H3 uchun mos o‘lcham */
   font-weight: 700;
-  /* Yanada qalinroq (bold) */
-  background-color: #e6f3ff;
-  /* Ko‘proq tiniqlik, professional ko‘rinish */
-  padding: 16px 24px;
-  /* Balanslangan ichki bo‘shliq */
+  background-color: #ecf2f8;
+  padding: 10px 24px;
   border-radius: 16px;
-  /* Burchaklar yumaloq, ammo juda katta emas */
   text-align: center;
-  /* Matnni markazga joylashtiradi */
   margin: 20px 0;
-  /* Yuqori va pastdan joy qoldiradi */
   box-shadow: 0 4px 12px rgb(102, 102, 102);
-  /* Engil soyali effekt */
   display: inline-block;
 }
 
@@ -508,7 +500,9 @@ body {
 .delete-btn:focus:not(:disabled) {
   background-color: var(--danger-hover);
 }
-
+.hidden{
+  display: none;
+}
 .edit-btn {
   background-color: var(--warning-color);
   color: var(--background-light);
@@ -530,7 +524,7 @@ body {
 }
 
 .print-btn {
-  background-color: #70e190;
+  background-color: #018685;
   color: #000;
   box-shadow: 0 4px 12px rgb(102, 102, 102);
   width: 150px;
@@ -546,7 +540,7 @@ body {
 }
 
 .print-pay-btn {
-  background-color: #fb6464;
+  background-color: red;
   color: #000;
   width: 150px;
   padding: 10px;
@@ -1240,4 +1234,10 @@ body {
 .delete-table-btn:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
+}
+.basket-table tr.hidden th {
+  background: #f0f0f0;
+  font-weight: bold;
+  padding: 8px;
+  text-align: left;
 }

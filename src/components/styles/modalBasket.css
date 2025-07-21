@@ -720,7 +720,7 @@ body {
 
 
 .table-item {
-  padding: 10px;
+  padding: 1px;
   border-bottom: 1px solid #eee;
   cursor: pointer;
   display: flex;
@@ -733,7 +733,7 @@ body {
 }
 
 .table-item.selected {
-  background-color: #7a88e4;
+  background-color: #c7cceb;
   font-weight: bold;
 }
 
