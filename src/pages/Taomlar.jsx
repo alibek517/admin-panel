@@ -2030,7 +2030,7 @@ const Taomlar = React.memo(() => {
           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}></th>
         </tr>
         {group.items
-          .sort((a, b) =>  new Date(a.createdAt) - new Date(b.createdAt)) // Sort by createdAt, newest first
+          .sort((a, b) =>  new Date(a.createdAt) - new Date(b.createdAt)) 
           .map((item, itemIndex) => (
             <tr
               id={`hidden-row-${groupIndex}-${itemIndex}`}
