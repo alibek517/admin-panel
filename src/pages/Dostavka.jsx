@@ -925,105 +925,39 @@ export default function Dostavka() {
     }
   }, 500);
 
-  const handleDeleteOrder = useCallback(async () => {
-    if (!selectedTableOrder?.id) {
-      setError("Буюртма танланмаган.");
-      console.error("No order selected for deletion", { selectedTableOrder });
-      setShowDeleteModal(false);
-      return;
-    }
-  
-    const hasReadyItems = selectedTableOrder.orderItems?.some(
-      (item) => item.status === "READY"
-    );
+  const handleDeleteOrder = async (orderId) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    const hasReadyItems = order.orderItems?.some((item) => item.status === "READY");
     if (hasReadyItems) {
-      setError("Буюртмада тайёр таомлар мавжуд, ўчириб бўлмайди.");
-      console.warn("Order contains READY items, cannot delete", {
-        orderId: selectedTableOrder.id,
-      });
-      setShowDeleteModal(false);
+      setError("Тайёр маҳсулотлари бор буюртмани ўчириб бўлмайди.");
       return;
     }
-  
+
+    if (!window.confirm("Буюртмани ўчирмоқчимисиз?")) return;
     try {
-      setIsSaving(true);
-      console.log("Attempting to delete order:", {
-        orderId: selectedTableOrder.id,
-        tableId: selectedTableOrder.tableId,
-      });
-  
-      // Perform the delete request
-      await axios.delete(`${API_ENDPOINTS.orders}/${selectedTableOrder.id}`, {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, isDeleting: true } : o
+        )
+      );
+      await axios.delete(`${API_ENDPOINTS.ORDERS}/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
-      // Emit socket event for order deletion
-      socket.emit("orderDeleted", { id: selectedTableOrder.id });
-      console.log("orderDeleted event emitted for order:", selectedTableOrder.id);
-  
-      // Update tables state to remove the order
-      const tableId = selectedTableOrder.tableId;
-      if (tableId) {
-        const hasOtherOrders = tables.some((t) =>
-          t.id === tableId &&
-          t.orders?.some((o) => o.id !== selectedTableOrder.id && o.status !== "ARCHIVE")
-        );
-  
-        if (!hasOtherOrders) {
-          // Update table status to empty if no other active orders
-          await axios.patch(
-            `${API_ENDPOINTS.tables}/${tableId}`,
-            { status: "empty" },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          console.log(`Table ${tableId} status set to empty`);
-        }
-  
-        // Update tables state
-        setTables((prev) =>
-          prev.map((table) => {
-            if (table.id === tableId) {
-              const updatedOrders = table.orders?.filter(
-                (order) => order.id !== selectedTableOrder.id
-              ) || [];
-              const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-              return {
-                ...table,
-                orders: updatedOrders,
-                status: hasActiveOrders ? "busy" : "empty",
-              };
-            }
-            return table;
-          })
-        );
-        console.log("Tables state updated after order deletion", { tableId });
-      } else {
-        console.warn("No tableId found for order, skipping table status update", {
-          orderId: selectedTableOrder.id,
-        });
-      }
-  
-      // Clear cart and selected order
-      setCart([]);
-      setSelectedTableId(null);
-      setSelectedTableOrder(null);
-      setUslug(commissionPercent.toString());
-      setTableUslugs((prev) => {
-        const newUslugs = { ...prev };
-        delete newUslugs[tableId];
-        return newUslugs;
-      });
-  
-      setSuccessMsg("Буюртма муваффақиятли ўчирилди!");
-      console.log(`Order ${selectedTableOrder.id} deleted successfully`);
-    } catch (error) {
-      console.error("Delete order error:", error);
-      setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
-    } finally {
-      setIsSaving(false);
-      setShowDeleteModal(false);
+      setTimeout(() => {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        setSuccessMsg("Буюртма муваффақиятли ўчирилди!");
+      }, 500);
+    } catch (err) {
+      setError(`Буюртмани ўчиришда хатолик юз берди: ${handleApiError(err, "Номаълум хатолик.")}`);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, isDeleting: false } : o
+        )
+      );
     }
-  }, [selectedTableOrder, token, tables, commissionPercent]);
+  };
 
   const addToCart = (taom) => {
     if (!taom?.id || !taom?.price || taom.isFinished) {
