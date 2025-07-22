@@ -74,7 +74,7 @@ export default function Header() {
       setLoading(true);
       setError(null);
 
-      const ordersResponse = await axios.get("http://192.168.100.99:3000/order", {
+      const ordersResponse = await axios.get("https://alikafecrm.uz/order", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -87,7 +87,7 @@ export default function Header() {
 
       let usersData = [{ email: "AdminInfo@gmail.com", role: "CUSTOMER", username: "Admin" }];
       try {
-        const usersResponse = await axios.get("http://192.168.100.99:3000/user", {
+        const usersResponse = await axios.get("https://alikafecrm.uz/user", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         usersData = Array.isArray(usersResponse.data) ? usersResponse.data : usersData;

@@ -37,7 +37,7 @@ export default function Sozlamalar() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://192.168.100.99:3000/user", {
+        const response = await axios.get("https://alikafecrm.uz/user", {
           headers: {
             "Content-Type": "application/json",
             ...(localStorage.getItem("token") && {
@@ -57,7 +57,7 @@ export default function Sozlamalar() {
         setStaff(users);
 
         try {
-          const restaurantResponse = await axios.get("http://192.168.100.99:3000/", {
+          const restaurantResponse = await axios.get("https://alikafecrm.uz/", {
             headers: {
               "Content-Type": "application/json",
               ...(localStorage.getItem("token") && {
@@ -76,7 +76,7 @@ export default function Sozlamalar() {
 
         try {
           const commissionResponse = await axios.get(
-            "http://192.168.100.99:3000/percent",
+            "https://alikafecrm.uz/percent",
             {
               headers: {
                 "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export default function Sozlamalar() {
           if (commissionResponse.data.length > 0) {
             setCommissionPercent(commissionResponse.data[0].percent);
             console.log(
-              `Commission loaded from: http://192.168.100.99:3000/percent`
+              `Commission loaded from: https://alikafecrm.uz/percent`
             );
           } else {
             setCommissionPercent(0);
@@ -119,7 +119,7 @@ export default function Sozlamalar() {
     }
     try {
       await axios.put(
-        "http://192.168.100.99:3000",
+        "https://alikafecrm.uz",
         { name: tempRestaurantName },
         {
           headers: {
@@ -139,8 +139,8 @@ export default function Sozlamalar() {
   };
 
   const handleStaffSave = async () => {
-    if (editingStaff.password && editingStaff.password.length < 8) {
-      alert("Парол камида 8 та белгидан иборат бўлиши керак.");
+    if (editingStaff.password && editingStaff.password.length < 4) {
+      alert("Парол камида 4 та белгидан иборат бўлиши керак.");
       return;
     }
 
@@ -152,7 +152,7 @@ export default function Sozlamalar() {
         role: editingStaff.role,
       };
       await axios.put(
-        `http://192.168.100.99:3000/user/${editingStaff.id}`,
+        `https://alikafecrm.uz/user/${editingStaff.id}`,
         staffData,
         {
           headers: {
@@ -185,8 +185,8 @@ export default function Sozlamalar() {
       return;
     }
 
-    if (newStaff.password.length < 8) {
-      alert("Парол камида 8 та белгидан иборат бўлиши керак.");
+    if (newStaff.password.length < 4) {
+      alert("Парол камида 4 та белгидан иборат бўлиши керак.");
       return;
     }
 
@@ -200,7 +200,7 @@ export default function Sozlamalar() {
         role: newStaff.role,
       };
       const response = await axios.post(
-        "http://192.168.100.99:3000/user",
+        "https://alikafecrm.uz/user",
         staffData,
         {
           headers: {
@@ -230,7 +230,7 @@ export default function Sozlamalar() {
     try {
       const commissionData = { percent: commissionPercent };
       const response = await axios.patch(
-        "http://192.168.100.99:3000/percent/1",
+        "https://alikafecrm.uz/percent/1",
         commissionData,
         {
           headers: {
@@ -397,7 +397,7 @@ export default function Sozlamalar() {
                         );
                         if (confirmDelete) {
                           axios
-                            .delete(`http://192.168.100.99:3000/user/${person.id}`, {
+                            .delete(`https://alikafecrm.uz/user/${person.id}`, {
                               headers: {
                                 "Content-Type": "application/json",
                                 ...(localStorage.getItem("token") && {
@@ -697,7 +697,6 @@ export default function Sozlamalar() {
         </div>
       )}
       
-      {/* Edit Staff Modal */}
       {editingStaff && (
         <div
           className={`modal-backdrop ${editingStaff ? "active" : ""}`}
@@ -741,12 +740,12 @@ export default function Sozlamalar() {
               </div>
               <div className="form-group">
                 <label className="form-label">
-                  Янги парол (агар керак бўлса)
+                  Янги парол 
                 </label>
                 <input
                   type="password"
                   className="form-control"
-                  placeholder="Янги парол (агар керак бўлса)"
+                  placeholder="Янги парол"
                   value={editingStaff.password}
                   onChange={(e) =>
                     setEditingStaff({

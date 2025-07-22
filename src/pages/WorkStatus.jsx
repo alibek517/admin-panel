@@ -3,24 +3,23 @@ import { Sun, Moon } from 'lucide-react';
 import './styles/WorkStatus.css';
 
 function WorkStatus() {
-  const [isDay, setIsDay] = useState(true); // Default to day mode
+  const [isDay, setIsDay] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch initial status from API on component mount
   useEffect(() => {
     const fetchInitialStatus = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+        const response = await fetch('https://alikafecrm.uz/auth-check/1', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           mode: 'cors',
         });
         if (response.ok) {
           const data = await response.json();
-          console.log('Initial status response:', data); // Debug API response
-          setIsDay(data.status ?? isDay); // Fallback to current state
+          console.log('Initial status response:', data);
+          setIsDay(data.status ?? isDay); 
         } else {
           throw new Error(`API error: ${response.status} ${response.statusText}`);
         }
@@ -36,12 +35,12 @@ function WorkStatus() {
   }, []);
 
   const handleStartWork = async () => {
-    console.log('Start Work button clicked, isLoading:', isLoading, 'isDay:', isDay); // Debug
-    if (isLoading || isDay) return; // Prevent redundant clicks
+    console.log('Start Work button clicked, isLoading:', isLoading, 'isDay:', isDay); 
+    if (isLoading || isDay) return; 
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+      const response = await fetch('https://alikafecrm.uz/auth-check/1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: true }),
@@ -49,7 +48,7 @@ function WorkStatus() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Start work response:', data); // Debug API response
+        console.log('Start work response:', data); 
         setIsDay(data.status ?? true);
       } else {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -63,12 +62,12 @@ function WorkStatus() {
   };
 
   const handleEndWork = async () => {
-    console.log('End Work button clicked, isLoading:', isLoading, 'isDay:', isDay); // Debug
-    if (isLoading || !isDay) return; // Prevent redundant clicks
+    console.log('End Work button clicked, isLoading:', isLoading, 'isDay:', isDay); 
+    if (isLoading || !isDay) return; 
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+      const response = await fetch('https://alikafecrm.uz/auth-check/1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: false }),
@@ -76,7 +75,7 @@ function WorkStatus() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('End work response:', data); // Debug API response
+        console.log('End work response:', data);
         setIsDay(data.status ?? false);
       } else {
         throw new Error(`API error: ${response.status} ${response.statusText}`);

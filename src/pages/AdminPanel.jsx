@@ -17,7 +17,7 @@ export default function AdminPanel() {
 
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
-  const [users, setUsers] = useState([]); // New state for users
+  const [users, setUsers] = useState([]); 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [modalType, setModalType] = useState("");
   const [currentOrder, setCurrentOrder] = useState(null);
@@ -89,9 +89,9 @@ export default function AdminPanel() {
   const fetchData = async () => {
     try {
       const [ordersRes, tablesRes, usersRes] = await Promise.all([
-        axios.get("http://192.168.100.99:3000/order", createApiRequest(token)),
-        axios.get("http://192.168.100.99:3000/tables", createApiRequest(token)),
-        axios.get("http://192.168.100.99:3000/user", createApiRequest(token)), // Fetch users
+        axios.get("https://alikafecrm.uz/order", createApiRequest(token)),
+        axios.get("https://alikafecrm.uz/tables", createApiRequest(token)),
+        axios.get("https://alikafecrm.uz/user", createApiRequest(token)),
       ]);
 
       const sanitizedOrders = ordersRes.data
@@ -112,7 +112,6 @@ export default function AdminPanel() {
           uslug: parseFloat(order.uslug) || null,
         }))
         .sort((a, b) => {
-          // Sort by endTime: null/undefined (incomplete) first, then by endTime descending
           if (!a.endTime && !b.endTime) return new Date(b.createdAt) - new Date(a.createdAt);
           if (!a.endTime) return -1;
           if (!b.endTime) return 1;
@@ -126,7 +125,7 @@ export default function AdminPanel() {
         return prevOrders;
       });
       setTables(tablesRes.data.data || []);
-      setUsers(usersRes.data || []); // Store user data
+      setUsers(usersRes.data || []); 
     } catch (error) {
       console.error("Маълумотларни олишда хатолик:", error);
       alert("Маълумотларни олишда хатолик юз берди.");
@@ -169,7 +168,7 @@ export default function AdminPanel() {
 
       await Promise.all(
         archiveOrders.map((order) =>
-          axios.delete(`http://192.168.100.99:3000/order/${order.id}`, createApiRequest(token))
+          axios.delete(`https://alikafecrm.uz/order/${order.id}`, createApiRequest(token))
         )
       );
 
@@ -237,7 +236,7 @@ export default function AdminPanel() {
   const userMap = users.reduce((map, user) => {
     map[user.id] = { name: user.name, surname: user.surname };
     return map;
-  }, {}); // Map userId to name and surname
+  }, {});
 
   const handleView = (order) => {
     setSelectedOrder(order);
@@ -267,7 +266,7 @@ export default function AdminPanel() {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`http://192.168.100.99:3000/order/${orderId}`, createApiRequest(token));
+      await axios.delete(`https://alikafecrm.uz/order/${orderId}`, createApiRequest(token));
       await fetchData();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(null);
@@ -623,7 +622,7 @@ export default function AdminPanel() {
                       }}
                     >
                       <img
-                        src={`http://192.168.100.99:3000${item.product?.image}`}
+                        src={`https://alikafecrm.uz${item.product?.image}`}
                         alt={item.product?.name}
                         style={{
                           width: "50px",
@@ -692,7 +691,7 @@ export default function AdminPanel() {
                       onClick={async () => {
                         try {
                           await axios.put(
-                            `http://192.168.100.99:3000/order/${selectedOrder.id}`,
+                            `https://alikafecrm.uz/order/${selectedOrder.id}`,
                             {
                               status: selectedOrder.status,
                               uslug: parseFloat(selectedOrder.uslug) || null,

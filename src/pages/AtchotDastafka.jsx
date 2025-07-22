@@ -25,7 +25,7 @@ const DeliveryReport = () => {
         if (!token) {
           throw new Error("Токен топилмади");
         }
-        const response = await axios.get('http://192.168.100.99:3000/order', {
+        const response = await axios.get('https://alikafecrm.uz/order', {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -123,7 +123,7 @@ const DeliveryReport = () => {
       if (!token) {
         throw new Error("Токен топилмади");
       }
-      await axios.delete(`http://192.168.100.99:3000/order/${orderId}`, {
+      await axios.delete(`https://alikafecrm.uz/order/${orderId}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -168,7 +168,7 @@ const DeliveryReport = () => {
         throw new Error("Токен топилмади");
       }
       for (const order of ordersToDelete) {
-        await axios.delete(`http://192.168.100.99:3000/order/${order.id}`, {
+        await axios.delete(`https://alikafecrm.uz/order/${order.id}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,

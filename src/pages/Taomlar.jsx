@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import ModalBasket from "../components/modal/modal-basket";
 import Receipt from "../components/Receipt.jsx";
-import { socket } from "../socket.js"; // Импорт сокета
-import { div } from "framer-motion/client";
+import { socket } from "../socket.js";
+
 
 
 const handleApiError = (error, defaultMessage) => {
@@ -39,7 +39,7 @@ const deepClone = (obj) => {
   return cloned;
 };
 
-const API_BASE = "http://192.168.100.99:3000";
+const API_BASE = "https://alikafecrm.uz";
 const API_ENDPOINTS = {
   orders: `${API_BASE}/order`,
   categories: `${API_BASE}/category`,
@@ -149,6 +149,7 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   const [suffix, setSuffix] = useState("");
   const [loading, setLoading] = useState(false);
   const [spaceCount, setSpaceCount] = useState(0);
+
 
   const handlePlaceChange = (e) => {
     const value = e.target.value;
@@ -305,7 +306,7 @@ const EditOrderModal = ({
       });
 
       const updatedOrder = response.data || {};
-      socket.emit("orderUpdated", updatedOrder); // Отправка события orderUpdated
+      socket.emit("orderUpdated", updatedOrder);
       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
 
       setTables((prev) =>
@@ -718,11 +719,16 @@ const Taomlar = React.memo(() => {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [adminCode, setAdminCode] = useState("");
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [users, setUsers] = useState([]); // New state for users
+  const [users, setUsers] = useState([]);
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const [orderDescriptions, setOrderDescriptions] = useState({});
   const processedEvents = useRef(new Set());
+  const [expandedGroupIndex, setExpandedGroupIndex] = useState(null);
+  const [showEditQuantityModal, setShowEditQuantityModal] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [newCount, setNewCount] = useState("");
+
 
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
@@ -766,7 +772,7 @@ const Taomlar = React.memo(() => {
           orderItems: Array.isArray(newOrder.orderItems) ? [...newOrder.orderItems] : [],
           table: newOrder.table || { name: "Йўқ", number: "Йўқ" },
           createdAt: newOrder.createdAt || new Date().toISOString(),
-          user: newOrder.user || { name: "Номаълум", surname: "" }, // Ensure user
+          user: newOrder.user || { name: "Номаълум", surname: "" },
         });
         return prev.map((table) =>
           table.id === newOrder.tableId
@@ -934,6 +940,115 @@ const Taomlar = React.memo(() => {
       setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
     }
   };
+  const openEditModal = (item) => {
+    console.log("Opening edit modal for item:", item);
+    console.log("Current order items:", selectedTableOrder?.orderItems);
+    setEditItem(item);
+    setNewCount(item.count.toString());
+    setShowEditQuantityModal(true);
+  };
+
+  const handleEditQuantity = async () => {
+    if (!selectedTableOrder?.id || !editItem) {
+      setError("Буюртма ёки элемент танланмаган.");
+      return;
+    }
+    const parsedCount = parseInt(newCount);
+    if (isNaN(parsedCount) || parsedCount < 0) {
+      setError("Илтимос, тўғри миқдор киритинг.");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const payload = {
+        products: selectedTableOrder.orderItems.map((oi) =>
+          oi.productId === editItem.id && oi.createdAt === editItem.createdAt
+            ? { productId: Number(editItem.id), count: parsedCount, description: editItem.description || "" }
+            : { productId: oi.productId, count: oi.count, description: oi.description || "" }
+        ),
+        tableId: selectedTableOrder.tableId,
+        userId: selectedTableOrder.userId,
+        status: selectedTableOrder.status,
+      };
+      const response = await axios.put(
+        `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedOrder = response.data;
+      socket.emit("orderUpdated", updatedOrder);
+  
+      // Update tables
+      setTables((prev) =>
+        prev.map((table) =>
+          table.id === updatedOrder.tableId
+            ? {
+                ...table,
+                status: updatedOrder.orderItems?.length ? "busy" : "empty",
+                orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
+              }
+            : table
+        )
+      );
+  
+      // Update selectedTableOrder
+      const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
+      setSelectedTableOrder({
+        ...updatedOrder,
+        totalPrice,
+        totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
+      });
+  
+      // Update cart
+      setCart(
+        updatedOrder.orderItems?.map((oi) => ({
+          id: oi.productId || oi.product?.id || 0,
+          name: oi.product?.name || "Номаълум таом",
+          price: parseFloat(oi.product?.price) || 0,
+          count: oi.count || 0,
+          status: oi.status || "PENDING",
+          description: oi.description || "",
+          createdAt: oi.createdAt || null,
+        })) || []
+      );
+  
+      setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
+      setShowEditQuantityModal(false);
+      setEditItem(null); // Reset editItem to avoid stale data
+    } catch (error) {
+      setError(handleApiError(error, "Миқдорни ўзгартиришда хатолик."));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Modal component
+  const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onConfirm }) => {
+    if (!isOpen) return null;
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Миқдорни ўзгартириш">
+        <div className="form-group">
+          <label htmlFor="quantity">Янги миқдор:</label>
+          <input
+            type="number"
+            id="quantity"
+            value={newCount}
+            onChange={(e) => setNewCount(e.target.value)}
+            min="0"
+            placeholder="Миқдорни киритинг"
+          />
+        </div>
+        <div className="form-actions">
+          <button type="button" onClick={onClose} className="cancel-btn">
+            Бекор қилиш
+          </button>
+          <button onClick={onConfirm} className="submit-btn" disabled={isSaving}>
+            Сақлаш
+          </button>
+        </div>
+      </Modal>
+    );
+  };
 
   const handleOrderItemStatusUpdated = (updatedItem) => {
     try {
@@ -1070,7 +1185,7 @@ const Taomlar = React.memo(() => {
           commissionPercent: parseFloat(uslug) || commissionPercent,
         };
         setSelectedTableOrder(updatedOrder);
-        socket.emit("orderUpdated", updatedOrder); // Отправка события orderUpdated
+        socket.emit("orderUpdated", updatedOrder);
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (!receiptRef.current) {
           console.log("Чоп этиш учун маълумотлар тайёр эмас.");
@@ -1093,7 +1208,7 @@ const Taomlar = React.memo(() => {
       }
       try {
         setIsSaving(true);
-        const commissionToSend = parseFloat(uslug) || commissionPercent; // Исправлено commissionPercent
+        const commissionToSend = parseFloat(uslug) || commissionPercent;
         const currentTime = new Date().toISOString();
         const response = await axios.put(
           `${API_ENDPOINTS.orders}/${order.id}`,
@@ -1167,7 +1282,7 @@ const Taomlar = React.memo(() => {
       await axios.delete(`${API_ENDPOINTS.orders}/${selectedTableOrder.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      socket.emit("orderDeleted", { id: selectedTableOrder.id }); // Отправка события orderDeleted
+      socket.emit("orderDeleted", { id: selectedTableOrder.id });
       const tableId = selectedTableOrder.tableId;
       if (tableId) {
         const hasOtherOrders = tables.some((t) =>
@@ -1265,11 +1380,11 @@ const Taomlar = React.memo(() => {
         setSelectedTableId(newTableId);
         setTableUslugs((prev) => {
           const newUslugs = { ...prev };
-          newUslugs[newTableId] = currentUslug; // Transfer uslug to new table
-          delete newUslugs[oldTableId]; // Remove uslug from old table if no other orders
+          newUslugs[newTableId] = currentUslug;
+          delete newUslugs[oldTableId];
           return newUslugs;
         });
-        setUslug((tableUslugs[newTableId] || commissionPercent).toString()); // Set uslug for new table
+        setUslug((tableUslugs[newTableId] || commissionPercent).toString());
         setSelectedTableOrder({
           ...updatedOrder,
           table: tables.find((t) => t.id === newTableId) || { name: "Йўқ", number: "N/A" },
@@ -1540,7 +1655,7 @@ const Taomlar = React.memo(() => {
     if (!selectedTableId) {
       setSelectedTableOrder(null);
       setCart([]);
-      setUslug(commissionPercent.toString()); // Reset to global commissionPercent
+      setUslug(commissionPercent.toString());
       setError(null);
       console.log("No table selected, resetting order and cart");
       return;
@@ -1550,7 +1665,7 @@ const Taomlar = React.memo(() => {
     if (!selectedTable) {
       setSelectedTableOrder(null);
       setCart([]);
-      setUslug(commissionPercent.toString()); // Reset to global commissionPercent
+      setUslug(commissionPercent.toString());
       setError("Стол топилмади.");
       console.error("Selected table not found", { selectedTableId });
       return;
@@ -1593,14 +1708,14 @@ const Taomlar = React.memo(() => {
       } else {
         setSelectedTableOrder(null);
         setCart([]);
-        setUslug(commissionPercent.toString()); // Reset to global commissionPercent
+        setUslug(commissionPercent.toString());
         setError("Актив буюртма топилмади.");
         console.log("No active orders for selected table", { tableId: selectedTableId });
       }
     } else {
       setSelectedTableOrder(null);
       setCart([]);
-      setUslug((tableUslugs[selectedTableId] || commissionPercent).toString()); // Use table-specific uslug or global
+      setUslug((tableUslugs[selectedTableId] || commissionPercent).toString());
       setError(null);
       console.log("Selected table is empty or has no orders", {
         tableId: selectedTableId,
@@ -1646,7 +1761,7 @@ const Taomlar = React.memo(() => {
           ...taom,
           count: 1,
           status: "PENDING",
-          createdAt: new Date().toISOString(), // Set creation time for new item
+          createdAt: new Date().toISOString(),
         },
       ];
     });
@@ -1776,7 +1891,7 @@ const Taomlar = React.memo(() => {
       const response = await method(url, body, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      socket.emit("orderCreated", response.data); // Отправка события orderCreated
+      socket.emit("orderCreated", response.data);
 
       if (orderData.isTableOrder && tableId) {
         await axios.patch(
@@ -1815,8 +1930,8 @@ const Taomlar = React.memo(() => {
               taom.categoryId &&
               taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
           )
-          .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
-        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+          .sort((a, b) => (a.index || 0) - (b.index || 0))
+        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0))
     );
   }, [selectedCategory, categories, taomlar]);
 
@@ -1955,15 +2070,14 @@ const Taomlar = React.memo(() => {
                         <tr>
                           <td
                             onClick={() => {
-                              const rows = document.querySelectorAll(`[id^="hidden-row-${groupIndex}-"]`);
-                              const headerRow = document.getElementById(`hidden-header-${groupIndex}`);
-                              const button = event.currentTarget.querySelector("b");
-                              const isHidden = button.textContent === "+";
-                              headerRow.classList.toggle("hidden", !isHidden);
-                              rows.forEach((row) => {
-                                row.classList.toggle("hidden", !isHidden);
-                              });
-                              button.textContent = isHidden ? "−" : "+";
+                              // Toggle the expanded group
+                              if (expandedGroupIndex === groupIndex) {
+                                // Collapse the current group
+                                setExpandedGroupIndex(null);
+                              } else {
+                                // Expand the clicked group and collapse others
+                                setExpandedGroupIndex(groupIndex);
+                              }
                             }}
                             style={{
                               background: "#e8e8e8",
@@ -1974,7 +2088,9 @@ const Taomlar = React.memo(() => {
                               cursor: "pointer",
                             }}
                           >
-                            <b style={{ background: "none", border: "none", fontSize: "30px" }}>+</b>
+                            <b style={{ background: "none", border: "none", fontSize: "30px" }}>
+                              {expandedGroupIndex === groupIndex ? "−" : "+"}
+                            </b>
                           </td>
                           <td>{group.name || "Номаълум"}</td>
                           <td>{group.totalCount || 0}</td>
@@ -1992,7 +2108,10 @@ const Taomlar = React.memo(() => {
                               : "Маълумот йўқ"}
                           </td>
                         </tr>
-                        <tr id={`hidden-header-${groupIndex}`} className="hidden">
+                        <tr
+                          id={`hidden-header-${groupIndex}`}
+                          className={expandedGroupIndex === groupIndex ? "" : "hidden"}
+                        >
                           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}></th>
                           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Номи</th>
                           <th style={{ background: "#f0f0f0", fontWeight: "bold" }}>Миқдор</th>
@@ -2005,7 +2124,7 @@ const Taomlar = React.memo(() => {
                           .map((item, itemIndex) => (
                             <tr
                               id={`hidden-row-${groupIndex}-${itemIndex}`}
-                              className="hidden"
+                              className={expandedGroupIndex === groupIndex ? "" : "hidden"}
                               key={`hidden-${groupIndex}-${itemIndex}`}
                             >
                               <td></td>
@@ -2023,98 +2142,12 @@ const Taomlar = React.memo(() => {
                               <td style={{ display: "flex", gap: "30px", alignItems: "center" }}>
                                 <button
                                   style={{ background: "none", border: "none", cursor: "pointer" }}
-                                  onClick={async () => {
-                                    if (!selectedTableOrder?.id) {
-                                      setError("Буюртма танланмаган.");
-                                      return;
-                                    }
-                                    const orderItem = selectedTableOrder.orderItems.find(
-                                      (oi) => oi.productId === item.id && oi.createdAt === item.createdAt
-                                    );
-                                    if (!orderItem) {
-                                      setError("Буюртма элементи топилмади.");
-                                      return;
-                                    }
-                                    if (orderItem.status === "READY") {
-                                      setError("Тайёр таомларни таҳрирлаб бўлмайди.");
-                                      return;
-                                    }
-                                    const newCount = prompt("Янги миқдорни киритинг:", item.count);
-                                    if (newCount !== null) {
-                                      const parsedCount = parseInt(newCount);
-                                      if (isNaN(parsedCount) || parsedCount < 0) {
-                                        setError("Илтимос, тўғри миқдор киритинг.");
-                                        return;
-                                      }
-                                      try {
-                                        setIsSaving(true);
-                                        const payload = {
-                                          products: [
-                                            {
-                                              productId: Number(item.id),
-                                              count: parsedCount,
-                                              description: item.description || "",
-                                            },
-                                          ],
-                                          tableId: selectedTableOrder.tableId,
-                                          userId: selectedTableOrder.userId,
-                                          status: selectedTableOrder.status,
-                                        };
-                                        const response = await axios.put(
-                                          `http://192.168.100.99:3000/order/${selectedTableOrder.id}`,
-                                          payload,
-                                          { headers: { Authorization: `Bearer ${token}` } }
-                                        );
-                                        const updatedOrder = response.data;
-                                        socket.emit("orderUpdated", updatedOrder);
-
-                                        // Update tables state
-                                        setTables((prev) =>
-                                          prev.map((table) =>
-                                            table.id === updatedOrder.tableId
-                                              ? {
-                                                ...table,
-                                                status: updatedOrder.orderItems?.length ? "busy" : "empty",
-                                                orders: [{ ...updatedOrder, table }],
-                                              }
-                                              : table
-                                          )
-                                        );
-
-                                        // Update selectedTableOrder
-                                        const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-                                        setSelectedTableOrder({
-                                          ...updatedOrder,
-                                          totalPrice,
-                                          totalWithCommission:
-                                            totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
-                                        });
-
-                                        // Update cart
-                                        setCart(
-                                          updatedOrder.orderItems?.map((oi) => ({
-                                            id: oi.productId || oi.product?.id || 0,
-                                            name: oi.product?.name || "Номаълум таом",
-                                            price: parseFloat(oi.product?.price) || 0,
-                                            count: oi.count || 0,
-                                            status: oi.status || "PENDING",
-                                            description: oi.description || "",
-                                            createdAt: oi.createdAt || null,
-                                          })) || []
-                                        );
-
-                                        setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
-                                      } catch (error) {
-                                        setError(handleApiError(error, "Миқдорни ўзгартиришда хатолик."));
-                                      } finally {
-                                        setIsSaving(false);
-                                      }
-                                    }
-                                  }}
+                                  onClick={() => openEditModal(item)}
                                   disabled={isSaving}
                                 >
                                   <Pencil size={20} />
                                 </button>
+
                                 <button
                                   style={{ background: "none", border: "none", cursor: "pointer" }}
                                   onClick={async () => {
@@ -2136,21 +2169,22 @@ const Taomlar = React.memo(() => {
                                     try {
                                       setIsSaving(true);
                                       await axios.delete(
-                                        `http://192.168.100.99:3000/order/orderItem/${orderItem.id}`,
+                                        `https://alikafecrm.uz/order/orderItem/${orderItem.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }
                                       );
                                       const response = await axios.get(
-                                        ` over http://192.168.100.99:3000/order/${selectedTableOrder.id}`,
+                                        `https://alikafecrm.uz/order/${selectedTableOrder.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }
                                       );
                                       const updatedOrder = response.data;
-                                      socket.emit("orderUpdated", updatedOrder);
-
-                                      // Update tables state
+                                      if (!updatedOrder?.orderItems || !Array.isArray(updatedOrder.orderItems)) {
+                                        setError("Сервердан нотўғри маълумот қайтарилди.");
+                                        return;
+                                      }
                                       setTables((prev) =>
                                         prev.map((table) =>
                                           table.id === updatedOrder.tableId
@@ -2165,7 +2199,6 @@ const Taomlar = React.memo(() => {
                                         )
                                       );
 
-                                      // Update selectedTableOrder
                                       const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
                                       setSelectedTableOrder({
                                         ...updatedOrder,
@@ -2174,7 +2207,6 @@ const Taomlar = React.memo(() => {
                                           totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
                                       });
 
-                                      // Update cart
                                       setCart(
                                         updatedOrder.orderItems?.map((oi) => ({
                                           id: oi.productId || oi.product?.id || 0,
@@ -2211,7 +2243,7 @@ const Taomlar = React.memo(() => {
                   )}
                 </tbody>
               </table>
-              
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '35px' }}>
                 <input
                   placeholder="Хизмат нархи (%)"
@@ -2557,7 +2589,14 @@ const Taomlar = React.memo(() => {
           }}
         />
       )}
-
+      <EditQuantityModal
+        isOpen={showEditQuantityModal}
+        onClose={() => setShowEditQuantityModal(false)}
+        item={editItem}
+        newCount={newCount}
+        setNewCount={setNewCount}
+        onConfirm={handleEditQuantity}
+      />
       {showEditModal && selectedTableOrder && (
         <EditOrderModal
           isOpen={showEditModal}

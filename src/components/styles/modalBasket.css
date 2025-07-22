@@ -419,11 +419,7 @@ body {
   margin-bottom: var(--space-4);
 }
 
-.basket-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: var(--space-4);
-}
+
 
 .basket-table th,
 .basket-table td {
@@ -757,11 +753,6 @@ body {
   margin-bottom: 15px;
 }
 
-.basket-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
 
 .basket-table th,
 .basket-table td {

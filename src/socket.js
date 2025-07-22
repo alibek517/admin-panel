@@ -1,6 +1,6 @@
 import io from 'socket.io-client';
 
-const API_BASE = 'http://192.168.100.99:3000';
+const API_BASE = 'https://alikafecrm.uz';
 
 const socket = io(API_BASE, {
   auth: { token: localStorage.getItem('token') },

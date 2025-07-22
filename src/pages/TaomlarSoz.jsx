@@ -18,7 +18,7 @@ export default function TaomlarSoz() {
     assignedToId: null,
     createdAt: null,
     category: null,
-    isCompleted: false, // Add isCompleted to the initial state
+    isCompleted: false,
   });
   const [categoryList, setCategoryList] = useState([]);
   const [kitchenStaff, setKitchenStaff] = useState([]);
@@ -82,7 +82,7 @@ export default function TaomlarSoz() {
         throw new Error("JWT token not found in localStorage");
       }
 
-      const res = await axios.get("http://192.168.100.99:3000/product", {
+      const res = await axios.get("https://alikafecrm.uz/product", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -96,7 +96,7 @@ export default function TaomlarSoz() {
           id: Number(item.id) || 0,
           categoryId: item.categoryId ? Number(item.categoryId) : null,
           index: item.index || "0",
-          isCompleted: item.isCompleted || false, // Ensure isCompleted is included
+          isCompleted: item.isCompleted || false,
         }))
         .sort((a, b) => Number(a.index) - Number(b.index));
 
@@ -112,7 +112,7 @@ export default function TaomlarSoz() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://192.168.100.99:3000/category", {
+      const res = await axios.get("https://alikafecrm.uz/category", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const categories = res.data.map((cat) => ({
@@ -134,7 +134,7 @@ export default function TaomlarSoz() {
   const fetchKitchenStaff = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://192.168.100.99:3000/user?role=KITCHEN", {
+      const res = await axios.get("https://alikafecrm.uz/user?role=KITCHEN", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setKitchenStaff(
@@ -168,7 +168,7 @@ export default function TaomlarSoz() {
       assignedToId: null,
       createdAt: null,
       category: null,
-      isCompleted: false, // Reset isCompleted
+      isCompleted: false,
     });
   };
 
@@ -205,13 +205,13 @@ export default function TaomlarSoz() {
 
     try {
       const request = editing
-        ? axios.put(`http://192.168.100.99:3000/product/${Number(dishes.id)}`, formData, {
+        ? axios.put(`https://alikafecrm.uz/product/${Number(dishes.id)}`, formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",
           },
         })
-        : axios.post("http://192.168.100.99:3000/product", formData, {
+        : axios.post("https://alikafecrm.uz/product", formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",
@@ -233,7 +233,7 @@ export default function TaomlarSoz() {
   const handleDelete = async (id) => {
     if (window.confirm("Таомни ўчиришни хоҳлайсизми?")) {
       try {
-        await axios.delete(`http://192.168.100.99:3000/product/${Number(id)}`, {
+        await axios.delete(`https://alikafecrm.uz/product/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         await fetchMenu();
@@ -247,7 +247,7 @@ export default function TaomlarSoz() {
   const handleDeleteCategory = async (id) => {
     if (window.confirm("Категорияни ўчиришни хоҳлайсизми?")) {
       try {
-        await axios.delete(`http://192.168.100.99:3000/category/${Number(id)}`, {
+        await axios.delete(`https://alikafecrm.uz/category/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         await fetchCategories();
@@ -270,7 +270,7 @@ export default function TaomlarSoz() {
       assignedToId: Number(dish.assignedToId) ?? null,
       createdAt: dish.createdAt ?? null,
       category: dish.category ?? null,
-      isCompleted: dish.isCompleted ?? false, // Include isCompleted
+      isCompleted: dish.isCompleted ?? false,
     });
     setEditing(true);
     setShowModal(true);
@@ -297,7 +297,7 @@ export default function TaomlarSoz() {
 
     try {
       await axios.post(
-        "http://192.168.100.99:3000/product/swap-indices",
+        "https://alikafecrm.uz/product/swap-indices",
         { index1: Number(index1), index2: Number(index2) },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -321,10 +321,9 @@ export default function TaomlarSoz() {
         throw new Error("JWT token not found in localStorage");
       }
 
-      // Toggle isCompleted based on current state
       const newIsCompleted = !dishes.isCompleted;
       await axios.put(
-        `http://192.168.100.99:3000/product/${Number(dishId)}`,
+        `https://alikafecrm.uz/product/${Number(dishId)}`,
         { isCompleted: newIsCompleted },
         {
           headers: {
@@ -334,7 +333,6 @@ export default function TaomlarSoz() {
         }
       );
 
-      // Update local state to reflect the change
       setDishes((prev) => ({ ...prev, isCompleted: newIsCompleted }));
       await fetchMenu();
     } catch (err) {
@@ -353,7 +351,7 @@ export default function TaomlarSoz() {
       >
         <img
           className="food-card-image"
-          src={`http://192.168.100.99:3000${item.image}`}
+          src={`https://alikafecrm.uz${item.image}`}
           alt={item.name}
         />
         <div className="food-card-content">
@@ -513,7 +511,7 @@ export default function TaomlarSoz() {
                   }
                   try {
                     const res = await axios.post(
-                      "http://192.168.100.99:3000/category",
+                      "https://alikafecrm.uz/category",
                       { name: newCategory.trim() },
                       {
                         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -605,7 +603,7 @@ export default function TaomlarSoz() {
               <div className="modal-body1">
                 {editing && typeof dishes.image === "string" && (
                   <img
-                    src={`http://192.168.100.99:3000${dishes.image}`}
+                    src={`https://alikafecrm.uz${dishes.image}`}
                     alt="Жорий"
                     style={{
                       width: "100px",

@@ -197,9 +197,7 @@ body {
   background-color: #e3f2fd;
 }
 
-.basket-table {
-  margin-left: -5px;
-}
+
 
 .description-input {
   display: flex;
@@ -418,11 +416,7 @@ body {
   margin: 10px 0 5px;
 }
 
-.basket-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
+
 
 .basket-table th,
 .basket-table td {
@@ -730,11 +724,124 @@ body {
   background-color: #6c757d;
   cursor: not-allowed;
 }
-
+/* Basket Table */
 .basket-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-bottom: 15px; /* Reduced from 20px */
+  margin-left: 0; /* Remove negative margin */
+  font-size: 0.9rem; /* Smaller font size for compactness */
+}
+
+.basket-table th,
+.basket-table td {
+  padding: 6px 8px; /* Reduced padding for smaller cells */
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle; /* Ensure vertical alignment */
+}
+
+.basket-table th {
+  background-color: var(--background-gray);
+  font-weight: bold;
+  font-size: 0.85rem; /* Slightly smaller header font */
+  text-transform: uppercase; /* Optional: for better readability */
+}
+
+.basket-table td {
+  font-size: 0.85rem; /* Smaller text for table cells */
+}
+
+/* Compact toggle button cell */
+.basket-table td:has(> b) {
+  padding: 4px; /* Even less padding for toggle button cell */
+  width: 40px; /* Fixed width to reduce space */
+  background: #e8e8e8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.basket-table td b {
+  font-size: 1.2rem; /* Reduced from 30px for compactness */
+  line-height: 1; /* Ensure proper alignment */
+}
+
+/* Hidden row styling */
+.basket-table tr.hidden th,
+.basket-table tr.hidden td {
+  background: #f0f0f0;
+  font-weight: normal; /* Less bold for hidden rows */
+  padding: 5px 8px; /* Reduced padding */
+  font-size: 0.8rem; /* Smaller font for hidden rows */
+}
+
+/* Action buttons in table */
+.basket-table td button {
+  padding: 4px; /* Reduced padding for buttons */
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.basket-table td button svg {
+  width: 16px; /* Smaller icons */
+  height: 16px;
+}
+
+/* Total row styling */
+.basket-table__total {
+  font-size: 1.2rem; /* Reduced from 1.5rem */
+  font-weight: 600;
+  background-color: #ecf2f8;
+  padding: 8px 16px; /* Reduced padding */
+  border-radius: 12px; /* Slightly smaller border-radius */
+  text-align: center;
+  margin: 10px 0; /* Reduced margin */
+  box-shadow: 0 2px 8px rgba(102, 102, 102, 0.2); /* Lighter shadow */
+  display: inline-block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .basket-table {
+    font-size: 0.8rem; /* Smaller font for mobile */
+  }
+
+  .basket-table th,
+  .basket-table td {
+    padding: 4px 6px; /* Further reduced padding for mobile */
+  }
+
+  .basket-table td b {
+    font-size: 1rem; /* Smaller toggle button */
+  }
+
+  .basket-table td button svg {
+    width: 14px; /* Smaller icons for mobile */
+    height: 14px;
+  }
+
+  .basket-table__total {
+    font-size: 1rem; /* Smaller total font */
+    padding: 6px 12px; /* Reduced padding */
+  }
+}
+
+@media (max-width: 480px) {
+  .basket-table {
+    font-size: 0.75rem; /* Even smaller font for small screens */
+  }
+
+  .basket-table th,
+  .basket-table td {
+    padding: 3px 5px; /* Minimal padding */
+  }
+
+  .basket-table td:has(> b) {
+    width: 30px; /* Smaller toggle button cell */
+  }
 }
 
 .basket-table th,

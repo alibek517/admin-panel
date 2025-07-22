@@ -7,7 +7,7 @@ import { useReactToPrint } from "react-to-print";
 import io from "socket.io-client";
 import Receipt from "../components/Receipt.jsx";
 
-const API_BASE_URL = "http://192.168.100.99:3000";
+const API_BASE_URL = "https://alikafecrm.uz";
 const API_ENDPOINTS = {
   ORDERS: `${API_BASE_URL}/order`,
   PRODUCTS: `${API_BASE_URL}/product`,
@@ -870,7 +870,6 @@ export default function Dostavka() {
         createdAt: order.createdAt || new Date().toISOString(),
       });
 
-      // Get current time in Asia/Tashkent timezone
       const currentDateTime = new Date().toLocaleString("en-US", {
         timeZone: "Asia/Tashkent",
         year: "numeric",
@@ -1273,8 +1272,8 @@ export default function Dostavka() {
                 taom.categoryId &&
                 taom.categoryId === categories.find((cat) => cat.name === selectedCategory)?.id
             )
-            .sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
-        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) // index bo'yicha tartiblash
+            .sort((a, b) => (a.index || 0) - (b.index || 0)) 
+        : taomlar.sort((a, b) => (a.index || 0) - (b.index || 0)) 
     );
   }, [selectedCategory, categories, taomlar]);
 

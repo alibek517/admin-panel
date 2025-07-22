@@ -25,7 +25,7 @@ import "./styles/Zakazlar.css";
 import axios from "axios";
 import { socket } from "../socket.js";
 
-const API_BASE = "http://192.168.100.99:3000";
+const API_BASE = "https://alikafecrm.uz";
 const API_ENDPOINTS = {
   orders: `${API_BASE}/order`,
   categories: `${API_BASE}/category`,
@@ -821,7 +821,6 @@ export default function Zakazlar() {
       }
     };
 
-    // Log all incoming socket events for debugging
     socket.onAny((event, ...args) => {
       console.log(`Received socket event: ${event}`, args);
     });

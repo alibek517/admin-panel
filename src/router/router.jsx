@@ -13,8 +13,8 @@ import Zakazlar from "../pages/Zakazlar.jsx";
 import ZakazlarTarixi from "../pages/ZakazlarTarixi.jsx";
 import Chiqish from "../pages/Chiqish.jsx";
 import Login from "../pages/Login.jsx";
-import Dostavka from "../pages/Dostavka.jsx"; // Added Dostavka import
-import AtchotDastafka from "../pages/AtchotDastafka.jsx"; // Added Dostavka import
+import Dostavka from "../pages/Dostavka.jsx"; 
+import AtchotDastafka from "../pages/AtchotDastafka.jsx"; 
 import IshniBoshlash from "../pages/WorkStatus.jsx";
 
 const ProtectedRoute = ({ children }) => {

@@ -29,6 +29,7 @@ export default function Sidebar() {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordd, setShowPasswordd] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingRoute, setPendingRoute] = useState(null);
 
@@ -42,10 +43,10 @@ export default function Sidebar() {
     location.pathname === "/ZakazlarTarixi" ||
     location.pathname === "/AtchotDastafka";
 
-  const checkAuth = async () => {
+    const checkAuth = async () => {
     setErrorMessage("");
     try {
-      const response = await fetch("http://192.168.100.99:3000/user");
+      const response = await fetch("https://alikafecrm.uz/user");
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
@@ -61,6 +62,7 @@ export default function Sidebar() {
         setLogin("");
         setPassword("");
         setShowPassword(false);
+        setShowPasswordd(false);
         if (pendingRoute) {
           navigate(pendingRoute);
           setPendingRoute(null);
@@ -93,6 +95,9 @@ export default function Sidebar() {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+  const togglePasswordVisibilityy = () => {
+    setShowPasswordd(!showPasswordd);
   };
 
   return (
@@ -226,7 +231,7 @@ export default function Sidebar() {
           className={`nav-item ${location.pathname === "/AdminPanel" ? "active" : ""}`}
         >
           <Home size={20} />
-          <span>Администратор панели</span>
+          <span>Админ</span>
         </div>
         <div
           onClick={() => handleNavigation("/ZakazlarTarixi")}
@@ -343,6 +348,7 @@ export default function Sidebar() {
           <div className="modal">
             <div className="modal-content">
               <h2>Авторизация</h2>
+              <div style={{ position: "relative", display: "inline-block" }}>
               <input
                 style={{
                   width: "300px",
@@ -350,11 +356,32 @@ export default function Sidebar() {
                   marginBottom: "-10px",
                 }}
                 className="modal-input"
-                type="text"
+                type={showPasswordd ? "text" : "password"}
                 placeholder="Логин"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
               />
+              <button
+                  type="button"
+                  onClick={togglePasswordVisibilityy}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#666",
+                    padding: "0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {showPasswordd ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               <div style={{ position: "relative", display: "inline-block" }}>
                 <input
                   style={{
