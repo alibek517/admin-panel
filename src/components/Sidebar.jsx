@@ -388,16 +388,14 @@ export default function Sidebar() {
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  marginBottom: '15px',
-                  border: '3px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.1)'
                 </button>
               </div>
               {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
-              <button className="success-message2"
+              <button className="success-message2" onClick={checkAuth}>
+                Войти
+              </button>
+              <button
+                className="success-message3"
                 onClick={() => setShowModal(false)}
               >
                 Отмена
