@@ -39,7 +39,7 @@ const deepClone = (obj) => {
   return cloned;
 };
 
-const API_BASE = "https://alikafecrm.uz";
+const API_BASE = "http://192.168.100.99:3000";
 const API_ENDPOINTS = {
   orders: `${API_BASE}/order`,
   categories: `${API_BASE}/category`,
@@ -2061,7 +2061,7 @@ const Taomlar = React.memo(() => {
                                           status: selectedTableOrder.status,
                                         };
                                         const response = await axios.put(
-                                          `https://alikafecrm.uz/order/${selectedTableOrder.id}`,
+                                          `http://192.168.100.99:3000/order/${selectedTableOrder.id}`,
                                           payload,
                                           { headers: { Authorization: `Bearer ${token}` } }
                                         );
@@ -2136,13 +2136,13 @@ const Taomlar = React.memo(() => {
                                     try {
                                       setIsSaving(true);
                                       await axios.delete(
-                                        `https://alikafecrm.uz/order/orderItem/${orderItem.id}`,
+                                        `http://192.168.100.99:3000/order/orderItem/${orderItem.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }
                                       );
                                       const response = await axios.get(
-                                        ` over https://alikafecrm.uz/order/${selectedTableOrder.id}`,
+                                        ` over http://192.168.100.99:3000/order/${selectedTableOrder.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }

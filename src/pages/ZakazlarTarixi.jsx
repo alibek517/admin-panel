@@ -108,9 +108,9 @@ export default function ZakazTarixi() {
         };
 
         const [ordersResponse, categoriesResponse, tablesResponse] = await Promise.all([
-          axios.get("https://alikafecrm.uz/order", config),
-          axios.get("https://alikafecrm.uz/category", config),
-          axios.get("https://alikafecrm.uz/tables", config),
+          axios.get("http://192.168.100.99:3000/order", config),
+          axios.get("http://192.168.100.99:3000/category", config),
+          axios.get("http://192.168.100.99:3000/tables", config),
         ]);
 
         const sanitizedOrders = ordersResponse.data.map((order) => ({

@@ -7,7 +7,7 @@ import { useReactToPrint } from "react-to-print";
 import io from "socket.io-client";
 import Receipt from "../components/Receipt.jsx";
 
-const API_BASE_URL = "https://alikafecrm.uz";
+const API_BASE_URL = "http://192.168.100.99:3000";
 const API_ENDPOINTS = {
   ORDERS: `${API_BASE_URL}/order`,
   PRODUCTS: `${API_BASE_URL}/product`,

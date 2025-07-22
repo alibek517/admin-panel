@@ -174,7 +174,7 @@ const AtchotOfitsantlar = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('https://alikafecrm.uz/order');
+        const response = await fetch('http://192.168.100.99:3000/order');
         if (!response.ok) {
           throw new Error('Ma\'lumotlarni yuklashda xatolik');
         }
