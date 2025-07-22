@@ -19,6 +19,7 @@ import {
   Plus,
   Rocket,
 } from "lucide-react";
+import logotip from "/logo Ai-01.png"
 
 export default function Sidebar() {
   const location = useLocation();
@@ -97,20 +98,99 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h1
-          style={{
+        <div style={{
+          display:'flex',
+          flexDirection:'column',
+          width:"100%"
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+            <img
+              src={logotip}
+              alt="AI Cafe Logo"
+              style={{
+                width: '180px',
+                height: '70px',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                
+              }}
+            />
+          </div>
+          <h1 style={{
             cursor: 'default',
-            fontSize: "24px",
-            fontWeight: "bold",
-            color: "#fff",
-            textAlign: "center",
-            marginBottom: "-12px",
-            padding: "10px 0",
+            fontSize: '22px',
+            fontWeight: '700',
+            marginTop:'-20px',
+            color: '#fff',
+            textAlign: 'center',
+            margin: 0,
+            letterSpacing: '1.5px',
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+            background: 'linear-gradient(135deg, #ffffff, #e0e0e0)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            АДМИН
+          </h1>
+         
+        </div>
+
+        <button
+          className="mobile-menu-toggle"
+          style={{
+            position: 'absolute',
+            fontSize: '22px',
+            right: '15px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            color: '#fff',
+            padding: '8px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.transform = 'scale(1)';
           }}
         >
-          АДМИН
-        </h1>
-        <button className="mobile-menu-toggle">
+          <Menu size={24} />
+        </button>
+
+        <button
+          className="mobile-menu-toggle"
+          style={{
+            position: 'absolute',
+            top: '15px',
+            right: '15px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: 'none',
+            color: '#fff',
+            padding: '8px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
           <Menu size={24} />
         </button>
       </div>
@@ -132,7 +212,6 @@ export default function Sidebar() {
           <Truck size={20} />
           <span>Доставка</span>
         </div>
-        {/* Rest of the nav items remain unchanged */}
         <div
           style={{ cursor: 'pointer', display: 'none' }}
           onClick={() => handleNavigation("/Zakazlar")}
@@ -177,20 +256,20 @@ export default function Sidebar() {
           <Truck size={20} />
           <span>Отчет по доставка</span>
         </div>
-            <div
-              onClick={() => handleNavigation("/AdminPanel/ofitsant")}
-              className={`nav-item ${location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
-                }`}
-              style={{
-                display: isAdminPanelActive ? "flex" : "none",
-                marginLeft: '15px',
-                fontSize: '15px',
-                cursor: 'pointer'
-              }}
-            >
-              <HandPlatter size={20} />
-              <span>Отчет по Официантам</span>
-            </div>
+        <div
+          onClick={() => handleNavigation("/AdminPanel/ofitsant")}
+          className={`nav-item ${location.pathname === "/AdminPanel/ofitsant" ? "active" : ""
+            }`}
+          style={{
+            display: isAdminPanelActive ? "flex" : "none",
+            marginLeft: '15px',
+            fontSize: '15px',
+            cursor: 'pointer'
+          }}
+        >
+          <HandPlatter size={20} />
+          <span>Отчет по Официантам</span>
+        </div>
         <div
           onClick={() => handleNavigation("/AdminPanel/ovqat")}
           className={`nav-item ${location.pathname === "/AdminPanel/ovqat" ? "active" : ""
@@ -205,8 +284,7 @@ export default function Sidebar() {
           <Pizza size={20} />
           <span>Отчет по блюдам</span>
         </div>
-        
-        
+
         <div
           style={{ cursor: 'pointer', display: 'none' }}
           onClick={() => handleNavigation("/Asboblar")}
@@ -310,14 +388,16 @@ export default function Sidebar() {
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  marginBottom: '15px',
+                  border: '3px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.1)'
                 </button>
               </div>
               {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
-              <button className="success-message2" onClick={checkAuth}>
-                Войти
-              </button>
-              <button
-                className="success-message3"
+              <button className="success-message2"
                 onClick={() => setShowModal(false)}
               >
                 Отмена

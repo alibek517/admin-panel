@@ -41,27 +41,18 @@
 .login-icon {
   width: 5rem;
   height: 5rem;
-  background-color: var(--color-primary);
   border-radius: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1rem;
-  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
-  transition: transform 0.2s ease;
 }
 
 .login-icon:hover {
   transform: scale(1.05);
-  box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.4);
-  background-color: var(--color-primary-dark);
 }
 
-.login-icon svg {
-  width: 2.5rem;
-  height: 2.5rem;
-  color: white;
-}
+
 
 .login-title {
   font-size: 1.5rem;
