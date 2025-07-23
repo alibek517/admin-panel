@@ -46,7 +46,7 @@ export default function Sidebar() {
     const checkAuth = async () => {
     setErrorMessage("");
     try {
-      const response = await fetch("https://alikafecrm.uz/user");
+      const response = await fetch("http://192.168.100.99:3000/user");
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }

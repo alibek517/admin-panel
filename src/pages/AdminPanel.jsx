@@ -89,9 +89,9 @@ export default function AdminPanel() {
   const fetchData = async () => {
     try {
       const [ordersRes, tablesRes, usersRes] = await Promise.all([
-        axios.get("https://alikafecrm.uz/order", createApiRequest(token)),
-        axios.get("https://alikafecrm.uz/tables", createApiRequest(token)),
-        axios.get("https://alikafecrm.uz/user", createApiRequest(token)),
+        axios.get("http://192.168.100.99:3000/order", createApiRequest(token)),
+        axios.get("http://192.168.100.99:3000/tables", createApiRequest(token)),
+        axios.get("http://192.168.100.99:3000/user", createApiRequest(token)),
       ]);
 
       const sanitizedOrders = ordersRes.data
@@ -168,7 +168,7 @@ export default function AdminPanel() {
 
       await Promise.all(
         archiveOrders.map((order) =>
-          axios.delete(`https://alikafecrm.uz/order/${order.id}`, createApiRequest(token))
+          axios.delete(`http://192.168.100.99:3000/order/${order.id}`, createApiRequest(token))
         )
       );
 
@@ -266,7 +266,7 @@ export default function AdminPanel() {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`https://alikafecrm.uz/order/${orderId}`, createApiRequest(token));
+      await axios.delete(`http://192.168.100.99:3000/order/${orderId}`, createApiRequest(token));
       await fetchData();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder(null);
@@ -622,7 +622,7 @@ export default function AdminPanel() {
                       }}
                     >
                       <img
-                        src={`https://alikafecrm.uz${item.product?.image}`}
+                        src={`http://192.168.100.99:3000${item.product?.image}`}
                         alt={item.product?.name}
                         style={{
                           width: "50px",
@@ -691,7 +691,7 @@ export default function AdminPanel() {
                       onClick={async () => {
                         try {
                           await axios.put(
-                            `https://alikafecrm.uz/order/${selectedOrder.id}`,
+                            `http://192.168.100.99:3000/order/${selectedOrder.id}`,
                             {
                               status: selectedOrder.status,
                               uslug: parseFloat(selectedOrder.uslug) || null,

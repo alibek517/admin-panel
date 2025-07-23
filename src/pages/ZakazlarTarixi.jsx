@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./styles/ZakazTarixi.css";
 import axios from "axios";
 import {
@@ -11,6 +11,7 @@ import {
   Calendar,
   Search,
   Eye,
+  X,
 } from "lucide-react";
 
 const filters = [
@@ -51,6 +52,7 @@ export default function ZakazTarixi() {
   const [sortAscending, setSortAscending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openFoodItems, setOpenFoodItems] = useState(null);
+  const modalRef = useRef(null);
 
   const calculateTotalPrice = (order) => {
     const itemsPrice = order?.orderItems?.reduce((sum, item) => {
@@ -108,9 +110,9 @@ export default function ZakazTarixi() {
         };
 
         const [ordersResponse, categoriesResponse, tablesResponse] = await Promise.all([
-          axios.get("https://alikafecrm.uz/order", config),
-          axios.get("https://alikafecrm.uz/category", config),
-          axios.get("https://alikafecrm.uz/tables", config),
+          axios.get("http://192.168.100.99:3000/order", config),
+          axios.get("http://192.168.100.99:3000/category", config),
+          axios.get("http://192.168.100.99:3000/tables", config),
         ]);
 
         const sanitizedOrders = ordersResponse.data.map((order) => ({
@@ -173,6 +175,7 @@ export default function ZakazTarixi() {
   const toggleFoodItems = (orderId) => {
     setOpenFoodItems(openFoodItems === orderId ? null : orderId);
   };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Заказ яакунланмагань";
     const date = new Date(dateString);
@@ -184,6 +187,24 @@ export default function ZakazTarixi() {
     const seconds = String(date.getSeconds()).padStart(2, "0");
     return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
   };
+
+  const handleClickOutside = (event) => {
+    if (modalRef.current && !modalRef.current.contains(event.target)) {
+      setOpenFoodItems(null);
+    }
+  };
+
+  useEffect(() => {
+    if (openFoodItems) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openFoodItems]);
+
   const filteredHistory = getFilteredOrders();
   const summary = calculateSummary();
 
@@ -367,73 +388,110 @@ export default function ZakazTarixi() {
               </div>
             </div>
 
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Стол/Телефон</th>
-                  <th>Бошланғич сана</th>
-                  <th>Якуний сана</th>
-                  <th>Комиссия</th>
-                  <th>Жами</th>
-                  <th>Таомлар</th>
-                </tr>
-              </thead>
-
-<tbody>
-  {filteredHistory.map((order) => {
-    const totalPrice = calculateTotalPrice(order);
-    const commissionRate = getCommissionRate(order);
-    const commission = totalPrice * (commissionRate / 100);
-    const totalWithCommission = totalPrice + commission;
-    return (
-      <React.Fragment key={order.id}>
-        <tr>
-          <td>{order.id}</td>
-          <td>
-            {tableMap[order.tableId]
-              ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
-              : ""}
-          </td>
-          <td>{formatDate(order.createdAt)}</td>
-          <td>{formatDate(order.endTime)}</td>
-          <td>{formatPrice(commission)} ({commissionRate}%)</td>
-          <td>{formatPrice(totalWithCommission)}</td>
-          <td>
-            <Eye
-              className="food-icon"
-              onClick={() => toggleFoodItems(order.id)}
-              style={{ cursor: "pointer" }}
-            />
-          </td>
-        </tr>
-        {openFoodItems === order.id && (
-          <tr>
-            <td colSpan="8" className="food-itemss">
-              {order.orderItems.length > 0 ? (
-                order.orderItems.map((item) => {
-                  return (
-                    <span style={{ width: "1000px" }} key={item.id}>
-                      {`${item.product?.name || "Номаълум"} - ${item.count || 0} Дона`}
-                    </span>
-                  );
-                })
-              ) : (
-                <div>Таомлар йўқ</div>
-              )}
-            </td>
-          </tr>
-        )}
-      </React.Fragment>
-    );
-  })}
-</tbody>
-            </table>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Стол/Телефон</th>
+                    <th>Бошланғич сана</th>
+                    <th>Якуний сана</th>
+                    <th>Комиссия</th>
+                    <th>Жами</th>
+                    <th>Таомлар</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHistory.map((order) => {
+                    const totalPrice = calculateTotalPrice(order);
+                    const commissionRate = getCommissionRate(order);
+                    const commission = totalPrice * (commissionRate / 100);
+                    const totalWithCommission = totalPrice + commission;
+                    return (
+                      <tr key={order.id}>
+                        <td>{order.id}</td>
+                        <td>
+                          {tableMap[order.tableId]
+                            ? `${tableMap[order.tableId].name} - ${tableMap[order.tableId].number}`
+                            : ""}
+                        </td>
+                        <td>{formatDate(order.createdAt)}</td>
+                        <td>{formatDate(order.endTime)}</td>
+                        <td>{formatPrice(commission)} ({commissionRate}%)</td>
+                        <td>{formatPrice(totalWithCommission)}</td>
+                        <td>
+                          <Eye
+                            className="food-icon"
+                            onClick={() => toggleFoodItems(order.id)}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
             {filteredHistory.length === 0 && (
               <div className="no-results">
                 <p>Ҳеч қандай буюртма топилмади</p>
               </div>
             )}
+          </div>
+        )}
+
+        {openFoodItems && (
+          <div className="modal-overlay">
+            <div className="modal" ref={modalRef}>
+              <div className="modal-header">
+                <h3>Таомлар рўйхати</h3>
+                
+              </div>
+              <div className="modal-body">
+                {orders
+                  .find((order) => order.id === openFoodItems)
+                  ?.orderItems.length > 0 ? (
+                  <div className="modal-table-container">
+                    <table className="food-items-table">
+                      <thead>
+                        <tr>
+                          <th>Таом номи</th>
+                          <th>Сони</th>
+                          <th>Нархи</th>
+                          <th>Жами</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders
+                          .find((order) => order.id === openFoodItems)
+                          .orderItems.map((item) => {
+                            const price = item?.product?.price
+                              ? parseFloat(item.product.price)
+                              : 0;
+                            const count = item?.count ? parseInt(item.count) : 0;
+                            const total = price * count;
+                            return (
+                              <tr key={item.id}>
+                                <td>{item.product?.name || "Номаълум"}</td>
+                                <td>{item.count || 0} Дона</td>
+                                <td>{formatPrice(price)}</td>
+                                <td>{formatPrice(total)}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div>Таомлар йўқ</div>
+                )}
+              </div>
+              <h1
+                  className="close-icon"
+                  onClick={() => setOpenFoodItems(null)}
+                  style={{ cursor: "pointer",marginLeft:'auto' }}
+                >Закрить</h1>
+            </div>
           </div>
         )}
       </div>

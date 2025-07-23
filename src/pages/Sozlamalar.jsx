@@ -37,7 +37,7 @@ export default function Sozlamalar() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://alikafecrm.uz/user", {
+        const response = await axios.get("http://192.168.100.99:3000/user", {
           headers: {
             "Content-Type": "application/json",
             ...(localStorage.getItem("token") && {
@@ -57,7 +57,7 @@ export default function Sozlamalar() {
         setStaff(users);
 
         try {
-          const restaurantResponse = await axios.get("https://alikafecrm.uz/", {
+          const restaurantResponse = await axios.get("http://192.168.100.99:3000/", {
             headers: {
               "Content-Type": "application/json",
               ...(localStorage.getItem("token") && {
@@ -76,7 +76,7 @@ export default function Sozlamalar() {
 
         try {
           const commissionResponse = await axios.get(
-            "https://alikafecrm.uz/percent",
+            "http://192.168.100.99:3000/percent",
             {
               headers: {
                 "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export default function Sozlamalar() {
           if (commissionResponse.data.length > 0) {
             setCommissionPercent(commissionResponse.data[0].percent);
             console.log(
-              `Commission loaded from: https://alikafecrm.uz/percent`
+              `Commission loaded from: http://192.168.100.99:3000/percent`
             );
           } else {
             setCommissionPercent(0);
@@ -119,7 +119,7 @@ export default function Sozlamalar() {
     }
     try {
       await axios.put(
-        "https://alikafecrm.uz",
+        "http://192.168.100.99:3000",
         { name: tempRestaurantName },
         {
           headers: {
@@ -152,7 +152,7 @@ export default function Sozlamalar() {
         role: editingStaff.role,
       };
       await axios.put(
-        `https://alikafecrm.uz/user/${editingStaff.id}`,
+        `http://192.168.100.99:3000/user/${editingStaff.id}`,
         staffData,
         {
           headers: {
@@ -200,7 +200,7 @@ export default function Sozlamalar() {
         role: newStaff.role,
       };
       const response = await axios.post(
-        "https://alikafecrm.uz/user",
+        "http://192.168.100.99:3000/user",
         staffData,
         {
           headers: {
@@ -230,7 +230,7 @@ export default function Sozlamalar() {
     try {
       const commissionData = { percent: commissionPercent };
       const response = await axios.patch(
-        "https://alikafecrm.uz/percent/1",
+        "http://192.168.100.99:3000/percent/1",
         commissionData,
         {
           headers: {
@@ -397,7 +397,7 @@ export default function Sozlamalar() {
                         );
                         if (confirmDelete) {
                           axios
-                            .delete(`https://alikafecrm.uz/user/${person.id}`, {
+                            .delete(`http://192.168.100.99:3000/user/${person.id}`, {
                               headers: {
                                 "Content-Type": "application/json",
                                 ...(localStorage.getItem("token") && {
