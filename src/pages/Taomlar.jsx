@@ -940,115 +940,127 @@ const Taomlar = React.memo(() => {
       setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
     }
   };
-  const openEditModal = (item) => {
-    console.log("Opening edit modal for item:", item);
-    console.log("Current order items:", selectedTableOrder?.orderItems);
-    setEditItem(item);
-    setNewCount(item.count.toString());
-    setShowEditQuantityModal(true);
-  };
+// MODIFIED: Updated openEditModal to include orderItemId
+const openEditModal = (item) => {
+  console.log("Opening edit modal for item:", item);
+  const orderItem = selectedTableOrder?.orderItems.find(
+    (oi) => oi.productId === item.id && oi.createdAt === item.createdAt
+  );
+  if (!orderItem) {
+    setError("Буюртма элементи топилмади.");
+    return;
+  }
+  console.log("Found order item:", orderItem);
+  setEditItem({ ...item, orderItemId: orderItem.id }); // MODIFIED: Include orderItemId
+  setNewCount(item.count.toString());
+  setShowEditQuantityModal(true);
+};
 
-  const handleEditQuantity = async () => {
-    if (!selectedTableOrder?.id || !editItem) {
-      setError("Буюртма ёки элемент танланмаган.");
-      return;
-    }
-    const parsedCount = parseInt(newCount);
-    if (isNaN(parsedCount) || parsedCount < 0) {
-      setError("Илтимос, тўғри миқдор киритинг.");
-      return;
-    }
-    try {
-      setIsSaving(true);
-      const payload = {
-        products: selectedTableOrder.orderItems.map((oi) =>
-          oi.productId === editItem.id && oi.createdAt === editItem.createdAt
-            ? { productId: Number(editItem.id), count: parsedCount, description: editItem.description || "" }
-            : { productId: oi.productId, count: oi.count, description: oi.description || "" }
-        ),
-        tableId: selectedTableOrder.tableId,
-        userId: selectedTableOrder.userId,
-        status: selectedTableOrder.status,
-      };
-      const response = await axios.put(
-        `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const updatedOrder = response.data;
-      socket.emit("orderUpdated", updatedOrder);
-  
-      // Update tables
-      setTables((prev) =>
-        prev.map((table) =>
-          table.id === updatedOrder.tableId
-            ? {
-                ...table,
-                status: updatedOrder.orderItems?.length ? "busy" : "empty",
-                orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
-              }
-            : table
-        )
-      );
-  
-      // Update selectedTableOrder
-      const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
-      setSelectedTableOrder({
-        ...updatedOrder,
-        totalPrice,
-        totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
-      });
-  
-      // Update cart
-      setCart(
-        updatedOrder.orderItems?.map((oi) => ({
-          id: oi.productId || oi.product?.id || 0,
-          name: oi.product?.name || "Номаълум таом",
-          price: parseFloat(oi.product?.price) || 0,
-          count: oi.count || 0,
-          status: oi.status || "PENDING",
-          description: oi.description || "",
-          createdAt: oi.createdAt || null,
-        })) || []
-      );
-  
-      setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
-      setShowEditQuantityModal(false);
-      setEditItem(null); // Reset editItem to avoid stale data
-    } catch (error) {
-      setError(handleApiError(error, "Миқдорни ўзгартиришда хатолик."));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Modal component
-  const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onConfirm }) => {
-    if (!isOpen) return null;
-    return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Миқдорни ўзгартириш">
-        <div className="form-group">
-          <label htmlFor="quantity">Янги миқдор:</label>
-          <input
-            type="number"
-            id="quantity"
-            value={newCount}
-            onChange={(e) => setNewCount(e.target.value)}
-            min="0"
-            placeholder="Миқдорни киритинг"
-          />
-        </div>
-        <div className="form-actions">
-          <button type="button" onClick={onClose} className="cancel-btn">
-            Бекор қилиш
-          </button>
-          <button onClick={onConfirm} className="submit-btn" disabled={isSaving}>
-            Сақлаш
-          </button>
-        </div>
-      </Modal>
+// MODIFIED: Updated handleEditQuantity to use orderItemId and new endpoint
+const handleEditQuantity = async () => {
+  if (!selectedTableOrder?.id || !editItem || !editItem.orderItemId) {
+    setError("Буюртма ёки элемент танланмаган.");
+    return;
+  }
+  const parsedCount = parseInt(newCount);
+  if (isNaN(parsedCount) || parsedCount < 0) {
+    setError("Илтимос, тўғри миқдор киритинг.");
+    return;
+  }
+  try {
+    setIsSaving(true);
+    // NEW: Use PATCH to update specific order item count
+    const response = await axios.patch(
+      `${API_ENDPOINTS.orders}/item/${editItem.orderItemId}/status`,
+      { count: parsedCount },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-  };
+    const updatedOrderItem = response.data;
+
+    // Fetch updated order to sync state
+    const updatedOrderResponse = await axios.get(
+      `${API_ENDPOINTS.orders}/${selectedTableOrder.id}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const updatedOrder = updatedOrderResponse.data;
+    socket.emit("orderUpdated", updatedOrder);
+
+    // Update tables
+    setTables((prev) =>
+      prev.map((table) =>
+        table.id === updatedOrder.tableId
+          ? {
+              ...table,
+              status: updatedOrder.orderItems?.length ? "busy" : "empty",
+              orders: updatedOrder.orderItems?.length ? [{ ...updatedOrder, table }] : [],
+            }
+          : table
+      )
+    );
+
+    // Update selectedTableOrder
+    const totalPrice = calculateTotalPrice(updatedOrder.orderItems);
+    setSelectedTableOrder({
+      ...updatedOrder,
+      totalPrice,
+      totalWithCommission: totalPrice * (1 + (parseFloat(uslug) / 100 || 0)),
+    });
+
+    // Update cart
+    setCart(
+      updatedOrder.orderItems?.map((oi) => ({
+        id: oi.productId || oi.product?.id || 0,
+        name: oi.product?.name || "Номаълум таом",
+        price: parseFloat(oi.product?.price) || 0,
+        count: oi.count || 0,
+        status: oi.status || "PENDING",
+        description: oi.description || "",
+        createdAt: oi.createdAt || null,
+        orderItemId: oi.id, // NEW: Include orderItemId in cart
+      })) || []
+    );
+
+    setSuccessMsg("Миқдор муваффақиятли ўзгартирилди!");
+    setShowEditQuantityModal(false);
+    setEditItem(null);
+  } catch (error) {
+    setError(handleApiError(error, "Миқдорни ўзгартиришда хатолик."));
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+// NEW: EditQuantityModal component
+const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onConfirm }) => {
+  if (!isOpen) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Миқдорни ўзгартириш">
+      <div className="form-group">
+        <label htmlFor="quantity">Янги миқдор:</label>
+        <input
+          type="number"
+          id="quantity"
+          value={newCount}
+          onChange={(e) => setNewCount(e.target.value)}
+          min="0"
+          placeholder="Миқдорни киритинг"
+        />
+      </div>
+      <div className="form-actions">
+        <button type="button" onClick={onClose} className="cancel-btn">
+          Бекор қилиш
+        </button>
+        <button onClick={onConfirm} className="submit-btn" disabled={isSaving}>
+          Сақлаш
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+
+
+  
 
   const handleOrderItemStatusUpdated = (updatedItem) => {
     try {
