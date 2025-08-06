@@ -445,8 +445,10 @@ export default function ZakazTarixi() {
             <div className="modal" ref={modalRef}>
               <div className="modal-header">
                 <h3>Таомлар рўйхати</h3>
-                
               </div>
+              <h3>
+                {orders.find((order) => order.id === openFoodItems)?.user?.name || "Официант маълумоти йўқ"}
+              </h3>
               <div className="modal-body">
                 {orders
                   .find((order) => order.id === openFoodItems)
@@ -487,10 +489,10 @@ export default function ZakazTarixi() {
                 )}
               </div>
               <h1
-                  className="close-icon"
-                  onClick={() => setOpenFoodItems(null)}
-                  style={{ cursor: "pointer",marginLeft:'auto' }}
-                >Закрить</h1>
+                className="close-icon"
+                onClick={() => setOpenFoodItems(null)}
+                style={{ cursor: "pointer", marginLeft: 'auto' }}
+              >Закрить</h1>
             </div>
           </div>
         )}
