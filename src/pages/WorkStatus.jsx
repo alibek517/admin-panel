@@ -11,7 +11,7 @@ function WorkStatus() {
     const fetchInitialStatus = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+        const response = await fetch('http://192.168.1.8:4356/auth-check/1', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           mode: 'cors',
@@ -40,7 +40,7 @@ function WorkStatus() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+      const response = await fetch('http://192.168.1.8:4356/auth-check/1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: true }),
@@ -67,7 +67,7 @@ function WorkStatus() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://192.168.100.99:3000/auth-check/1', {
+      const response = await fetch('http://192.168.1.8:4356/auth-check/1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: false }),

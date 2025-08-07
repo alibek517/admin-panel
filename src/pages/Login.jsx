@@ -17,7 +17,7 @@ export default function Login() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://192.168.100.99:3000/user", {
+        const response = await axios.get("http://192.168.1.8:4356/user", {
           headers: {
             "Content-Type": "application/json",
             ...(localStorage.getItem("token") && {

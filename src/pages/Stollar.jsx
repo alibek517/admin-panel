@@ -18,7 +18,7 @@ export default function Stollar() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = "http://192.168.100.99:3000/tables";
+  const API_URL = "http://192.168.1.8:4356/tables";
 
   const statusMapToBackend = { "Бўш": "empty", Банд: "busy" };
   const statusMapToFrontend = { empty: "Бўш", busy: "Банд" };
@@ -484,8 +484,8 @@ export default function Stollar() {
                                   className="order-item-image"
                                   src={
                                     item.product?.image
-                                      ? `http://192.168.100.99:3000${item.product.image}`
-                                      : "http://192.168.100.99:3000/placeholder.png"
+                                      ? `http://192.168.1.8:4356${item.product.image}`
+                                      : "http://192.168.1.8:4356/placeholder.png"
                                   }
                                   alt={item.product?.name || "Маҳсулот"}
                                 />

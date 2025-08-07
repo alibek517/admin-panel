@@ -110,9 +110,9 @@ export default function ZakazTarixi() {
         };
 
         const [ordersResponse, categoriesResponse, tablesResponse] = await Promise.all([
-          axios.get("http://192.168.100.99:3000/order", config),
-          axios.get("http://192.168.100.99:3000/category", config),
-          axios.get("http://192.168.100.99:3000/tables", config),
+          axios.get("http://192.168.1.8:4356/order", config),
+          axios.get("http://192.168.1.8:4356/category", config),
+          axios.get("http://192.168.1.8:4356/tables", config),
         ]);
 
         const sanitizedOrders = ordersResponse.data.map((order) => ({
@@ -187,7 +187,14 @@ export default function ZakazTarixi() {
     const seconds = String(date.getSeconds()).padStart(2, "0");
     return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
   };
-
+  const formatDatee = (dateString) => {
+    if (!dateString) return "Заказ яакунланмагань";
+    const date = new Date(dateString);
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${hours}:${minutes}:${seconds}`;
+  };
   const handleClickOutside = (event) => {
     if (modalRef.current && !modalRef.current.contains(event.target)) {
       setOpenFoodItems(null);
@@ -460,7 +467,7 @@ export default function ZakazTarixi() {
                           <th>Таом номи</th>
                           <th>Сони</th>
                           <th>Нархи</th>
-                          <th>Жами</th>
+                          <th>Вакти</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -477,7 +484,7 @@ export default function ZakazTarixi() {
                                 <td>{item.product?.name || "Номаълум"}</td>
                                 <td>{item.count || 0} Дона</td>
                                 <td>{formatPrice(price)}</td>
-                                <td>{formatPrice(total)}</td>
+                                <td>{formatDatee(item.createdAt)}</td>
                               </tr>
                             );
                           })}
@@ -492,7 +499,7 @@ export default function ZakazTarixi() {
                 className="close-icon"
                 onClick={() => setOpenFoodItems(null)}
                 style={{ cursor: "pointer", marginLeft: 'auto' }}
-              >Закрить</h1>
+              >Закрыть</h1>
             </div>
           </div>
         )}
