@@ -25,7 +25,7 @@ import "./styles/Zakazlar.css";
 import axios from "axios";
 import { socket } from "../socket.js";
 
-const API_BASE = "http://192.168.1.8:4356";
+const API_BASE = "http://192.168.1.52:4357";
 const API_ENDPOINTS = {
   orders: `${API_BASE}/order`,
   categories: `${API_BASE}/category`,

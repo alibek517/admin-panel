@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Eye, Search, Calendar } from 'lucide-react';
 
 const DeliveryReport = () => {
+  const modalRef = useRef(null); // Reference for modal to handle click outside
+
   const getTodayDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -16,6 +18,7 @@ const DeliveryReport = () => {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [expandedOrders, setExpandedOrders] = useState({});
   const [loading, setLoading] = useState(true);
+  const [openFoodItems, setOpenFoodItems] = useState(null);
 
   useEffect(() => {
     const fetchDeliveryReport = async () => {
@@ -25,7 +28,7 @@ const DeliveryReport = () => {
         if (!token) {
           throw new Error("Токен топилмади");
         }
-        const response = await axios.get('http://192.168.1.8:4356/order', {
+        const response = await axios.get('http://192.168.1.52:4357/order', {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -36,7 +39,9 @@ const DeliveryReport = () => {
           .map(order => ({
             ...order,
             orderItems: Array.isArray(order.orderItems) ? order.orderItems : [],
-          }));
+          }))
+          // Sort orders by createdAt in descending order (newest first)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setReport(orders);
         applyFilter(orders, startDate, endDate, searchInput);
       } catch (error) {
@@ -96,12 +101,16 @@ const DeliveryReport = () => {
 
     if (search) {
       filtered = filtered.filter(order =>
-        order.id.toString().includes(search) ||
+        order.id?.toString().toLowerCase().includes(search.toLowerCase()) ||
         (order.carrierNumber && order.carrierNumber.toLowerCase().includes(search.toLowerCase()))
       );
     }
 
     setFilteredOrders(filtered);
+  };
+
+  const toggleFoodItems = (orderId) => {
+    setOpenFoodItems(openFoodItems === orderId ? null : orderId);
   };
 
   const handleFilter = () => {
@@ -123,7 +132,7 @@ const DeliveryReport = () => {
       if (!token) {
         throw new Error("Токен топилмади");
       }
-      await axios.delete(`http://192.168.1.8:4356/order/${orderId}`, {
+      await axios.delete(`http://192.168.1.52:4357/order/${orderId}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -143,6 +152,23 @@ const DeliveryReport = () => {
       }
     }
   };
+
+  const handleClickOutside = (event) => {
+    if (modalRef.current && !modalRef.current.contains(event.target)) {
+      setOpenFoodItems(null);
+    }
+  };
+
+  useEffect(() => {
+    if (openFoodItems) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openFoodItems]);
 
   const handleDeleteRange = async () => {
     if (!startDate || !endDate) {
@@ -168,7 +194,7 @@ const DeliveryReport = () => {
         throw new Error("Токен топилмади");
       }
       for (const order of ordersToDelete) {
-        await axios.delete(`http://192.168.1.8:4356/order/${order.id}`, {
+        await axios.delete(`http://192.168.1.52:4357/order/${order.id}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -210,7 +236,20 @@ const DeliveryReport = () => {
       return 'Номаълум';
     }
   };
-
+  const formatDatee = (dateString) => {
+    if (!dateString || dateString === 'null') {
+      return 'Заказ яакунланмаган';
+    }
+    try {
+      return new Date(dateString).toLocaleString('uz-Cyrl-UZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).replace(/\//g, '.');
+    } catch {
+      return 'Номаълум';
+    }
+  };
   const formatPrice = (price) => {
     try {
       const priceStr = price.toString();
@@ -399,7 +438,7 @@ const DeliveryReport = () => {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="no-results">
+                    <td colSpan="7" className="no-results">
                       <p>Буюртмалар топилмади</p>
                     </td>
                   </tr>
@@ -414,8 +453,8 @@ const DeliveryReport = () => {
                         <td>
                           <Eye
                             className="food-icon"
-                            onClick={() => toggleOrderItems(order.id)}
-                            style={{ cursor: 'pointer' }}
+                            onClick={() => toggleFoodItems(order.id)}
+                            style={{ cursor: "pointer" }}
                           />
                         </td>
                         <td>{formatPrice(calculateOrderTotal(order).total)}</td>
@@ -430,11 +469,11 @@ const DeliveryReport = () => {
                       </tr>
                       {expandedOrders[order.id] && (
                         <tr>
-                          <td colSpan="6" className="food-items">
+                          <td colSpan="7" className="food-items">
                             {(order.orderItems || []).length > 0 ? (
                               order.orderItems.map((item, idx) => (
-                                <div style={{width:'555px',display:'flex',alignItems:'center'}} key={idx}>
-                                  <h3 style={{display:'inline'}}>{calculateItemTotal(item).count}</h3>-{item.product?.name || 'Номаълум'} - {formatPrice(calculateItemTotal(item).total)}
+                                <div style={{ width: '555px', display: 'flex', alignItems: 'center' }} key={idx}>
+                                  <h3 style={{ display: 'inline' }}>{calculateItemTotal(item).count}</h3>-{item.product?.name || 'Номаълум'} - {formatPrice(calculateItemTotal(item).total)}
                                 </div>
                               ))
                             ) : (
@@ -450,10 +489,65 @@ const DeliveryReport = () => {
             </table>
           </div>
         )}
+        {openFoodItems && (
+          <div className="modal-overlay">
+            <div className="modal" ref={modalRef}>
+              <div className="modal-header">
+                <h3>Таомлар рўйхати</h3>
+              </div>
+              
+              <div className="modal-body">
+                {filteredOrders
+                  .find((order) => order.id === openFoodItems)
+                  ?.orderItems.length > 0 ? (
+                  <div className="modal-table-container">
+                    <table className="food-items-table">
+                      <thead>
+                        <tr>
+                          <th>Таом номи</th>
+                          <th>Сони</th>
+                          <th>Нархи</th>
+                          <th>Вакти</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredOrders
+                          .find((order) => order.id === openFoodItems)
+                          .orderItems.map((item) => {
+                            const price = item?.product?.price
+                              ? parseFloat(item.product.price)
+                              : 0;
+                            const count = item?.count ? parseInt(item.count) : 0;
+                            const total = price * count;
+                            return (
+                              <tr key={item.id}>
+                                <td>{item.product?.name || "Номаълум"}</td>
+                                <td>{item.count || 0} Дона</td>
+                                <td>{formatPrice(price)}</td>
+                                <td>{formatDatee(item.createdAt)}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div>Таомлар йўқ</div>
+                )}
+              </div>
+              <h1
+                className="close-icon"
+                onClick={() => setOpenFoodItems(null)}
+                style={{ cursor: "pointer", marginLeft: 'auto' }}
+              >
+                Закрыть
+              </h1>
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
         :root {
           --primary: #2563eb;

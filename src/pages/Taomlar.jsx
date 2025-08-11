@@ -9,8 +9,6 @@ import ModalBasket from "../components/modal/modal-basket";
 import Receipt from "../components/Receipt.jsx";
 import { socket } from "../socket.js";
 
-
-
 const handleApiError = (error, defaultMessage) => {
 
   const statusMessages = {
@@ -39,7 +37,7 @@ const deepClone = (obj) => {
   return cloned;
 };
 
-const API_BASE = "http://192.168.1.8:4356";
+const API_BASE = "http://192.168.1.52:4357";
 const API_ENDPOINTS = {
   orders: `${API_BASE}/order`,
   categories: `${API_BASE}/category`,
@@ -149,6 +147,7 @@ const AddTableModal = ({ isOpen, onClose, onConfirm, places }) => {
   const [suffix, setSuffix] = useState("");
   const [loading, setLoading] = useState(false);
   const [spaceCount, setSpaceCount] = useState(0);
+  const [tableToDelete, setTableToDelete] = useState(null);
 
 
   const handlePlaceChange = (e) => {
@@ -720,6 +719,7 @@ const Taomlar = React.memo(() => {
   const [adminCode, setAdminCode] = useState("");
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [users, setUsers] = useState([]);
+  const [tableToDelete, setTableToDelete] = useState(null); 
   const receiptRef = useRef();
   const token = localStorage.getItem("token");
   const [orderDescriptions, setOrderDescriptions] = useState({});
@@ -901,46 +901,46 @@ const Taomlar = React.memo(() => {
     }
   };
 
-  const handleOrderDeleted = (data) => {
-    try {
-      console.log("Received orderDeleted event:", data);
-      const id = data?.id;
-      if (!id) {
-        console.error("Invalid order ID received:", data);
-        setError("Нотўғри буюртма ID.");
-        return;
-      }
-      const eventKey = `orderDeleted:${id}:${Date.now()}`;
-      if (processedEvents.current.has(eventKey)) {
-        console.log(`Duplicate orderDeleted event ignored: ${eventKey}`);
-        return;
-      }
-      processedEvents.current.add(eventKey);
-      setTables((prev) =>
-        prev.map((table) => {
-          if (table.orders?.some((order) => order.id === id)) {
-            const updatedOrders = table.orders.filter((order) => order.id !== id);
-            const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
-            return {
-              ...table,
-              orders: updatedOrders,
-              status: hasActiveOrders ? "busy" : "empty",
-            };
-          }
-          return table;
-        })
-      );
-      if (selectedTableOrder?.id === id) {
-        setSelectedTableOrder(null);
-        setCart([]);
-        setSelectedTableId(null);
-      }
-    } catch (error) {
-      console.error("Error in handleOrderDeleted:", error);
-      setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
+const handleOrderDeleted = (data) => {
+  try {
+    console.log("Received orderDeleted event:", data);
+    const id = data?.id;
+    if (!id) {
+      console.error("Invalid order ID received:", data);
+      setError("Нотўғри буюртма ID.");
+      return;
     }
-  };
-// MODIFIED: Updated openEditModal to include orderItemId
+    const eventKey = `orderDeleted:${id}:${Date.now()}`;
+    if (processedEvents.current.has(eventKey)) {
+      console.log(`Duplicate orderDeleted event ignored: ${eventKey}`);
+      return;
+    }
+    processedEvents.current.add(eventKey);
+    setTables((prev) =>
+      prev.map((table) => {
+        if (table.orders?.some((order) => order.id === id)) {
+          const updatedOrders = table.orders.filter((order) => order.id !== id);
+          const hasActiveOrders = updatedOrders.some((o) => o.status !== "ARCHIVE");
+          return {
+            ...table,
+            orders: updatedOrders,
+            status: hasActiveOrders ? "busy" : "empty", // Ensure status is updated correctly
+          };
+        }
+        return table;
+      })
+    );
+    if (selectedTableOrder?.id === id) {
+      setSelectedTableOrder(null);
+      setCart([]);
+      setSelectedTableId(null);
+    }
+  } catch (error) {
+    console.error("Error in handleOrderDeleted:", error);
+    setError(handleApiError(error, "Буюртма ўчиришда хатолик."));
+  }
+};
+
 const openEditModal = (item) => {
   console.log("Opening edit modal for item:", item);
   const orderItem = selectedTableOrder?.orderItems.find(
@@ -1058,10 +1058,6 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
   );
 };
 
-
-
-  
-
   const handleOrderItemStatusUpdated = (updatedItem) => {
     try {
       console.log("Received orderItemStatusUpdated event:", updatedItem);
@@ -1134,7 +1130,14 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
       0
     ) || 0;
   }, []);
-
+const getNameFrequency = (tables) => {
+    const frequency = {};
+    tables.forEach((table) => {
+      const name = table.name || "Unknown"; 
+      frequency[name] = (frequency[name] || 0) + 1;
+    });
+    return frequency;
+  };
   const handleUslugChange = useCallback(
     async (e) => {
       const value = e.target.value;
@@ -1495,173 +1498,202 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
   const deleteFromCart = (taomId) => {
     setCart((prev) => prev.filter((item) => item.id !== taomId));
   };
-  const handleDeleteTable = async () => {
-    if (!tableToDelete?.id) {
-      setError("Стол танланмаган.");
-      return;
+const handleDeleteTable = async () => {
+  if (!tableToDelete?.id) {
+    setError("Стол танланмаган.");
+    return;
+  }
+  try {
+    setIsSaving(true);
+    console.log("Sending DELETE request for table:", tableToDelete.id);
+    const response = await axios.delete(`${API_ENDPOINTS.tables}/${tableToDelete.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    console.log("DELETE response:", response.data);
+    setTables((prev) => prev.filter((table) => table.id !== tableToDelete.id));
+setPlaces((prev) => {
+  const remainingTables = tables.filter((table) => table.id !== tableToDelete.id);
+  const nameFrequency = getNameFrequency(remainingTables);
+  const uniquePlaces = [...new Set(remainingTables.map((table) => table.name))]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const freqA = nameFrequency[a] || 0;
+      const freqB = nameFrequency[b] || 0;
+      if (freqA !== freqB) {
+        return freqB - freqA; 
+      }
+      return a.localeCompare(b); 
+    });
+  if (!uniquePlaces.includes(filterPlace) && uniquePlaces.length > 0) {
+    setFilterPlace(uniquePlaces[0]);
+  } else if (uniquePlaces.length === 0) {
+    setFilterPlace("");
+  }
+  return uniquePlaces;
+});
+    if (selectedTableId === tableToDelete.id) {
+      setSelectedTableId(null);
+      setSelectedTableOrder(null);
+      setCart([]);
     }
+    setSuccessMsg("Стол муваффақиятли ўчирилди!");
+  } catch (error) {
+    console.error("Delete table error:", error.response || error);
+    setError(handleApiError(error, "Стол ўчиришда хатолик."));
+  } finally {
+    setIsSaving(false);
+    setShowDeleteTableModal(false);
+    setTableToDelete(null);
+  }
+};
+const handleTableClick = (tableId) => {
+  const selectedTable = tables.find((t) => t.id === tableId);
+  console.log("Selected table:", { id: tableId, status: selectedTable?.status, orders: selectedTable?.orders });
+  setSelectedTableId(tableId);
+};
+
+useEffect(() => {
+  if (!token) {
+    setError("Токен топилмади. Илтимос, тизимга қайта киринг.");
+    console.error("No token found, redirecting to login");
+    window.location.href = "/login";
+    return;
+  }
+
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      setIsSaving(true);
-      await axios.delete(`${API_ENDPOINTS.tables}/${tableToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTables((prev) => prev.filter((table) => table.id !== tableToDelete.id));
-      setPlaces((prev) => {
-        const remainingTables = tables.filter((table) => table.id !== tableToDelete.id);
-        const uniquePlaces = [...new Set(remainingTables.map((table) => table.name))].filter(Boolean);
-        if (!uniquePlaces.includes(filterPlace) && uniquePlaces.length > 0) {
-          setFilterPlace(uniquePlaces[0]);
-        } else if (uniquePlaces.length === 0) {
-          setFilterPlace("");
-        }
-        return uniquePlaces;
-      });
-      if (selectedTableId === tableToDelete.id) {
-        setSelectedTableId(null);
-        setSelectedTableOrder(null);
-        setCart([]);
-      }
-      setSuccessMsg("Стол муваффақиятли ўчирилди!");
-    } catch (error) {
-      console.error("Delete table error:", error);
-      setError(handleApiError(error, "Стол ўчиришда хатолик."));
-    } finally {
-      setIsSaving(false);
-      setShowDeleteTableModal(false);
-      setTableToDelete(null);
-    }
-  };
+      console.log("Fetching initial data with token:", token);
+      const [tablesRes, productsRes, categoriesRes, percentRes, usersRes] = await Promise.all([
+        axios.get(API_ENDPOINTS.tables, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        }).catch((err) => {
+          throw new Error(`Столларни юклашда хатолик: ${err.message}`);
+        }),
+        axios.get(API_ENDPOINTS.products, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        }).catch((err) => {
+          throw new Error(`Маҳсулотларни юклашда хатолик: ${err.message}`);
+        }),
+        axios.get(API_ENDPOINTS.categories, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        }).catch((err) => {
+          throw new Error(`Категорияларни юклашда хатолик: ${err.message}`);
+        }),
+        axios.get(API_ENDPOINTS.percent, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        }).catch((err) => {
+          throw new Error(`Хизмат нархини юклашда хатолик: ${err.message}`);
+        }),
+        axios.get(`${API_BASE}/user`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        }).catch((err) => {
+          throw new Error(`Фойдаланувчиларни юклашда хатолик: ${err.message}`);
+        }),
+      ]);
 
-  const handleTableClick = (tableId) => {
-    setSelectedTableId(tableId);
-  };
+      const tablesData = Array.isArray(tablesRes.data?.data)
+        ? tablesRes.data.data
+        : Array.isArray(tablesRes.data)
+        ? tablesRes.data
+        : [];
+      const normalizedTables = tablesData.map((table) => ({
+        ...table,
+        status: normalizeStatus(table.status),
+        orders: Array.isArray(table.orders) ? table.orders : [],
+      }));
 
-  useEffect(() => {
-    if (!token) {
-      setError("Токен топилмади. Илтимос, тизимга қайта киринг.");
-      console.error("No token found, redirecting to login");
-      window.location.href = "/login";
-      return;
-    }
-
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        console.log("Fetching initial data with token:", token);
-        const [tablesRes, productsRes, categoriesRes, percentRes, usersRes] = await Promise.all([
-          axios.get(API_ENDPOINTS.tables, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal,
-          }).catch((err) => {
-            throw new Error(`Столларни юклашда хатолик: ${err.message}`);
-          }),
-          axios.get(API_ENDPOINTS.products, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal,
-          }).catch((err) => {
-            throw new Error(`Маҳсулотларни юклашда хатолик: ${err.message}`);
-          }),
-          axios.get(API_ENDPOINTS.categories, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal,
-          }).catch((err) => {
-            throw new Error(`Категорияларни юклашда хатолик: ${err.message}`);
-          }),
-          axios.get(API_ENDPOINTS.percent, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal,
-          }).catch((err) => {
-            throw new Error(`Хизмат нархини юклашда хатолик: ${err.message}`);
-          }),
-          axios.get(`${API_BASE}/user`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal,
-          }).catch((err) => {
-            throw new Error(`Фойдаланувчиларни юклашда хатолик: ${err.message}`);
-          }),
-        ]);
-
-        const tablesData = Array.isArray(tablesRes.data?.data)
-          ? tablesRes.data.data
-          : Array.isArray(tablesRes.data)
-            ? tablesRes.data
-            : [];
-        const normalizedTables = tablesData.map((table) => ({
-          ...table,
-          status: normalizeStatus(table.status),
-          orders: Array.isArray(table.orders) ? table.orders : [],
-        }));
-        const uniquePlaces = [...new Set(tablesData.map((table) => table.name))].filter(
-          Boolean
-        );
-
-        setTables(normalizedTables);
-        setPlaces(uniquePlaces);
-        setFilterPlace(uniquePlaces[0] || "");
-        setTaomlar((prev) => {
-          const newProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
-          if (JSON.stringify(prev) !== JSON.stringify(newProducts)) {
-            console.log("Updating taomlar with new data:", newProducts);
-            return newProducts;
+      // Calculate frequency of place names
+      const nameFrequency = getNameFrequency(tablesData);
+      // Sort places by frequency (descending) and then alphabetically for ties
+      const uniquePlaces = [...new Set(tablesData.map((table) => table.name))]
+        .filter(Boolean)
+        .sort((a, b) => {
+          const freqA = nameFrequency[a] || 0;
+          const freqB = nameFrequency[b] || 0;
+          if (freqA !== freqB) {
+            return freqB - freqA; // Sort by frequency descending
           }
-          console.log("No change in taomlar, skipping update");
-          return prev;
+          return a.localeCompare(b); // Alphabetical sort for equal frequencies
         });
-        const categoriesData = Array.isArray(categoriesRes.data?.data)
-          ? categoriesRes.data.data
-          : Array.isArray(categoriesRes.data)
-            ? categoriesRes.data
-            : [];
-        setCategories(categoriesData);
-        if (categoriesData.length > 0) {
-          setSelectedCategory(categoriesData[0].name);
+
+      setTables(normalizedTables);
+      setPlaces(uniquePlaces);
+      // Set filterPlace to the most frequent place if current filterPlace is invalid
+      setFilterPlace((prevFilterPlace) =>
+        uniquePlaces.includes(prevFilterPlace) && prevFilterPlace
+          ? prevFilterPlace
+          : uniquePlaces[0] || ""
+      );
+      setTaomlar((prev) => {
+        const newProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+        if (JSON.stringify(prev) !== JSON.stringify(newProducts)) {
+          console.log("Updating taomlar with new data:", newProducts);
+          return newProducts;
         }
-        setCommissionPercent(parseFloat(percentRes.data?.percent) || 0);
-        setUslug(percentRes.data?.percent?.toString() || "0");
-
-        const usersData = Array.isArray(usersRes.data?.data)
-          ? usersRes.data.data
-          : Array.isArray(usersRes.data)
-            ? usersRes.data
-            : [];
-        setUsers(usersData);
-        console.log("Data fetched successfully", {
-          tables: tablesData.length,
-          products: productsRes.data.length,
-          categories: categoriesData.length,
-          users: usersData.length,
-        });
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        setError(handleApiError(err, "Маълумотларни юклашда хатолик."));
-      } finally {
-        setLoading(false);
+        console.log("No change in taomlar, skipping update");
+        return prev;
+      });
+      const categoriesData = Array.isArray(categoriesRes.data?.data)
+        ? categoriesRes.data.data
+        : Array.isArray(categoriesRes.data)
+        ? categoriesRes.data
+        : [];
+      setCategories(categoriesData);
+      if (categoriesData.length > 0) {
+        setSelectedCategory(categoriesData[0].name);
       }
-    };
+      setCommissionPercent(parseFloat(percentRes.data?.percent) || 0);
+      setUslug(percentRes.data?.percent?.toString() || "0");
 
-    fetchData();
+      const usersData = Array.isArray(usersRes.data?.data)
+        ? usersRes.data.data
+        : Array.isArray(usersRes.data)
+        ? usersRes.data
+        : [];
+      setUsers(usersData);
+      console.log("Data fetched successfully", {
+        tables: tablesData.length,
+        products: productsRes.data.length,
+        categories: categoriesData.length,
+        users: usersData.length,
+      });
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      setError(handleApiError(err, "Маълумотларни юклашда хатолик."));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("orderCreated", handleOrderCreated);
-    socket.on("orderUpdated", handleOrderUpdated);
-    socket.on("orderDeleted", handleOrderDeleted);
-    socket.on("orderItemStatusUpdated", handleOrderItemStatusUpdated);
+  fetchData();
 
-    return () => {
-      controller.abort();
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("orderCreated", handleOrderCreated);
-      socket.off("orderUpdated", handleOrderUpdated);
-      socket.off("orderDeleted", handleOrderDeleted);
-      socket.off("orderItemStatusUpdated", handleOrderItemStatusUpdated);
-      socket.offAny();
-    };
-  }, [token]);
+  socket.on("connect", handleConnect);
+  socket.on("disconnect", handleDisconnect);
+  socket.on("orderCreated", handleOrderCreated);
+  socket.on("orderUpdated", handleOrderUpdated);
+  socket.on("orderDeleted", handleOrderDeleted);
+  socket.on("orderItemStatusUpdated", handleOrderItemStatusUpdated);
+
+  return () => {
+    controller.abort();
+    socket.off("connect", handleConnect);
+    socket.off("disconnect", handleDisconnect);
+    socket.off("orderCreated", handleOrderCreated);
+    socket.off("orderUpdated", handleOrderUpdated);
+    socket.off("orderDeleted", handleOrderDeleted);
+    socket.off("orderItemStatusUpdated", handleOrderItemStatusUpdated);
+    socket.offAny();
+  };
+}, [token]);
 
   useEffect(() => {
     if (!selectedTableId) {
@@ -2181,13 +2213,13 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
                                     try {
                                       setIsSaving(true);
                                       await axios.delete(
-                                        `http://192.168.1.8:4356/order/orderItem/${orderItem.id}`,
+                                        `http://192.168.1.52:4357/order/orderItem/${orderItem.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }
                                       );
                                       const response = await axios.get(
-                                        `http://192.168.1.8:4356/order/${selectedTableOrder.id}`,
+                                        `http://192.168.1.52:4357/order/${selectedTableOrder.id}`,
                                         {
                                           headers: { Authorization: `Bearer ${token}` },
                                         }
@@ -2413,7 +2445,7 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
         )}
 
       </div>
-      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+<div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="admin-mode-control" style={{ marginBottom: "10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <input
@@ -2649,16 +2681,16 @@ const EditQuantityModal = ({ isOpen, onClose, item, newCount, setNewCount, onCon
       )}
 
       {showDeleteTableModal && tableToDelete && (
-        <DeleteTableModal
-          isOpen={showDeleteTableModal}
-          onClose={() => {
-            setShowDeleteTableModal(false);
-            setTableToDelete(null);
-          }}
-          onConfirm={handleDeleteTable}
-          table={tableToDelete}
-        />
-      )}
+  <DeleteTableModal
+    isOpen={showDeleteTableModal}
+    onClose={() => {
+      setShowDeleteTableModal(false);
+      setTableToDelete(null);
+    }}
+    onConfirm={handleDeleteTable}
+    table={tableToDelete}
+  />
+)}
 
       {showResetProductsModal && (
         <ResetFinishedProductsModal

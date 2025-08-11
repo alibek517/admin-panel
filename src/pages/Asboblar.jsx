@@ -98,7 +98,7 @@ export default function Asboblar() {
 
   const fetchData = async () => {
     try {
-      const ordersResponse = await axios.get("http://192.168.1.8:4356/order");
+      const ordersResponse = await axios.get("http://192.168.1.52:4357/order");
 
       const orders = ordersResponse.data.map((order) => ({
         ...order,

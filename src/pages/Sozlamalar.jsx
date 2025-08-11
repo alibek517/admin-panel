@@ -37,7 +37,7 @@ export default function Sozlamalar() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://192.168.1.8:4356/user", {
+        const response = await axios.get("http://192.168.1.52:4357/user", {
           headers: {
             "Content-Type": "application/json",
             ...(localStorage.getItem("token") && {
@@ -57,7 +57,7 @@ export default function Sozlamalar() {
         setStaff(users);
 
         try {
-          const restaurantResponse = await axios.get("http://192.168.1.8:4356/", {
+          const restaurantResponse = await axios.get("http://192.168.1.52:4357/", {
             headers: {
               "Content-Type": "application/json",
               ...(localStorage.getItem("token") && {
@@ -76,7 +76,7 @@ export default function Sozlamalar() {
 
         try {
           const commissionResponse = await axios.get(
-            "http://192.168.1.8:4356/percent",
+            "http://192.168.1.52:4357/percent",
             {
               headers: {
                 "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export default function Sozlamalar() {
           if (commissionResponse.data.length > 0) {
             setCommissionPercent(commissionResponse.data[0].percent);
             console.log(
-              `Commission loaded from: http://192.168.1.8:4356/percent`
+              `Commission loaded from: http://192.168.1.52:4357/percent`
             );
           } else {
             setCommissionPercent(0);
@@ -119,7 +119,7 @@ export default function Sozlamalar() {
     }
     try {
       await axios.put(
-        "http://192.168.1.8:4356",
+        "http://192.168.1.52:4357",
         { name: tempRestaurantName },
         {
           headers: {
@@ -152,7 +152,7 @@ export default function Sozlamalar() {
         role: editingStaff.role,
       };
       await axios.put(
-        `http://192.168.1.8:4356/user/${editingStaff.id}`,
+        `http://192.168.1.52:4357/user/${editingStaff.id}`,
         staffData,
         {
           headers: {
@@ -200,7 +200,7 @@ export default function Sozlamalar() {
         role: newStaff.role,
       };
       const response = await axios.post(
-        "http://192.168.1.8:4356/user",
+        "http://192.168.1.52:4357/user",
         staffData,
         {
           headers: {
@@ -230,7 +230,7 @@ export default function Sozlamalar() {
     try {
       const commissionData = { percent: commissionPercent };
       const response = await axios.patch(
-        "http://192.168.1.8:4356/percent/1",
+        "http://192.168.1.52:4357/percent/1",
         commissionData,
         {
           headers: {
@@ -397,7 +397,7 @@ export default function Sozlamalar() {
                         );
                         if (confirmDelete) {
                           axios
-                            .delete(`http://192.168.1.8:4356/user/${person.id}`, {
+                            .delete(`http://192.168.1.52:4357/user/${person.id}`, {
                               headers: {
                                 "Content-Type": "application/json",
                                 ...(localStorage.getItem("token") && {

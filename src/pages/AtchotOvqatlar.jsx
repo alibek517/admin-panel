@@ -18,7 +18,7 @@ const ProductSales = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const categoriesResponse = await axios.get('http://192.168.1.8:4356/category');
+        const categoriesResponse = await axios.get('http://192.168.1.52:4357/category');
         const categoriesData = categoriesResponse.data;
         const formattedCategories = categoriesData.map(category => ({
           id: category.id.toString(),
@@ -30,7 +30,7 @@ const ProductSales = () => {
           setSelectedCategory(formattedCategories[0].id);
         }
 
-        const ordersResponse = await axios.get('http://192.168.1.8:4356/order');
+        const ordersResponse = await axios.get('http://192.168.1.52:4357/order');
         const ordersData = ordersResponse.data;
         setOrders(ordersData);
 

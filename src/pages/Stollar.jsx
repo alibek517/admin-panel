@@ -18,7 +18,7 @@ export default function Stollar() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = "http://192.168.1.8:4356/tables";
+  const API_URL = "http://192.168.1.52:4357/tables";
 
   const statusMapToBackend = { "Бўш": "empty", Банд: "busy" };
   const statusMapToFrontend = { empty: "Бўш", busy: "Банд" };
@@ -195,7 +195,6 @@ export default function Stollar() {
       setStollar((prev) => prev.filter((stol) => stol.id !== id));
       setError(null);
     } catch (err) {
-      console.error("Столни ўчиришда хато:", err);
       setError("Столни ўчиришда хато");
     }
   };
@@ -484,8 +483,8 @@ export default function Stollar() {
                                   className="order-item-image"
                                   src={
                                     item.product?.image
-                                      ? `http://192.168.1.8:4356${item.product.image}`
-                                      : "http://192.168.1.8:4356/placeholder.png"
+                                      ? `http://192.168.1.52:4357${item.product.image}`
+                                      : "http://192.168.1.52:4357/placeholder.png"
                                   }
                                   alt={item.product?.name || "Маҳсулот"}
                                 />

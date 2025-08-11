@@ -82,7 +82,7 @@ export default function TaomlarSoz() {
         throw new Error("JWT token not found in localStorage");
       }
 
-      const res = await axios.get("http://192.168.1.8:4356/product", {
+      const res = await axios.get("http://192.168.1.52:4357/product", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -112,7 +112,7 @@ export default function TaomlarSoz() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://192.168.1.8:4356/category", {
+      const res = await axios.get("http://192.168.1.52:4357/category", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const categories = res.data.map((cat) => ({
@@ -134,7 +134,7 @@ export default function TaomlarSoz() {
   const fetchKitchenStaff = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://192.168.1.8:4356/user?role=KITCHEN", {
+      const res = await axios.get("http://192.168.1.52:4357/user?role=KITCHEN", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setKitchenStaff(
@@ -205,13 +205,13 @@ export default function TaomlarSoz() {
 
     try {
       const request = editing
-        ? axios.put(`http://192.168.1.8:4356/product/${Number(dishes.id)}`, formData, {
+        ? axios.put(`http://192.168.1.52:4357/product/${Number(dishes.id)}`, formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",
           },
         })
-        : axios.post("http://192.168.1.8:4356/product", formData, {
+        : axios.post("http://192.168.1.52:4357/product", formData, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "multipart/form-data",
@@ -233,7 +233,7 @@ export default function TaomlarSoz() {
   const handleDelete = async (id) => {
     if (window.confirm("Таомни ўчиришни хоҳлайсизми?")) {
       try {
-        await axios.delete(`http://192.168.1.8:4356/product/${Number(id)}`, {
+        await axios.delete(`http://192.168.1.52:4357/product/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         await fetchMenu();
@@ -247,7 +247,7 @@ export default function TaomlarSoz() {
   const handleDeleteCategory = async (id) => {
     if (window.confirm("Категорияни ўчиришни хоҳлайсизми?")) {
       try {
-        await axios.delete(`http://192.168.1.8:4356/category/${Number(id)}`, {
+        await axios.delete(`http://192.168.1.52:4357/category/${Number(id)}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         await fetchCategories();
@@ -297,7 +297,7 @@ export default function TaomlarSoz() {
 
     try {
       await axios.post(
-        "http://192.168.1.8:4356/product/swap-indices",
+        "http://192.168.1.52:4357/product/swap-indices",
         { index1: Number(index1), index2: Number(index2) },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -323,7 +323,7 @@ export default function TaomlarSoz() {
 
       const newIsCompleted = !dishes.isCompleted;
       await axios.put(
-        `http://192.168.1.8:4356/product/${Number(dishId)}`,
+        `http://192.168.1.52:4357/product/${Number(dishId)}`,
         { isCompleted: newIsCompleted },
         {
           headers: {
@@ -351,7 +351,7 @@ export default function TaomlarSoz() {
       >
         <img
           className="food-card-image"
-          src={`http://192.168.1.8:4356${item.image}`}
+          src={`http://192.168.1.52:4357${item.image}`}
           alt={item.name}
         />
         <div className="food-card-content">
@@ -511,7 +511,7 @@ export default function TaomlarSoz() {
                   }
                   try {
                     const res = await axios.post(
-                      "http://192.168.1.8:4356/category",
+                      "http://192.168.1.52:4357/category",
                       { name: newCategory.trim() },
                       {
                         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -603,7 +603,7 @@ export default function TaomlarSoz() {
               <div className="modal-body1">
                 {editing && typeof dishes.image === "string" && (
                   <img
-                    src={`http://192.168.1.8:4356${dishes.image}`}
+                    src={`http://192.168.1.52:4357${dishes.image}`}
                     alt="Жорий"
                     style={{
                       width: "100px",
